@@ -21,6 +21,10 @@ class WidgetTokens:
                 raise ValueError('Invalid widget token records')
             self.records = [r for r in records if isinstance(r, dict) and isinstance(r.get('hash'), str) and len(r['hash']) == 64
                             and isinstance(r.get('id'), str) and isinstance(r.get('name'), str)]
+            # Tokens from before phone pairing belong to no device, so nothing could ever disconnect them.
+            if any('device' not in r for r in self.records):
+                self.records = [r for r in self.records if 'device' in r]
+                self.save()
         except (ValueError, OSError):
             self.records = []
 
