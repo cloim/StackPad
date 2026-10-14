@@ -100,7 +100,7 @@ try {
   expect(otherPad.ok()).toBe(true);
   const otherTouchPad = await page.request.post(`${base}/api/services`, { headers: { origin: base }, data: { name: '다른 셋 서비스 2', command: 'echo fixture', cwd: dataDirectory, slot: 2, padset_id: 'default' } });
   expect(otherTouchPad.ok()).toBe(true);
-  await page.getByRole('button', { name: '새로고침', exact: true }).click();
+  await page.reload();
   await page.getByRole('button', { name: '도커 API 자리 이동', exact: true }).dragTo(page.getByRole('button', { name: '패드 2 서비스 등록', exact: true }));
   await expect(page.getByRole('button', { name: '패드 1 서비스 등록', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: '패드 2 서비스 등록', exact: true })).toHaveCount(0);
@@ -137,6 +137,9 @@ try {
   expect(errors).toEqual([]);
   await fs.writeFile('.jobs/padsets-ui-result.json', JSON.stringify({ passed: true, errors, checks: ['settings tabs and keyboard', 'create rename delete padset', 'sixteen slots', 'docker register start stop logs', 'running delete guard', 'padset persistence and move', '360px overflow', 'desktop and mobile screenshots'] }, null, 2));
   console.log('패드셋, 설정 탭, 도커 UI 검증 성공');
+} catch (error) {
+  await page.screenshot({ path: '.jobs/padsets-ui-test-fail.png', fullPage: true }).catch(() => {});
+  throw error;
 } finally {
   await browser.close();
 }

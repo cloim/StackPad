@@ -19,7 +19,7 @@ await page.route('http://stackpad.test/**', async route => {
     if (url.pathname === '/api/auth') body = { configured: true, authenticated: true };
     else if (url.pathname === '/api/usage') body = { providers: [] };
     else if (url.pathname === '/api/services') body = { services, groups };
-    else if (url.pathname === '/api/settings') body = { hostname: 'TEST', cpu: 10, memory: 20 };
+    else if (url.pathname === '/api/settings') body = { onboarding_done: true, recommend_roots: ['C:/Users/me/projects'], hostname: 'TEST', cpu: 10, memory: 20 };
     else if (url.pathname.endsWith('/logs')) body = { text: 'component log\nREADY' };
     else if (/\/pads\/[^/]+\/position$/.test(url.pathname)) {
       const id = url.pathname.split('/')[3];
@@ -62,6 +62,7 @@ try {
   const registration = page.getByRole('dialog', { name: '서비스 등록', exact: true });
   await registration.getByLabel('패드 이름', { exact: true }).fill('NOVA');
   await registration.getByRole('button', { name: '오렌지', exact: true }).click();
+  await registration.getByRole('tab', { name: '서비스', exact: true }).click();
   await registration.getByRole('region', { name: '서비스 1', exact: true }).getByLabel('실행 명령', { exact: false }).fill('uv run uvicorn main:app');
   await registration.getByRole('button', { name: '서비스 추가', exact: true }).click();
   const first = registration.getByRole('region', { name: '서비스 1', exact: true });
@@ -76,32 +77,31 @@ try {
   await registration.getByRole('button', { name: '서비스 추가', exact: true }).click();
   await registration.getByRole('button', { name: '서비스 3 제거', exact: true }).click();
   await registration.locator('.modal-body').evaluate(element => { element.scrollTop = 0; });
-  await page.screenshot({ path: 'docs/reviews/screenshots/pad-registration-desktop.png' });
+  await page.screenshot({ path: '.jobs/pad-registration-desktop.png' });
   await registration.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByRole('button', { name: 'NOVA 실행', exact: true })).toBeVisible();
   const nova = groups.find(g => g.name === 'NOVA');
   expect(nova.member_ids.map(id => services.find(s => s.id === id).name)).toEqual(['백엔드', '프론트엔드']);
   expect(services.filter(s => nova.member_ids.includes(s.id)).every(s => s.color === '#f97316')).toBe(true);
-  await page.locator('.pad-wrap').filter({ has: page.getByRole('button', { name: 'NOVA 실행', exact: true }) }).dragTo(page.getByRole('button', { name: '패드 5 서비스 등록', exact: true }));
+  await page.getByRole('button', { name: 'NOVA 자리 이동', exact: true }).dragTo(page.getByRole('button', { name: '패드 5 서비스 등록', exact: true }));
   await expect.poll(() => nova.slot).toBe(4);
-  await page.locator('.pad-wrap').filter({ has: page.getByRole('button', { name: 'Shop 종료', exact: true }) }).dragTo(page.getByRole('button', { name: '패드 9 서비스 등록', exact: true }));
+  await page.getByRole('button', { name: 'Shop 자리 이동', exact: true }).dragTo(page.getByRole('button', { name: '패드 9 서비스 등록', exact: true }));
   await expect.poll(() => groups.find(g => g.id === 'app').slot).toBe(8);
   expect(services.slice(0, 2).map(s => s.pid)).toEqual([100, 101]);
-  await page.locator('.pad-wrap').filter({ has: page.getByRole('button', { name: 'NOVA 실행', exact: true }) }).dragTo(page.getByRole('button', { name: 'Wiki 실행', exact: true }));
+  await page.getByRole('button', { name: 'NOVA 자리 이동', exact: true }).dragTo(page.getByRole('button', { name: 'Wiki 실행', exact: true }));
   expect(positions).toHaveLength(2);
   expect(actions).toEqual([]);
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Shop 메뉴', exact: true }).click(); await page.getByRole('menuitem', { name: '상세' }).click();
-  await page.getByRole('button', { name: 'Shop 백엔드 설정', exact: true }).click();
-  await expect(page.getByRole('dialog', { name: '서비스 설정', exact: true }).locator('.color-field')).toHaveCount(0);
-  await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: '패드 설정', exact: true }).click();
+  // A running pad opens its settings read-only; color is a pad setting, not a service setting.
+  await page.getByRole('button', { name: 'Shop 메뉴', exact: true }).click(); await page.getByRole('menuitem', { name: '설정' }).click();
   const settings = page.getByRole('dialog', { name: '패드 설정', exact: true });
   await expect(settings.getByLabel('패드 이름', { exact: true })).not.toBeEditable();
   await expect(settings.locator('.color-field')).toHaveCount(1);
   await expect(settings.getByRole('button', { name: '블루', exact: true })).toBeDisabled();
+  await settings.getByRole('tab', { name: '서비스', exact: true }).click();
+  await expect(settings.locator('.registration-service .color-field')).toHaveCount(0);
   await expect(settings.getByRole('button', { name: '서비스 추가', exact: true })).toHaveCount(0);
-  await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
   await page.setViewportSize({ width: 390, height: 844 });
   // Use real Chromium touch input to exercise pointer capture and touch hit testing.
   const cdp = await page.context().newCDPSession(page);
@@ -116,15 +116,19 @@ try {
   expect(services.slice(0, 2).map(s => s.pid)).toEqual([100, 101]);
   await expect(page.getByRole('dialog')).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.screenshot({ path: 'docs/reviews/screenshots/pad-move-mobile.png' });
+  await page.screenshot({ path: '.jobs/pad-move-mobile.png' });
   await expect(page.locator('.pad-number')).toHaveCount(0);
   await page.getByRole('button', { name: '서비스 등록', exact: true }).click();
   const mobile = page.getByRole('dialog');
   await mobile.getByLabel('패드 이름', { exact: true }).fill('모바일 등록');
+  await mobile.getByRole('tab', { name: '서비스', exact: true }).click();
   await mobile.getByRole('button', { name: '서비스 추가', exact: true }).click();
   await expect(mobile.locator('.registration-service')).toHaveCount(2);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.screenshot({ path: 'docs/reviews/screenshots/pad-registration-mobile.png' });
+  await page.screenshot({ path: '.jobs/pad-registration-mobile.png' });
   expect(errors).toEqual([]);
   console.log('PAD REGISTRATION UI PASS: inline services, shared color, order/removal, atomic registration, readonly, native desktop drag, occupied target, real mobile touch drag, no pad numbers, no run/stop on drop, toolbar registration');
+} catch (error) {
+  await page.screenshot({ path: '.jobs/pad-registration-ui-test-fail.png', fullPage: true }).catch(() => {});
+  throw error;
 } finally { await browser.close(); }

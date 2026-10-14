@@ -19,7 +19,7 @@ await page.route('http://stackpad.test/**', async route => {
     if (url.pathname === '/api/auth') body = { configured: true, authenticated: true, local: true };
     else if (url.pathname === '/api/usage') body = { providers: [] };
     else if (url.pathname === '/api/services') body = { services, groups, padsets: [{ id: 'default', name: '기본' }], links: {} };
-    else if (url.pathname === '/api/settings') body = { autostart: false, data_dir: 'C:/test' };
+    else if (url.pathname === '/api/settings') body = { onboarding_done: true, recommend_roots: ['C:/Users/me/projects'], autostart: false, data_dir: 'C:/test' };
     else if (url.pathname.endsWith('/logs')) body = { text: `${url.pathname.split('/')[3]} 로그` };
     else if (url.pathname.endsWith('/restart')) { restarted = url.pathname.split('/')[3]; body = { ok: true }; }
     else if (url.pathname.endsWith('/position')) { services.find(s => s.id === 'single').slot = route.request().postDataJSON().slot; body = { ok: true }; }
@@ -99,7 +99,8 @@ try {
   await page.screenshot({ path: '.jobs/pad-ui-general.png' });
   await page.keyboard.press('Escape');
   services[0].active = true; services[0].pid = 12345; services[0].status = 'running';
-  await page.getByRole('button', { name: '새로고침', exact: true }).click();
+  // The deck polls every two seconds, so wait for the running state instead of a refresh button.
+  await expect(page.getByRole('button', { name: '통합 패드 종료', exact: true })).toBeVisible();
   await page.getByRole('button', { name: '통합 패드 메뉴', exact: true }).click();
   await expect(page.getByRole('menuitem', { name: '삭제', exact: true })).toBeDisabled();
   await page.getByRole('menuitem', { name: '설정', exact: true }).click();
@@ -125,4 +126,7 @@ try {
   }
   expect(errors).toEqual([]);
   console.log('PASS: title drag, per-service ports, delete confirmation/cancel, detail tabs/restart/logs, form tabs/validation/save, responsive layouts');
+} catch (error) {
+  await page.screenshot({ path: '.jobs/pad-ui-test-fail.png', fullPage: true }).catch(() => {});
+  throw error;
 } finally { await browser.close(); }

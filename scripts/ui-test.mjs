@@ -5,7 +5,9 @@ import path from 'node:path';
 // Start the engine on a data folder seeded with scripts/ui_session.py.
 const base = 'http://127.0.0.1:48732';
 const session = process.env.STACKPAD_TEST_SESSION || 'stackpad-ui-test-session';
-const screenshots = path.resolve('docs/reviews/screenshots');
+const screenshots = path.resolve('.jobs/ui');
+const root = path.resolve('.');
+const python = path.join(root, '.venv', 'Scripts', 'python.exe');
 await fs.mkdir(screenshots, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ locale: 'ko-KR', viewport: { width: 1440, height: 1120 }, locale: 'ko-KR' });
@@ -30,20 +32,21 @@ try {
   // Register the first fixture using the real editor UI.
   await page.getByRole('button', { name: '패드 1 서비스 등록', exact: true }).click();
   await page.getByLabel('패드 이름').fill('테스트 API');
-  await page.getByLabel('실행 명령').fill('"D:\\PROJECTS\\StackPad\\.venv\\Scripts\\python.exe" -u -m http.server 48821 --bind 127.0.0.1');
-  await page.getByLabel('작업 폴더').fill('D:\\PROJECTS\\StackPad');
+  await page.getByRole('tab', { name: '서비스', exact: true }).click();
+  await page.getByLabel('실행 명령').fill(`"${python}" -u -m http.server 48821 --bind 127.0.0.1`);
+  await page.getByLabel('작업 폴더').fill(root);
   await page.getByLabel('포트', { exact: false }).fill('48821');
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   let services = await request('/services', undefined, 'GET');
   ids.push(services.services[0].id);
   const fixtures = [
-    ['웹 프런트엔드', '#7db5eb', 48822], ['작업 큐', '#f2ad62', null], ['검색 서버', '#c8a0ee', null],
-    ['문서 API', '#ee8e9c', null], ['파일 서버', '#dfcf76', null], ['알림 워커', '#75d9a5', null], ['개발 프록시', '#7db5eb', null],
+    ['웹 프런트엔드', '#3b82f6', 48822], ['작업 큐', '#f97316', null], ['검색 서버', '#a855f7', null],
+    ['문서 API', '#ef3994', null], ['파일 서버', '#facc15', null], ['알림 워커', '#22c55e', null], ['개발 프록시', '#3b82f6', null],
   ];
   for (let index = 0; index < fixtures.length; index++) {
     const [name, color, port] = fixtures[index];
-    const result = await request('/services', { name, color, port, command: `"D:\\PROJECTS\\StackPad\\.venv\\Scripts\\python.exe" -u -m http.server ${port || 48830 + index} --bind 127.0.0.1`, cwd: 'D:\\PROJECTS\\StackPad', health_url: '', slot: index + 1, autostart: index === 0 });
+    const result = await request('/services', { name, color, port, command: `"${python}" -u -m http.server ${port || 48830 + index} --bind 127.0.0.1`, cwd: root, health_url: '', slot: index + 1, autostart: index === 0 });
     ids.push(result.id);
   }
   await expect(page.getByRole('button', { name: '테스트 API 실행', exact: true })).toBeVisible();
@@ -61,8 +64,7 @@ try {
   await page.goto(`${base}/settings`);
   await expect(page.getByRole('heading', { name: '환경 설정', exact: true })).toBeVisible();
   await page.goto(base);
-  await page.getByRole('button', { name: '작업 큐 메뉴', exact: true }).click(); await page.getByRole('menuitem', { name: '상세' }).click();
-  await page.getByRole('button', { name: '설정', exact: true }).click();
+  await page.getByRole('button', { name: '작업 큐 메뉴', exact: true }).click(); await page.getByRole('menuitem', { name: '설정' }).click();
   const dialog = page.getByRole('dialog', { name: '패드 설정', exact: true });
   await expect(dialog).toBeVisible();
   // Verify the shared desktop modal can be moved and keeps focus inside.

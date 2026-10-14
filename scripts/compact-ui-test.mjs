@@ -16,10 +16,11 @@ await page.route('http://stackpad.test/**', async route => {
     if (url.pathname === '/api/auth') body = { configured: true, authenticated: true };
     else if (url.pathname === '/api/usage') body = { providers: [] };
     else if (url.pathname === '/api/services') body = { services };
-    else if (url.pathname === '/api/settings') body = { hostname: '내 PC', data_dir: 'C:/Users/test/StackPad', autostart: startup, cpu: 12, memory: 38 };
+    else if (url.pathname === '/api/settings') body = { onboarding_done: true, hostname: '내 PC', data_dir: 'C:/Users/test/StackPad', autostart: startup, cpu: 12, memory: 38 };
     else if (url.pathname === '/api/settings/autostart') { startup = route.request().postDataJSON().enabled; body = { ok: true }; }
     else if (url.pathname.endsWith('/logs')) body = { text: '서비스 실행 로그\n' + '긴 로그 '.repeat(100) };
     else if (/\/services\/1\/(start|stop)$/.test(url.pathname)) { actions++; Object.assign(services[1], url.pathname.endsWith('/start') ? { pid: 2, status: 'running' } : { pid: null, status: 'stopped' }); body = { ok: true }; }
+    else if (url.pathname === '/api/devices') body = { devices: [], current: null };
     else throw new Error(`Unexpected API: ${url.pathname}`);
     if (url.pathname === '/api/services') {
       body.padsets = [{ id: 'default', name: '기본' }];
@@ -51,7 +52,7 @@ try {
   }
   await page.setViewportSize({ width: 1280, height: 930 });
   await fs.mkdir('docs/reviews/screenshots', { recursive: true });
-  await page.screenshot({ path: 'docs/reviews/screenshots/compact-desktop.png' });
+  await page.screenshot({ path: '.jobs/compact-desktop.png' });
   await page.getByRole('button', { name: 'Shop 백엔드 실행', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Shop 백엔드 종료', exact: true })).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -60,13 +61,13 @@ try {
   expect(actions).toBe(2);
   await page.getByRole('button', { name: '환경 설정', exact: true }).click();
   await expect(page.getByRole('dialog', { name: '환경 설정', exact: true })).toBeVisible();
-  await page.getByRole('switch').click();
+  await page.getByRole('switch', { name: 'Windows 로그인 시 자동 실행' }).click();
   await expect(page.getByRole('dialog', { name: '설정을 반영했습니다' })).toBeVisible();
   await page.getByRole('button', { name: '확인', exact: true }).click();
-  await expect(page.getByRole('switch')).toBeChecked();
+  await expect(page.getByRole('switch', { name: 'Windows 로그인 시 자동 실행' })).toBeChecked();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: '시스템 모니터', exact: true })).toHaveCount(0);
-  expect(await page.locator('.toolbar-actions .tool-button').evaluateAll(buttons => buttons.map(b => b.getAttribute('aria-label')))).toEqual(['새로고침', '등록 추천', '서비스 등록', '환경 설정']);
+  expect(await page.locator('.toolbar-actions .tool-button').evaluateAll(buttons => buttons.map(b => b.getAttribute('aria-label')))).toEqual(['등록 추천', '서비스 등록', '환경 설정']);
   await expect(page.locator('.toolbar-actions').getByRole('button', { name: '로그아웃', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: '환경 설정', exact: true }).click();
   await page.getByRole('tab', { name: '계정', exact: true }).click();
@@ -75,14 +76,17 @@ try {
   await page.keyboard.press('Escape');
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.screenshot({ path: 'docs/reviews/screenshots/compact-mobile.png' });
+  await page.screenshot({ path: '.jobs/compact-mobile.png' });
   await page.getByRole('button', { name: 'Blog 백엔드 메뉴', exact: true }).click(); await page.getByRole('menuitem', { name: '상세' }).click();
   await expect(page.getByRole('dialog', { name: 'Blog 백엔드', exact: true })).toBeVisible();
   await expect(page.locator('.log-panel pre')).toContainText('서비스 실행 로그');
-  await page.screenshot({ path: 'docs/reviews/screenshots/compact-detail-mobile.png' });
+  await page.screenshot({ path: '.jobs/compact-detail-mobile.png' });
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '패드 6 서비스 등록', exact: true }).click();
   await expect(page.getByRole('dialog').getByLabel('패드 이름', { exact: true })).toBeEditable();
   expect(errors).toEqual([]);
   console.log('COMPACT UI PASS: toolbar and 16 pads, start/stop, settings modal without system monitor, nested notice, detail/logs, new registration, desktop and mobile');
+} catch (error) {
+  await page.screenshot({ path: '.jobs/compact-ui-test-fail.png', fullPage: true }).catch(() => {});
+  throw error;
 } finally { await browser.close(); }

@@ -39,6 +39,7 @@ try {
   // Register a remote pad with the systemd helper and a connection test.
   await page.getByRole('button', { name: '패드 1 서비스 등록' }).click();
   await page.getByLabel('패드 이름').fill('주문 API');
+  await page.getByRole('tab', { name: '서비스', exact: true }).click();
   await page.getByRole('radio', { name: '원격 서버' }).click();
   await expect(page.getByRole('radio', { name: '원격 서버' })).toHaveAttribute('aria-checked', 'true');
   await expect(page.getByLabel('실행 명령')).toHaveCount(0);
@@ -50,6 +51,7 @@ try {
   await page.getByRole('button', { name: '명령 채우기' }).click();
   await expect(page.getByLabel('시작 명령', { exact: true })).toHaveValue('sudo systemctl start order-api');
   await expect(page.getByLabel('상태 명령', { exact: true })).toHaveValue('systemctl is-active --quiet order-api');
+  await page.getByRole('tab', { name: '일반', exact: true }).click();
   await expect(page.getByText('자동 실행 대상에서 제외됩니다')).toBeVisible();
   await page.screenshot({ path: path.join(shots, 'remote-form-pc.png') });
   await page.getByRole('button', { name: '저장' }).click();
@@ -70,7 +72,7 @@ try {
   await expect(dialog).toContainText('호스트');
   await expect(dialog).toContainText('시작 성공');
   await expect(dialog.locator('.log-panel pre')).toContainText('line 2 한글', { timeout: 10000 });
-  await expect(dialog).toContainText('원격 로그');
+  await expect(dialog).toContainText('실행 로그');
   await page.screenshot({ path: path.join(shots, 'remote-detail-pc.png') });
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
@@ -78,6 +80,7 @@ try {
   // An unreachable host shows a connection failure.
   await page.getByRole('button', { name: '패드 2 서비스 등록' }).click();
   await page.getByLabel('패드 이름').fill('NAS');
+  await page.getByRole('tab', { name: '서비스', exact: true }).click();
   await page.getByRole('radio', { name: '원격 서버' }).click();
   await page.getByLabel('호스트', { exact: true }).fill('down');
   await page.getByLabel('systemd 서비스 이름').fill('nas-app');
@@ -99,7 +102,9 @@ try {
   await page.getByRole('button', { name: '패드 4 서비스 등록' }).click();
   await page.getByLabel('패드 이름').fill('웹앱');
   await page.getByLabel('도메인 URL').fill('https://webapp.example.com/');
+  await page.getByRole('tab', { name: '서비스', exact: true }).click();
   await page.getByLabel('실행 명령').fill('echo web');
+  await page.getByLabel('작업 폴더').fill(root);
   await page.getByLabel('포트').fill('48799');
   await page.getByPlaceholder('http://127.0.0.1:8000/health').fill('http://127.0.0.1:48799/app/');
   await page.getByRole('button', { name: '저장' }).click();
@@ -128,10 +133,11 @@ try {
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '주문 API 메뉴' }).click();
   await page.getByRole('menuitem', { name: '설정' }).click();
-  await expect(page.getByText('이 PC에서 접속해 변경할 수 있어요')).toBeVisible();
+  await page.getByRole('tab', { name: '서비스', exact: true }).click();
   await expect(page.getByLabel('시작 명령', { exact: true })).toHaveAttribute('readonly', '');
   await page.getByText('닫기', { exact: true }).click();
   await page.getByRole('button', { name: '패드 3 서비스 등록' }).click();
+  await page.getByRole('tab', { name: '서비스', exact: true }).click();
   await expect(page.getByRole('radio', { name: '원격 서버' })).toBeDisabled();
   await page.getByRole('button', { name: '취소' }).click();
   await page.unroute(`${base}/api/auth`);
@@ -142,6 +148,7 @@ try {
   await expect(page.getByRole('button', { name: 'NAS 실행' })).toBeVisible();
   await page.screenshot({ path: path.join(shots, 'remote-pads-mobile.png') });
   await page.getByRole('button', { name: '패드 3 서비스 등록' }).click();
+  await page.getByRole('tab', { name: '서비스', exact: true }).click();
   await page.getByRole('radio', { name: '원격 서버' }).click();
   const overflow = await page.evaluate(() => [...document.querySelectorAll('.remote-fields *')].some(el => el.getBoundingClientRect().right > window.innerWidth + 1));
   if (overflow) throw new Error('remote form overflows on mobile');

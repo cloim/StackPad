@@ -2,7 +2,7 @@ import { chromium, expect } from '@playwright/test';
 
 // Start the engine on a data folder seeded with scripts/ui_session.py.
 const base = 'http://127.0.0.1:48739';
-const session = process.env.STACKPAD_TEST_SESSION || 'stackpad-ui-test-session';
+const sessionToken = process.env.STACKPAD_TEST_SESSION || 'stackpad-ui-test-session';
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ locale: 'ko-KR', viewport: { width: 390, height: 844 } });
 const page = await context.newPage();
@@ -25,7 +25,7 @@ try {
   const session = await page.context().newCDPSession(page);
   const { installabilityErrors: installErrors } = await session.send('Page.getInstallabilityErrors');
   expect(installErrors).toEqual([]);
-  await context.addCookies([{ name: 'stackpad_session', value: session, url: base }]);
+  await context.addCookies([{ name: 'stackpad_session', value: sessionToken, url: base }]);
   await page.reload();
   await expect(page.getByRole('main', { name: '서비스 패드' })).toBeVisible();
   const cachedUrls = await page.evaluate(async () => {
