@@ -248,3 +248,4 @@
 .settings-actions>.section-heading{margin-right:auto;flex:1;min-width:220px}.settings-actions>p.optional{margin-right:auto;flex:1}
 .usage-switches{display:flex;flex-wrap:wrap;gap:10px}.usage-switch{flex-direction:row;align-items:center;justify-content:space-between;gap:12px;flex:1;min-width:170px;padding:10px 12px;border:1px solid #414a4d;border-radius:8px;background:#22282a;color:#d9dfdf}.usage-switch .switch{margin-left:0}
 .pair-link{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+@media(max-height:560px){.app-shell .pad.assigned{padding-top:24px;padding-bottom:4px}.app-shell .pad-state{padding-top:0}.app-shell .pad-port{gap:1px}}
