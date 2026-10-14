@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">StackPad</string>
+    <string name="title_activity_main">StackPad</string>
+    <string name="package_name">com.cloimism.stackpad</string>
+    <string name="custom_url_scheme">com.cloimism.stackpad</string>
+    <string name="widget_title">Agent limits</string>
+    <string name="widget_loading">Loading usage…</string>
+    <string name="widget_description">5-hour and weekly usage of Claude, Codex and Antigravity</string>
+    <string name="widget_sign_in">Sign in from the StackPad app</string>
+    <string name="widget_connects_after_sign_in">Connects after you sign in to the app</string>
+    <string name="widget_sign_in_again">Sign in again from the app</string>
+    <string name="widget_engine_off">The PC engine is off</string>
+    <string name="widget_check_access">Check remote access to the PC</string>
+    <string name="widget_usage_failed">Could not load usage</string>
+    <string name="widget_check_network">Check the network connection</string>
+    <string name="widget_usage_off">Turn on AI usage in StackPad Settings on the PC</string>
+    <string name="widget_unavailable">Unavailable</string>
+    <string name="widget_hours_ago">%1$dh ago</string>
+    <string name="widget_minutes_ago">%1$dm ago</string>
+    <string name="bridge_invalid_server">The PC address must start with https://.</string>
+    <string name="bridge_invalid_widget">The widget connection details are invalid.</string>
+    <string name="bridge_pin_unsupported">This launcher cannot add widgets from the app. Long-press the home screen and add it from Widgets.</string>
+</resources>

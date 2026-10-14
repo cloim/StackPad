@@ -1,0 +1,111 @@
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import QRCode from 'qrcode';
+import { Globe, KeyRound, LogOut, QrCode, Smartphone, UserPlus, Users } from 'lucide-react';
+import { CopyValue, OAuthClientForm, OAuthGuide, TailscaleConnect } from './AuthSetup.jsx';
+import { isNative, pinWidget } from '../native.js';
+import { t } from '../i18n.js';
+
+function dateLabel(seconds) {
+  return new Date(seconds * 1000).toLocaleString(undefined, { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function Accounts({ settings, api, reload, onError }) {
+  const [email, setEmail] = useState('');
+  const [busy, setBusy] = useState(false);
+  async function run(action) {
+    setBusy(true);
+    try { await action(); await reload(); } catch (e) { onError(e.message); } finally { setBusy(false); }
+  }
+  return <section className="settings-card vertical">
+    <div className="section-heading"><Users size={22} /><div><h2>{t('허용 계정')}</h2><p>{t('이 Google 계정들만 로그인할 수 있어요. 계정을 삭제하면 그 계정의 로그인도 바로 해제됩니다.')}</p></div></div>
+    <div className="component-list">{settings.accounts.map(account => <div className="component-row" key={account}>
+      <div><strong>{account}</strong>{account === settings.owner && <p>{t('소유자')}</p>}</div>
+      {account !== settings.owner && <div className="component-actions"><button className="secondary" disabled={busy} onClick={() => run(() => api(`/auth/accounts/${encodeURIComponent(account)}`, { method: 'DELETE' }))} aria-label={t('{0} 삭제', account)}>{t('삭제')}</button></div>}
+    </div>)}</div>
+    <p className="optional">{t('Google OAuth 클라이언트가 테스트 상태라면 추가한 계정을 Google 인증 플랫폼의 테스트 사용자에도 넣어 주세요.')}</p>
+    <form className="settings-actions" onSubmit={event => { event.preventDefault(); run(async () => { await api('/auth/accounts', { method: 'POST', body: JSON.stringify({ email }) }); setEmail(''); }); }}>
+      <input type="email" required aria-label={t('추가할 Google 계정')} placeholder="name@gmail.com" value={email} onChange={e => setEmail(e.target.value)} />
+      <button className="primary" disabled={busy}><UserPlus size={15} />{t('추가')}</button>
+    </form>
+  </section>;
+}
+
+// The QR carries the external address and a five-minute, single-use code; the phone app scans it to sign in.
+function PhonePairing({ settings, api, onError }) {
+  const [pairing, setPairing] = useState(null);
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (!pairing) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [pairing]);
+  async function show() {
+    try {
+      const result = await api('/pairing', { method: 'POST' });
+      const svg = await QRCode.toString(result.link, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#111111', light: '#ffffff' } });
+      setPairing({ svg, expires: Date.now() + result.expires_in * 1000 }); setNow(Date.now());
+    } catch (e) { onError(e.message); }
+  }
+  const left = pairing ? Math.max(0, Math.round((pairing.expires - now) / 1000)) : 0;
+  return <section className="settings-card vertical">
+    <div className="settings-actions"><div className="section-heading"><QrCode size={22} /><div><h2>{t('휴대폰 연결')}</h2><p>{t('휴대폰에 Tailscale과 StackPad Android 앱을 설치하고, 앱에서 이 QR 코드를 찍으면 바로 연결돼요.')}</p></div></div>
+      <button className="secondary" disabled={!settings.external_url} onClick={show}>{pairing ? t('새 QR 코드') : t('QR 코드 표시')}</button></div>
+    {!settings.external_url && <p className="optional">{t('먼저 외부 접속을 연결해 주세요.')}</p>}
+    {pairing && (left > 0 ? <div className="pairing-qr"><div className="qr-image" role="img" aria-label={t('휴대폰 연결 QR 코드')} dangerouslySetInnerHTML={{ __html: pairing.svg }} /><p className="optional">{t('{0}분 {1}초 동안 한 번 사용할 수 있어요.', Math.floor(left / 60), left % 60)}</p></div>
+      : <p className="optional">{t('QR 코드가 만료되었습니다. 새 QR 코드를 띄워 주세요.')}</p>)}
+    <p className="optional">{t('Android 앱 내려받기:')} <a className="text-link" href="https://github.com/cloim/StackPad/releases/latest" target="_blank" rel="noreferrer">GitHub Releases</a>. {t('iPhone은 Safari에서 외부 주소를 열고 홈 화면에 추가하세요.')}</p>
+  </section>;
+}
+
+function Devices({ api, onError }) {
+  const [data, setData] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const report = useRef(onError);
+  report.current = onError;
+  const load = useCallback(async () => {
+    try { setData(await api('/devices')); } catch (e) { setData({ devices: [] }); report.current(e.message); }
+  }, [api]);
+  useEffect(() => { load(); }, [load]);
+  async function revoke(device) {
+    setBusy(true);
+    try { await api(`/devices/${device.id}`, { method: 'DELETE' }); await load(); }
+    catch (e) { onError(e.message); } finally { setBusy(false); }
+  }
+  return <section className="settings-card vertical">
+    <div className="settings-actions"><div className="section-heading"><Smartphone size={22} /><div><h2>{t('연결된 기기')}</h2><p>{t('QR 코드로 연결한 휴대폰입니다. 해제하면 앱과 홈 화면 위젯의 연결이 바로 끊어져요.')}</p></div></div>
+      {isNative && <button className="secondary" onClick={() => pinWidget().catch(e => onError(e.message))}>{t('위젯 추가')}</button>}</div>
+    {data === null ? <div className="widget-device skeleton" aria-label={t('연결된 기기 불러오는 중')} /> : !data.devices.length ? <p className="optional">{t('연결된 기기가 없습니다.')}</p> : <div className="component-list">{data.devices.map(device => <div className="component-row" key={device.id}>
+      <div><strong>{device.name}{device.id === data.current ? t(' (이 기기)') : ''}</strong><p>{device.email} {t('| 연결')} {dateLabel(device.created_at)}</p></div>
+      <div className="component-actions"><button className="secondary" disabled={busy} onClick={() => revoke(device)} aria-label={t('{0} 연결 해제', device.name)}>{t('해제')}</button></div>
+    </div>)}</div>}
+  </section>;
+}
+
+export function AccountSettings({ auth, api, onError, onLogout }) {
+  const [settings, setSettings] = useState(null);
+  const [editingClient, setEditingClient] = useState(false);
+  const report = useRef(onError);
+  report.current = onError;
+  const load = useCallback(async () => {
+    if (!auth.local) return;
+    try { setSettings(await api('/auth/settings')); } catch (e) { report.current(e.message); }
+  }, [api, auth.local]);
+  useEffect(() => { load(); }, [load]);
+  return <>
+    <section className="settings-card"><div className="settings-icon"><LogOut size={22} /></div><div><h2>{auth.email}</h2><p>{isNative ? t('이 기기의 로그인을 해제합니다.') : t('이 브라우저의 로그인을 해제합니다.')}</p></div><button className="secondary logout-button" onClick={onLogout}>{t('로그아웃')}</button></section>
+    {!auth.local && <p className="optional">{t('허용 계정, 외부 접속과 휴대폰 연결은 StackPad가 실행 중인 PC에서 설정할 수 있어요.')}</p>}
+    {settings && <>
+      <Accounts {...{ settings, api, onError }} reload={load} />
+      <section className="settings-card vertical"><div className="section-heading"><Globe size={22} /><div><h2>{t('외부 접속')}</h2><p>{t('Tailscale로 이 PC에 HTTPS 주소를 연결해 내 기기에서 접속합니다.')}</p></div></div>
+        <TailscaleConnect api={api} onConnected={load} onError={onError} /></section>
+      <PhonePairing {...{ settings, api, onError }} />
+    </>}
+    <Devices {...{ api, onError }} />
+    {settings && <section className="settings-card vertical"><div className="settings-actions"><div className="section-heading"><KeyRound size={22} /><div><h2>{t('Google 로그인 설정')}</h2><p><code>{settings.client_id}</code></p></div></div>
+      <button className="secondary" onClick={() => setEditingClient(value => !value)}>{editingClient ? t('닫기') : t('변경')}</button></div>
+      <p className="optional">{t('외부 주소를 새로 연결했다면 아래 리디렉션 URI가 OAuth 클라이언트에 모두 등록되어 있는지 확인해 주세요.')}</p>
+      {settings.redirect_uris.map(uri => <CopyValue key={uri} value={uri} label={t('리디렉션 URI')} />)}
+      {editingClient && <><OAuthGuide /><OAuthClientForm api={api} current={settings} onSaved={async () => { setEditingClient(false); await load(); }} onError={onError} /></>}
+    </section>}
+  </>;
+}

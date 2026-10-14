@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="widget_title">에이전트 한도</string>
+    <string name="widget_loading">사용량을 불러오는 중이에요</string>
+    <string name="widget_description">Claude, Codex와 Antigravity의 5시간, 1주일 사용률</string>
+    <string name="widget_sign_in">StackPad 앱에서 로그인해 주세요</string>
+    <string name="widget_connects_after_sign_in">앱에서 로그인하면 연결됩니다</string>
+    <string name="widget_sign_in_again">앱에서 다시 로그인해 주세요</string>
+    <string name="widget_engine_off">PC 엔진이 꺼져 있어요</string>
+    <string name="widget_check_access">PC 외부 접속을 확인해 주세요</string>
+    <string name="widget_usage_failed">사용량을 불러오지 못했어요</string>
+    <string name="widget_check_network">네트워크 연결을 확인해 주세요</string>
+    <string name="widget_usage_off">PC의 StackPad 환경 설정에서 AI 사용량을 켜 주세요</string>
+    <string name="widget_unavailable">조회 실패</string>
+    <string name="widget_hours_ago">%1$d시간 전</string>
+    <string name="widget_minutes_ago">%1$d분 전</string>
+    <string name="bridge_invalid_server">PC 주소는 https://로 시작해야 합니다.</string>
+    <string name="bridge_invalid_widget">위젯 연결 정보가 올바르지 않습니다.</string>
+    <string name="bridge_pin_unsupported">이 런처는 앱에서 위젯 추가를 지원하지 않습니다. 홈 화면을 길게 눌러 위젯에서 추가해 주세요.</string>
+</resources>

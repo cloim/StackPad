@@ -1,0 +1,54 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "StackPad",
+  "version": "../package.json",
+  "identifier": "com.cloimism.stackpad",
+  "build": {
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis"
+    ],
+    "createUpdaterArtifacts": true,
+    "externalBin": [
+      "binaries/StackPadEngine"
+    ],
+    "icon": [
+      "icons/icon.ico",
+      "icons/icon.png"
+    ],
+    "publisher": "StackPad",
+    "shortDescription": "StackPad",
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "installerHooks": "./windows/hooks.nsh",
+        "languages": [
+          "English",
+          "Korean"
+        ],
+        "displayLanguageSelector": false
+      }
+    }
+  },
+  "mainBinaryName": "StackPad",
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEFDNTNENTQ5RjA4NzZFQUMKUldTc2JvZndTZFZUckpOTlZmaGVnMnpHWGdOdmZuMCtoZXFUTVdxQnoyTmE1dFhuT0ZzbDYwRmIK",
+      "endpoints": [
+        "https://github.com/cloim/StackPad/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

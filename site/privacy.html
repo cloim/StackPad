@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StackPad Privacy Policy</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <header><img src="favicon.svg" alt="" width="40" height="40"><h1>Privacy Policy</h1></header>
+  <p class="meta">Last updated: October 14, 2026</p>
+
+  <h2>Summary</h2>
+  <p>StackPad runs entirely on your own Windows PC. The StackPad project does not operate any server and does not receive, store or share your data.</p>
+
+  <h2>Google sign-in</h2>
+  <p>StackPad uses Google sign-in with an OAuth client that you create in your own Google Cloud project. It requests only the <code>openid</code> and <code>email</code> scopes. Your email address is used to check whether the account is allowed to use your StackPad, and is stored on your PC in the list of allowed accounts and in your sign-in records. StackPad does not request access to Gmail, Drive or any other Google data, and does not keep Google access tokens after sign-in.</p>
+
+  <h2>Data stored on your PC</h2>
+  <ul>
+    <li>Your pads and service settings, logs, allowed accounts and the OAuth client you entered, in <code>%USERPROFILE%\.config\stackpad</code></li>
+    <li>Sign-in sessions and phone connections, stored only as hashes</li>
+    <li>If you turn on AI usage, StackPad reads the credentials that Claude Code, Codex or Antigravity already saved on your PC and asks those services for your usage. It does not change or copy those credentials.</li>
+  </ul>
+
+  <h2>Phone app</h2>
+  <p>The Android app stores the address of your PC and a sign-in cookie on the phone, and talks only to your PC. To check for new versions it asks GitHub for the latest release.</p>
+
+  <h2>Third parties</h2>
+  <p>Requests go only to Google during sign-in, to Tailscale if you use it for remote access, to GitHub for update checks, and to the AI services you turned on. Their own privacy policies apply.</p>
+
+  <h2>Contact</h2>
+  <p>Questions: <a href="https://github.com/cloim/StackPad/issues">github.com/cloim/StackPad/issues</a></p>
+
+  <section id="ko" lang="ko">
+    <h2>개인정보처리방침 (한국어)</h2>
+    <p>StackPad는 사용자의 Windows PC에서만 동작합니다. StackPad 프로젝트는 서버를 운영하지 않으며 사용자의 데이터를 받거나 저장하거나 공유하지 않습니다.</p>
+    <p><b>Google 로그인</b>: 사용자가 자신의 Google Cloud 프로젝트에 만든 OAuth 클라이언트로 <code>openid</code>와 <code>email</code> 범위만 요청합니다. 이메일 주소는 허용된 계정인지 확인하는 데 쓰이며 허용 계정 목록과 로그인 기록에 PC에만 저장됩니다. Gmail, Drive 등 다른 Google 데이터에는 접근하지 않고, 로그인 후 Google 액세스 토큰을 보관하지 않습니다.</p>
+    <p><b>PC에 저장하는 정보</b>: 패드와 서비스 설정, 로그, 허용 계정, 입력한 OAuth 클라이언트는 <code>%USERPROFILE%\.config\stackpad</code>에 저장합니다. 로그인 세션과 휴대폰 연결은 해시로만 저장합니다. AI 사용량을 켜면 Claude Code, Codex, Antigravity가 PC에 저장해 둔 자격 증명을 읽어 사용량을 조회하며, 자격 증명을 바꾸거나 복사하지 않습니다.</p>
+    <p><b>휴대폰 앱</b>: PC 주소와 로그인 쿠키를 휴대폰에 저장하고 사용자의 PC하고만 통신합니다. 새 버전 확인을 위해 GitHub에 최신 릴리스를 조회합니다.</p>
+    <p><b>제3자</b>: 로그인할 때 Google, 외부 접속에 Tailscale, 업데이트 확인에 GitHub, 켜 둔 AI 서비스로만 요청을 보내며 각 서비스의 개인정보처리방침이 적용됩니다.</p>
+    <p><b>문의</b>: <a href="https://github.com/cloim/StackPad/issues">github.com/cloim/StackPad/issues</a></p>
+  </section>
+  <footer><a href="./">StackPad</a></footer>
+</main>
+</body>
+</html>
