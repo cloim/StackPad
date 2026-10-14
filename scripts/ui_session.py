@@ -18,6 +18,8 @@ def seed(data_dir, token=DEFAULT_TOKEN):
     data.mkdir(parents=True, exist_ok=True)
     config_path = data / 'config.json'
     config = json.loads(config_path.read_text('utf-8')) if config_path.exists() else {'services': []}
+    # UI tests start from the deck, not the first-run folder prompt.
+    config['onboarding_done'] = True
     config['auth'] = {'client_id': 'ui-test.apps.googleusercontent.com', 'client_secret': 'ui-test', 'owner': OWNER, 'allowed': [OWNER]}
     config_path.write_text(json.dumps(config, ensure_ascii=False, indent=2), 'utf-8')
     sessions_path = data / 'sessions.json'
