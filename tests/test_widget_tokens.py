@@ -1,3 +1,4 @@
+import json
 import sys
 import tempfile
 import unittest
@@ -58,6 +59,16 @@ class WidgetTokenTests(unittest.TestCase):
         self.assertEqual(app.post('/api/logout').status_code, 403)
         crafted = {'X-StackPad-Client': 'android', 'Origin': 'https://attacker.example'}
         self.assertEqual(app.post('/api/logout', headers=crafted).status_code, 403)
+
+    def test_tokens_without_device_are_dropped(self):
+        path = self.data / 'widget-tokens.json'
+        records = json.loads(path.read_text('utf-8'))
+        records.append({'id': 'old', 'name': 'Former app', 'hash': 'a' * 64, 'created_at': 0, 'last_used_at': None})
+        path.write_text(json.dumps(records), 'utf-8')
+        from widget_tokens import WidgetTokens
+        tokens = WidgetTokens(lambda: self.data)
+        self.assertEqual([r['id'] for r in tokens.records], [self.token_id])
+        self.assertNotIn('Former app', path.read_text('utf-8'))
 
     def test_only_token_hash_is_stored(self):
         content = (self.data / 'widget-tokens.json').read_text('utf-8')
