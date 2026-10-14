@@ -138,7 +138,8 @@ def collect_usage(home=None, refresh=False, enabled=None):
     if not names:
         return []
     key = (home, names)
-    requested_at = time.monotonic()
+    # perf_counter: Windows monotonic ticks every 15 ms, which made a refresh look like a concurrent request.
+    requested_at = time.perf_counter()
     with _cache_lock:
         cached = _cache.get(key)
         if cached and ((not refresh and requested_at - cached[0] < CACHE_SECONDS) or cached[0] >= requested_at):
@@ -146,5 +147,5 @@ def collect_usage(home=None, refresh=False, enabled=None):
         with ThreadPoolExecutor(max_workers=3) as pool:
             results = list(pool.map(lambda name: COLLECTORS[name](home), names))
             providers = [provider for result in results for provider in (result if isinstance(result, list) else [result])]
-        _cache[key] = (time.monotonic(), providers)
+        _cache[key] = (time.perf_counter(), providers)
         return copy.deepcopy(providers)
