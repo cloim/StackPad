@@ -12,7 +12,14 @@ jobs:
     env:
       # Tests compare Korean source messages; the runner's Windows language is English.
       STACKPAD_LANG: ko
+      # Fixtures print Korean and compare full paths; avoid the runner's cp1252 console and 8.3 short temp path.
+      PYTHONUTF8: '1'
     steps:
+      - name: Use the runner temp folder, which has no 8.3 short name
+        shell: pwsh
+        run: |
+          "TEMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
+          "TMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
