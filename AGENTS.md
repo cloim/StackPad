@@ -6,10 +6,10 @@
 
 ## PC 배포
 
-- 소스 수정과 웹 빌드 작업의 기본 완료 범위에 데스크톱 실행 파일 빌드, 로컬 배포와 적용 검증을 포함한다.
-- `scripts/build.py --release-dir <임시 경로>`를 WMI 작업자로 실행해 별도 경로에 패키징하고 검증한 뒤 `scripts/deploy-local-update.py <임시 경로>`로 `release/StackPad`에 배포한다.
-- 배포 전에 기존 실행 파일과 사용자 설정을 백업한다. 등록된 패드, 인증 설정, 로그와 실행 중인 서비스는 보존한다. 데이터 구조 변경 시 의도한 이전만 발생했는지 확인한다.
-- 배포 후 패키지 파일, 관리 엔진 상태와 변경 기능을 확인한 다음 완료를 보고한다.
+- 형님 PC는 설치판(`%LOCALAPPDATA%\StackPad`)을 쓰며 태그 릴리스를 트레이의 업데이트 설치로 받는다. 로컬 빌드로 설치 폴더를 직접 덮어쓰지 않는다.
+- 소스 수정과 웹 빌드 작업의 기본 완료 범위에 `scripts/build.py --release-dir <임시 경로>`(WMI 작업자) 패키징과 `scripts/package-smoke.py <임시 경로>\StackPadEngine.exe` 검증을 포함한다.
+- 사용자에게 반영할 변경은 버전을 올려 태그 릴리스를 게시하고, 트레이 업데이트 후 엔진 버전, 등록된 패드, 인증 설정과 실행 중인 서비스 보존을 확인한 다음 완료를 보고한다.
+- `scripts/deploy-local-update.py`는 포터블 폴더(`release/StackPad`)를 쓰는 환경에서만 사용한다.
 
 ## Android 앱
 
