@@ -1,0 +1,20 @@
+{
+  "appId": "com.cloimism.stackpad",
+  "appName": "StackPad",
+  "webDir": "dist",
+  "android": {
+    "path": "android"
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    },
+    "CapacitorCookies": {
+      "enabled": true
+    },
+    "SystemBars": {
+      "style": "DARK"
+    }
+  },
+  "backgroundColor": "#202122"
+}

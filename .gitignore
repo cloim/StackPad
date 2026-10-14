@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.venv/
+.jobs/
+__pycache__/
+*.pyc
+src-tauri/target/
+src-tauri/binaries/*.exe
+build/
+release/
+*.spec
+.test-data/
+%programdata%/
+
+# Research, plans and reviews stay on the local machine.
+docs/

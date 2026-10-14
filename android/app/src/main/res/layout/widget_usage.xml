@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Detailed layout for two or more rows: reset times included, rows packed without a title. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingStart="10dp"
+    android:paddingEnd="10dp"
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp">
+    <LinearLayout android:id="@+id/rows" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="center_vertical" android:orientation="vertical" android:visibility="gone">
+        <LinearLayout android:id="@+id/row_0" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:orientation="horizontal" android:gravity="center_vertical" android:visibility="gone">
+            <TextView android:id="@+id/name_0" android:layout_width="96dp" android:layout_height="wrap_content" android:textColor="#FFF2F4F3" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+            <TextView android:id="@+id/message_0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#FFB4B8BA" android:textSize="11sp" android:maxLines="1" android:ellipsize="end" android:visibility="gone" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+            <LinearLayout android:id="@+id/window_0_0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="0dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                    <TextView android:id="@+id/label_0_0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFB4B8BA" android:textSize="10sp" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+                    <TextView android:id="@+id/percent_0_0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="4dp" android:textColor="#FF75D9A5" android:textSize="12sp" android:textStyle="bold" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+                    <TextView android:id="@+id/reset_0_0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFB4B8BA" android:textSize="10sp" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+                </LinearLayout>
+                <ProgressBar android:id="@+id/bar_0_0" style="@android:style/Widget.ProgressBar.Horizontal" android:layout_width="match_parent" android:layout_height="4dp" android:layout_marginTop="2dp" android:max="100" android:progressDrawable="@drawable/widget_progress" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/window_0_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="10dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                    <TextView android:id="@+id/label_0_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFB4B8BA" android:textSize="10sp" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+                    <TextView android:id="@+id/percent_0_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="4dp" android:textColor="#FF75D9A5" android:textSize="12sp" android:textStyle="bold" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+                    <TextView android:id="@+id/reset_0_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFB4B8BA" android:textSize="10sp" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+                </LinearLayout>
+                <ProgressBar android:id="@+id/bar_0_1" style="@android:style/Widget.ProgressBar.Horizontal" android:layout_width="match_parent" android:layout_height="4dp" android:layout_marginTop="2dp" android:max="100" android:progressDrawable="@drawable/widget_progress" />
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/row_1" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:orientation="horizontal" android:gravity="center_vertical" android:visibility="gone">
+            <TextView android:id="@+id/name_1" android:layout_width="96dp" android:layout_height="wrap_content" android:textColor="#FFF2F4F3" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+            <TextView android:id="@+id/message_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#FFB4B8BA" android:textSize="11sp" android:maxLines="1" android:ellipsize="end" android:visibility="gone" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+            <LinearLayout android:id="@+id/window_1_0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="0dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                    <TextView android:id="@+id/label_1_0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFB4B8BA" android:textSize="10sp" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+                    <TextView android:id="@+id/percent_1_0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="4dp" android:textColor="#FF75D9A5" android:textSize="12sp" android:textStyle="bold" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+                    <TextView android:id="@+id/reset_1_0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFB4B8BA" android:textSize="10sp" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+                </LinearLayout>
+                <ProgressBar android:id="@+id/bar_1_0" style="@android:style/Widget.ProgressBar.Horizontal" android:layout_width="match_parent" android:layout_height="4dp" android:layout_marginTop="2dp" android:max="100" android:progressDrawable="@drawable/widget_progress" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/window_1_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="10dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                    <TextView android:id="@+id/label_1_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFB4B8BA" android:textSize="10sp" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+                    <TextView android:id="@+id/percent_1_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="4dp" android:textColor="#FF75D9A5" android:textSize="12sp" android:textStyle="bold" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+                    <TextView android:id="@+id/reset_1_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFB4B8BA" android:textSize="10sp" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+                </LinearLayout>
+                <ProgressBar android:id="@+id/bar_1_1" style="@android:style/Widget.ProgressBar.Horizontal" android:layout_width="match_parent" android:layout_height="4dp" android:layout_marginTop="2dp" android:max="100" android:progressDrawable="@drawable/widget_progress" />
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/row_2" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:orientation="horizontal" android:gravity="center_vertical" android:visibility="gone">
+            <TextView android:id="@+id/name_2" android:layout_width="96dp" android:layout_height="wrap_content" android:textColor="#FFF2F4F3" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+            <TextView android:id="@+id/message_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#FFB4B8BA" android:textSize="11sp" android:maxLines="1" android:ellipsize="end" android:visibility="gone" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+            <LinearLayout android:id="@+id/window_2_0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="0dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                    <TextView android:id="@+id/label_2_0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFB4B8BA" android:textSize="10sp" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+                    <TextView android:id="@+id/percent_2_0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="4dp" android:textColor="#FF75D9A5" android:textSize="12sp" android:textStyle="bold" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+                    <TextView android:id="@+id/reset_2_0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFB4B8BA" android:textSize="10sp" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+                </LinearLayout>
+                <ProgressBar android:id="@+id/bar_2_0" style="@android:style/Widget.ProgressBar.Horizontal" android:layout_width="match_parent" android:layout_height="4dp" android:layout_marginTop="2dp" android:max="100" android:progressDrawable="@drawable/widget_progress" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/window_2_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="10dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                    <TextView android:id="@+id/label_2_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFB4B8BA" android:textSize="10sp" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+                    <TextView android:id="@+id/percent_2_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="4dp" android:textColor="#FF75D9A5" android:textSize="12sp" android:textStyle="bold" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+                    <TextView android:id="@+id/reset_2_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFB4B8BA" android:textSize="10sp" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+                </LinearLayout>
+                <ProgressBar android:id="@+id/bar_2_1" style="@android:style/Widget.ProgressBar.Horizontal" android:layout_width="match_parent" android:layout_height="4dp" android:layout_marginTop="2dp" android:max="100" android:progressDrawable="@drawable/widget_progress" />
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/row_3" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:orientation="horizontal" android:gravity="center_vertical" android:visibility="gone">
+            <TextView android:id="@+id/name_3" android:layout_width="96dp" android:layout_height="wrap_content" android:textColor="#FFF2F4F3" android:textSize="11sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+            <TextView android:id="@+id/message_3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#FFB4B8BA" android:textSize="11sp" android:maxLines="1" android:ellipsize="end" android:visibility="gone" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+            <LinearLayout android:id="@+id/window_3_0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="0dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                    <TextView android:id="@+id/label_3_0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFB4B8BA" android:textSize="10sp" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+                    <TextView android:id="@+id/percent_3_0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="4dp" android:textColor="#FF75D9A5" android:textSize="12sp" android:textStyle="bold" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+                    <TextView android:id="@+id/reset_3_0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFB4B8BA" android:textSize="10sp" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+                </LinearLayout>
+                <ProgressBar android:id="@+id/bar_3_0" style="@android:style/Widget.ProgressBar.Horizontal" android:layout_width="match_parent" android:layout_height="4dp" android:layout_marginTop="2dp" android:max="100" android:progressDrawable="@drawable/widget_progress" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/window_3_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="10dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                    <TextView android:id="@+id/label_3_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFB4B8BA" android:textSize="10sp" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+                    <TextView android:id="@+id/percent_3_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="4dp" android:textColor="#FF75D9A5" android:textSize="12sp" android:textStyle="bold" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+                    <TextView android:id="@+id/reset_3_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFB4B8BA" android:textSize="10sp" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+                </LinearLayout>
+                <ProgressBar android:id="@+id/bar_3_1" style="@android:style/Widget.ProgressBar.Horizontal" android:layout_width="match_parent" android:layout_height="4dp" android:layout_marginTop="2dp" android:max="100" android:progressDrawable="@drawable/widget_progress" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+    <TextView android:id="@+id/empty" android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:text="@string/widget_loading" android:textColor="#FFE4E8E7" android:textSize="12sp" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+    <ImageView android:id="@+id/status_dot" android:layout_width="6dp" android:layout_height="6dp" android:layout_gravity="top|end" android:background="@drawable/widget_status_dot" android:visibility="gone" />
+</FrameLayout>
