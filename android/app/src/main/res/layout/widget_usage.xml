@@ -91,5 +91,6 @@
         </LinearLayout>
     </LinearLayout>
     <TextView android:id="@+id/empty" android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:text="@string/widget_loading" android:textColor="#FFE4E8E7" android:textSize="12sp" android:shadowColor="#B3000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" />
+    <ProgressBar android:id="@+id/loading" android:layout_width="28dp" android:layout_height="28dp" android:layout_gravity="center" android:indeterminate="true" android:indeterminateTint="#FFF2F4F3" android:visibility="gone" />
     <ImageView android:id="@+id/status_dot" android:layout_width="6dp" android:layout_height="6dp" android:layout_gravity="top|end" android:background="@drawable/widget_status_dot" android:visibility="gone" />
 </FrameLayout>

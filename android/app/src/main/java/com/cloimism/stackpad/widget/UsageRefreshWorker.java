@@ -21,6 +21,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BooleanSupplier;
 import org.json.JSONObject;
 
 /** Fetches /api/widget/usage with the device token and redraws every placed widget. */
@@ -56,6 +57,26 @@ public class UsageRefreshWorker extends Worker {
         WorkManager.getInstance(context).enqueueUniqueWork(NOW, ExistingWorkPolicy.KEEP, request);
     }
 
+    /** A tap fetches inside the click broadcast, skipping the WorkManager queue and the engine's 60 second cache. */
+    static void refreshFromTap(Context context) {
+        WidgetStore store = new WidgetStore(context);
+        if (store.token() == null) {
+            UsageWidgetProvider.renderAll(context);
+            return;
+        }
+        store.markRefreshing(true);
+        UsageWidgetProvider.renderAll(context);
+        boolean done = false;
+        try {
+            done = fetch(context, store, true, false, () -> false);
+        } finally {
+            store.markRefreshing(false);
+            UsageWidgetProvider.renderAll(context);
+        }
+        // A network hiccup goes to the worker, which retries with pauses the broadcast cannot afford.
+        if (!done) refreshNow(context);
+    }
+
     @NonNull
     @Override
     public Result doWork() {
@@ -63,7 +84,9 @@ public class UsageRefreshWorker extends Worker {
         WidgetStore store = new WidgetStore(context);
         try {
             if (store.token() == null) return Result.success();
-            for (int attempt = 0; !fetch(store, attempt == RETRY_DELAYS.length); attempt++) {
+            store.markRefreshing(true);
+            UsageWidgetProvider.renderAll(context);
+            for (int attempt = 0; !fetch(context, store, false, attempt == RETRY_DELAYS.length, this::isStopped); attempt++) {
                 Thread.sleep(RETRY_DELAYS[attempt]);
                 if (isStopped()) break;
             }
@@ -71,16 +94,16 @@ public class UsageRefreshWorker extends Worker {
         } catch (InterruptedException error) {
             return Result.success();
         } finally {
+            store.markRefreshing(false);
             if (!isStopped()) UsageWidgetProvider.renderAll(context);
         }
     }
 
     /** Returns false for a transient network failure that should be retried; the message is shown only on the last attempt. */
-    private boolean fetch(WidgetStore store, boolean lastAttempt) {
-        Context context = getApplicationContext();
+    private static boolean fetch(Context context, WidgetStore store, boolean refresh, boolean lastAttempt, BooleanSupplier stopped) {
         HttpURLConnection connection = null;
         try {
-            connection = (HttpURLConnection) new URL(store.origin() + "/api/widget/usage").openConnection();
+            connection = (HttpURLConnection) new URL(store.origin() + "/api/widget/usage" + (refresh ? "?refresh=1" : "")).openConnection();
             connection.setConnectTimeout(10000);
             connection.setReadTimeout(20000);
             connection.setInstanceFollowRedirects(false);
@@ -106,7 +129,7 @@ public class UsageRefreshWorker extends Worker {
                 store.saveProblem(context.getString(R.string.widget_usage_failed));
             }
         } catch (IOException error) {
-            if (isStopped()) return true;
+            if (stopped.getAsBoolean()) return true;
             Log.w(TAG, "Usage request failed: " + error.getClass().getSimpleName() + " " + error.getMessage());
             if (!lastAttempt) return false;
             store.saveProblem(context.getString(R.string.widget_check_network));

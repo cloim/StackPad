@@ -16,6 +16,9 @@ import com.cloimism.stackpad.R;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -26,6 +29,10 @@ public class UsageWidgetProvider extends AppWidgetProvider {
     /** Below this height (dp) the 4x1 layout is used; two rows and more get the detailed layout. */
     private static final int DETAILED_HEIGHT = 120;
     private static final int GREEN = 0xFF75D9A5, ORANGE = 0xFFEFA668, RED = 0xFFF2A0A7;
+    /** A spinner older than this belongs to a refresh whose process was killed, so it is hidden. */
+    private static final long SPINNER_LIMIT = 90000;
+    private static final ExecutorService TAPS = Executors.newSingleThreadExecutor();
+    private static final AtomicBoolean TAP_RUNNING = new AtomicBoolean();
 
     @Override
     public void onEnabled(Context context) {
@@ -47,7 +54,18 @@ public class UsageWidgetProvider extends AppWidgetProvider {
     @Override
     public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
-        if (REFRESH.equals(intent.getAction())) UsageRefreshWorker.refreshNow(context);
+        // Repeated taps while a refresh runs are ignored instead of queueing more requests.
+        if (!REFRESH.equals(intent.getAction()) || !TAP_RUNNING.compareAndSet(false, true)) return;
+        Context app = context.getApplicationContext();
+        PendingResult result = goAsync();
+        TAPS.execute(() -> {
+            try {
+                UsageRefreshWorker.refreshFromTap(app);
+            } finally {
+                TAP_RUNNING.set(false);
+                result.finish();
+            }
+        });
     }
 
     @Override
@@ -91,7 +109,11 @@ public class UsageWidgetProvider extends AppWidgetProvider {
         views.setViewVisibility(R.id.status_dot, problem != null && providers != null ? View.VISIBLE : View.GONE);
         // An empty list means AI usage is turned off on the PC.
         boolean off = providers != null && providers.length() == 0;
-        views.setViewVisibility(R.id.empty, providers == null || off ? View.VISIBLE : View.GONE);
+        long since = store.refreshingSince();
+        boolean refreshing = since > 0 && System.currentTimeMillis() - since < SPINNER_LIMIT;
+        views.setViewVisibility(R.id.loading, refreshing ? View.VISIBLE : View.GONE);
+        // The spinner replaces the placeholder text so the two do not overlap.
+        views.setViewVisibility(R.id.empty, (providers == null || off) && !refreshing ? View.VISIBLE : View.GONE);
         views.setViewVisibility(R.id.rows, providers == null || off ? View.GONE : View.VISIBLE);
         views.setTextViewText(R.id.empty, context.getString(store.token() == null ? R.string.widget_sign_in : off ? R.string.widget_usage_off : R.string.widget_loading));
         String prefix = detailed ? "" : "c_";
