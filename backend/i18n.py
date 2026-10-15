@@ -162,6 +162,19 @@ EN = {
     'Antigravity 실행 후 표시': 'Shown after running Antigravity',
     '위젯 연결 기기가 너무 많습니다. 사용하지 않는 기기를 해제해 주세요.': 'Too many widget devices. Disconnect ones you no longer use.',
     '위젯 연결을 찾지 못했습니다.': 'Widget connection not found.',
+    # Command line
+    '명령 형식을 확인해 주세요: {0}': 'Check the command: {0}',
+    'StackPad.exe help로 사용법을 볼 수 있습니다.': 'Run StackPad.exe help to see the usage.',
+    'JSON 형식을 확인해 주세요: {0}': 'Check the JSON: {0}',
+    '패드 설정 JSON은 객체로 입력해 주세요.': 'Write the pad settings as a JSON object.',
+    '패드셋을 찾을 수 없습니다: {0}': 'Pad set not found: {0}',
+    '패드를 찾을 수 없습니다: {0}': 'Pad not found: {0}',
+    '구성을 찾을 수 없습니다: {0}': 'Component not found: {0}',
+    '같은 이름의 패드가 여러 개입니다. ID로 지정해 주세요: {0}': 'Several pads have this name. Use an ID: {0}',
+    '여러 구성을 가진 패드는 --json으로 구성을 지정해 주세요.': 'Set the components of a pad with several components with --json.',
+    '패드셋에 빈 슬롯이 없습니다.': 'The pad set has no free slot.',
+    '--name으로 패드 이름을 입력해 주세요.': 'Enter the pad name with --name.',
+    '--command, --container 또는 --json으로 구성을 입력해 주세요.': 'Enter the component with --command, --container or --json.',
 }
 
 # Text written to Windows or into files follows the Windows display language instead of a browser.
@@ -230,3 +243,64 @@ def system_lang():
 
 def system_text(korean):
     return korean if system_lang() == 'ko' else SYSTEM.get(korean, korean)
+
+
+# The command line help lives in cli.py in Korean; cli.py pairs it with these.
+CLI_HELP = {
+    'main': '''StackPad command line
+
+Usage: StackPad.exe <command> [options]
+
+  help [padset|pad]          Help
+  version                    Engine version
+
+  padset list                Pad sets with their pad count and free slots
+  padset add <name>          Add a pad set
+  padset rename <padset> <new name>
+  padset order <padset>...   Put these first in this order and keep the rest as they are
+  padset delete <padset>     Delete an empty pad set
+
+  pad list [--padset P]      Pads and their status
+  pad show <pad>             Pad details; its input can be passed back to --json as is
+  pad add [options]          Add a pad
+  pad update <pad> [options] Change a pad; only the given options change
+  pad move <pad> --slot S [--padset P]
+  pad delete <pad>           Delete a stopped pad
+  pad start <pad> [--takeover]
+  pad stop <pad>
+  pad restart <pad>
+  pad logs <pad> [--component C]
+
+Pads and pad sets are named by ID or by name (case does not matter).
+Results are printed as JSON; only pad logs and help print text.
+Exit codes: 0 success, 1 failed, 2 wrong command, 3 engine not reachable''',
+    'pad': '''pad add and pad update options
+
+  --name N                  Pad name (required for add)
+  --padset P                Pad set; the first pad set by default
+  --slot S                  0 to 15, row by row from the top left. The first free slot by default
+  --color C                 Pad color
+  --autostart / --no-autostart       Start with Windows
+  --wait-ready / --no-wait-ready     Wait for each component to be ready when a group starts
+  --domain-url U, --local-url U      Addresses in the pad menu; an empty value clears them
+
+Single component options
+  --command CMD --cwd DIR   Local command and working folder. --cwd defaults to the current folder
+  --port N                  Port to check; none clears it
+  --health-url U            Local health check address
+  --container NAME          Docker container
+
+--json FILE|-  The whole pad as a JSON file or standard input. Use it for group pads and remote server pads.
+  {"name": "App", "components": [{"kind": "local", "name": "API", "command": "uv run main.py", "cwd": "D:/app", "port": 8000},
+                                {"kind": "remote", "name": "DB", "remote": {"host": "nas", "start": "...", "stop": "...", "status": "..."}}]}
+  In update, a component without its id becomes a new component. Editing the input from pad show is the safe way.
+
+Colors:''',
+    'padset': '''padset commands
+
+  padset list
+  padset add <name>
+  padset rename <padset> <new name>
+  padset order <padset>...
+  padset delete <padset>     Move or delete its pads first''',
+}
