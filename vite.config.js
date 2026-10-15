@@ -4,6 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 import packageJson from './package.json' with { type: 'json' };
 
 export default defineConfig({
+  build: { rollupOptions: { input: { main: 'index.html', tray: 'tray-usage.html' } } },
   define: { APP_VERSION: JSON.stringify(packageJson.version) },
   plugins: [react(), VitePWA({
     useCredentials: true,
@@ -30,7 +31,7 @@ export default defineConfig({
     workbox: {
       globPatterns: ['**/*.{js,css,html,ico,svg}'],
       navigateFallback: '/index.html',
-      navigateFallbackDenylist: [/^\/api(?:\/|$)/],
+      navigateFallbackDenylist: [/^\/api(?:\/|$)/, /^\/tray-usage\.html$/],
       cleanupOutdatedCaches: true,
       // Only public build assets are cached; authenticated API traffic stays on the network.
       runtimeCaching: [],

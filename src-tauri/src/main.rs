@@ -12,6 +12,8 @@ const SCREEN_MARGIN: f64 = 8.0;
 // Both dimensions are resizable; keep the four-column pad grid usable.
 const MIN_WIDTH: f64 = 360.0;
 const MIN_HEIGHT: f64 = 420.0;
+mod tray_usage;
+
 const ENGINE: &str = "127.0.0.1:48731";
 const RELEASES: &str = "https://github.com/cloim/StackPad/releases/latest";
 
@@ -86,43 +88,12 @@ fn portable() -> bool {
     std::env::current_exe().ok().and_then(|exe| exe.parent().map(|dir| dir.join("portable").exists())).unwrap_or(false)
 }
 
-struct Updates { item: MenuItem<tauri::Wry>, pending: Mutex<Option<Update>>, usage: Mutex<String> }
+struct Updates { item: MenuItem<tauri::Wry>, pending: Mutex<Option<Update>>, usage: Mutex<Value> }
 
-fn usage_tooltip(data: &Value, ko: bool) -> String {
-    let mut lines = vec!["StackPad".to_string()];
-    if let Some(providers) = data["providers"].as_array() {
-        for provider in providers {
-            let name = provider["name"].as_str().unwrap_or("");
-            let details = if provider["status"] == "ok" {
-                provider["windows"].as_array().into_iter().flatten().filter_map(|window| {
-                    Some(format!("{} {}%", window["label"].as_str()?, window["used_percent"].as_f64()?.clamp(0.0, 100.0).round()))
-                }).collect::<Vec<_>>().join(" ")
-            } else {
-                match (provider["status"].as_str(), ko) {
-                    (Some("login_required"), true) => "로그인 필요",
-                    (Some("login_required"), false) => "Sign in",
-                    (Some("unavailable"), true) => "실행 후 표시",
-                    (Some("unavailable"), false) => "Run CLI",
-                    (_, true) => "조회 실패",
-                    (_, false) => "Unavailable",
-                }.into()
-            };
-            lines.push(format!("{name}: {details}"));
-        }
-    }
-    lines.join("\n")
-}
-
-fn refresh_tooltip(app: &AppHandle) {
+fn refresh_popup(app: &AppHandle) {
     let state = app.state::<Updates>();
-    let mut tooltip = state.usage.lock().unwrap().clone();
-    if state.pending.lock().unwrap().is_some() {
-        tooltip.push_str(&text("\n새 버전이 있어요", "\nUpdate available"));
-    }
-    // Windows NOTIFYICONDATA allows 127 UTF-16 units plus its terminating NUL.
-    let mut units = 0;
-    let tooltip: String = tooltip.chars().take_while(|c| { units += c.len_utf16(); units <= 127 }).collect();
-    if let Some(tray) = app.tray_by_id("main") { let _ = tray.set_tooltip(Some(tooltip)); }
+    let data = state.usage.lock().unwrap().clone();
+    tray_usage::update(app, data, state.pending.lock().unwrap().is_some());
 }
 
 fn watch_usage(app: AppHandle) {
@@ -141,9 +112,8 @@ fn watch_usage(app: AppHandle) {
             if !headers.starts_with("HTTP/1.1 200 ") { return None; }
             serde_json::from_str(body).ok()
         })();
-        *app.state::<Updates>().usage.lock().unwrap() = data.map(|data| usage_tooltip(&data, korean()))
-            .unwrap_or_else(|| text("StackPad\n사용량 조회 실패", "StackPad\nUsage unavailable"));
-        refresh_tooltip(&app);
+        *app.state::<Updates>().usage.lock().unwrap() = data.unwrap_or_else(|| json!({"error": true, "providers": []}));
+        refresh_popup(&app);
         thread::sleep(Duration::from_secs(60));
     });
 }
@@ -158,7 +128,7 @@ fn check_updates(app: AppHandle) {
                     let _ = state.item.set_text(format!("{label} (v{})", update.version));
                     let _ = state.item.set_enabled(true);
                     *state.pending.lock().unwrap() = Some(update);
-                    refresh_tooltip(&app);
+                    refresh_popup(&app);
                     return;
                 }
             }
@@ -317,8 +287,9 @@ fn main() {
             let quit_all = MenuItem::with_id(app, "quit-all", text("완전 종료 (서비스도 중지)", "Quit StackPad and stop services"), true, None::<&str>)?;
             let separator = PredefinedMenuItem::separator(app)?;
             let menu = Menu::with_items(app, &[&open, &update, &separator, &close, &quit, &quit_all])?;
-            app.manage(Updates { item: update, pending: Mutex::new(None), usage: Mutex::new("StackPad".into()) });
-            TrayIconBuilder::with_id("main").icon(app.default_window_icon().unwrap().clone()).tooltip("StackPad").menu(&menu).show_menu_on_left_click(false)
+            app.manage(Updates { item: update, pending: Mutex::new(None), usage: Mutex::new(Value::Null) });
+            tray_usage::init(app.handle())?;
+            TrayIconBuilder::with_id("main").icon(app.default_window_icon().unwrap().clone()).menu(&menu).show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "open" => show(app),
                     "update" => install_update(app),
@@ -331,41 +302,16 @@ fn main() {
                     }
                     _ => {}
                 })
-                .on_tray_icon_event(|tray, event| { if let TrayIconEvent::DoubleClick { button: MouseButton::Left, .. } = event { show(tray.app_handle()); } }).build(app)?;
+                .on_tray_icon_event(|tray, event| match event {
+                    TrayIconEvent::Enter { rect, .. } | TrayIconEvent::Move { rect, .. } => tray_usage::hover(tray.app_handle(), rect),
+                    TrayIconEvent::DoubleClick { button: MouseButton::Left, .. } => { tray_usage::dismiss(tray.app_handle()); show(tray.app_handle()); }
+                    TrayIconEvent::Click { .. } => tray_usage::dismiss(tray.app_handle()),
+                    _ => {}
+                }).build(app)?;
             check_updates(app.handle().clone());
             watch_usage(app.handle().clone());
             Ok(())
         })
         .run(tauri::generate_context!())
         .expect("StackPad failed to start");
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn tooltip_matches_header_percent_rounding_and_empty_settings() {
-        assert_eq!(usage_tooltip(&json!({"providers": []}), true), "StackPad");
-        let data = json!({"providers": [{"name": "Codex", "status": "ok", "windows": [
-            {"label": "5h", "used_percent": 12.5}, {"label": "w", "used_percent": 101.0}
-        ]}]});
-        assert_eq!(usage_tooltip(&data, true), "StackPad\nCodex: 5h 13% w 100%");
-    }
-
-    #[test]
-    fn all_providers_and_update_notice_fit_windows_tooltip() {
-        let data = json!({"providers": (["Claude", "Codex", "AG Gemini", "AG Claude/GPT"].map(|name|
-            json!({"name": name, "status": "ok", "windows": [
-                {"label": "5h", "used_percent": 100}, {"label": "w", "used_percent": 100}
-            ]}))) });
-        assert!(format!("{}\nUpdate available", usage_tooltip(&data, false)).encode_utf16().count() <= 127);
-        let errors = json!({"providers": [
-            {"name": "Claude", "status": "login_required"},
-            {"name": "AG Gemini", "status": "unavailable"},
-            {"name": "Codex", "status": "error"}
-        ]});
-        assert_eq!(usage_tooltip(&errors, true), "StackPad\nClaude: 로그인 필요\nAG Gemini: 실행 후 표시\nCodex: 조회 실패");
-        assert_eq!(usage_tooltip(&errors, false), "StackPad\nClaude: Sign in\nAG Gemini: Run CLI\nCodex: Unavailable");
-    }
 }

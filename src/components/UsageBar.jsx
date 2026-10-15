@@ -42,6 +42,10 @@ export function UsageBar({ api }) {
     return () => { active = false; clearInterval(timer); document.removeEventListener('visibilitychange', visibility); };
   }, [api]);
 
+  return <UsageProviders providers={providers} now={now} error={error} />;
+}
+
+export function UsageProviders({ providers, now, error = false }) {
   // Nothing shows until the first answer, and the bar stays hidden while every provider is turned off.
   if (!providers?.length) return null;
   return <div className="usage-bar" aria-label={t('AI 사용량')}>
