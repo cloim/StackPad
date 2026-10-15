@@ -36,7 +36,7 @@ from i18n import request_lang, translate, translate_payload
 
 
 # Keep in step with package.json; tests/test_version.py checks it.
-VERSION = '1.0.1'
+VERSION = '1.0.2'
 
 
 def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_token=None):
@@ -334,6 +334,12 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
     def usage(refresh: int = 0):
         enabled = engine.config.get('usage_providers', [])
         return {'providers': collect_usage(refresh=refresh == 1, enabled=enabled), 'enabled': enabled}
+
+    @app.get('/api/desktop/usage', dependencies=[Depends(local_only)])
+    def desktop_usage(request: Request):
+        if not control_token or not secrets.compare_digest(request.headers.get('x-stackpad-control', ''), control_token):
+            raise HTTPException(403, 'StackPad가 실행 중인 PC에서 설정해 주세요.')
+        return usage()
 
     class WidgetDevice(BaseModel):
         name: str = Field(min_length=1, max_length=60)
