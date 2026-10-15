@@ -55,6 +55,26 @@ Settings, logs and sign-in records are stored in `%USERPROFILE%\.config\stackpad
 - **Settings > General**: language, start with Windows, log retention, AI usage and the storage folder.
 - Tray menu: open, close the window (engine and services keep running), quit StackPad (optionally stopping every service), and install updates.
 
+## Command line
+
+`StackPad.exe` also takes commands, so scripts and AI coding agents can manage pads without the screen. The installer adds the StackPad folder to your user PATH; open a new terminal after installing.
+
+```powershell
+StackPad.exe help                     # every command; help pad lists the pad options and colors
+StackPad.exe padset list              # pad sets with their free slots
+StackPad.exe padset add Work
+StackPad.exe pad add --name API --command "uv run main.py" --cwd D:\app --port 8000 --padset Work
+StackPad.exe pad list --padset Work
+StackPad.exe pad start API
+StackPad.exe pad logs API
+StackPad.exe pad show API             # its "input" can be edited and passed back with pad update API --json -
+```
+
+- Pads and pad sets are named by ID or by name. Slots are 0 to 15, row by row from the top left.
+- Results are JSON on standard output, errors go to standard error. Exit codes: 0 success, 1 failed, 2 wrong command, 3 engine not running.
+- Group pads and remote server pads are written as JSON with `--json FILE` or `--json -` (standard input).
+- Commands talk to the running engine with the token it keeps in `%USERPROFILE%\.config\stackpad`, so they work only on this PC, for this Windows user, while StackPad is running (`StackPad.exe --hidden` starts it without the window).
+
 ## Phone
 
 - **Android:** install `StackPad.apk`, turn on Tailscale on the phone, then on the PC open **Settings > Account > Connect a phone** and scan the QR code with the app. The code works once for five minutes. Connected phones are listed there and can be disconnected. Long-press the home screen to add the **Agent limits** widget.
@@ -73,6 +93,7 @@ Remote pads run your commands over SSH with your own keys (`~/.ssh/config` alias
 - The engine listens on `127.0.0.1` only. Remote access goes through Tailscale, so only your tailnet devices can reach it, and every request still needs an allowed Google account.
 - Commands run as your Windows user. Only add Google accounts you trust with that.
 - The OAuth client secret is stored in the local settings file.
+- The command line needs no Google sign-in: it uses the engine token readable only by your Windows user, and the engine accepts it only from this PC.
 
 ## Development
 

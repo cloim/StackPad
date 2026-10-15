@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -66,12 +67,46 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
     assert not psutil.pid_exists(owned_pid)
     assert client.get('/api/services').json()['services'][0]['status'] == 'stopped'
     assert client.delete(f'/api/services/{service_id}').status_code == 200
+    # The desktop app forwards command lines to the engine; output arrives through pipes even though the app has no console.
+    desktop = binary.parent / 'StackPad.exe'
+    cli_checked = desktop.is_file()
+    if cli_checked:
+        environment = {**os.environ, 'STACKPAD_ENGINE': '127.0.0.1:48733', 'STACKPAD_CONFIG_DIR': folder.name}
+
+        def cli(*args, stdin=None):
+            done = subprocess.run([str(desktop), *args], input=(stdin or '').encode('utf-8'), capture_output=True, env=environment, cwd=root, timeout=120)
+            return done.returncode, done.stdout.decode('utf-8'), done.stderr.decode('utf-8')
+
+        code, out, err = cli('padset', 'add', '스모크')
+        assert code == 0, (code, out, err)
+        code, out, err = cli('pad', 'add', '--name', '명령줄 검증', '--command', 'ping.exe 127.0.0.1 -n 999', '--padset', '스모크')
+        assert code == 0, (code, out, err)
+        assert json.loads(out)['pad']['components'][0]['cwd'] == str(root), out
+        code, out, err = cli('pad', 'start', '명령줄 검증')
+        assert code == 0, (code, out, err)
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            pads = json.loads(cli('pad', 'list', '--padset', '스모크')[1])['pads']
+            if pads[0]['status'] == 'running':
+                break
+            time.sleep(0.3)
+        assert pads[0]['status'] == 'running', pads
+        assert cli('pad', 'delete', '명령줄 검증')[0] == 1
+        assert cli('pad', 'stop', '명령줄 검증')[0] == 0
+        assert cli('pad', 'update', '명령줄 검증', '--json', '-', stdin=json.dumps({'color': '#3b82f6'}))[0] == 0
+        assert cli('pad', 'delete', '명령줄 검증')[0] == 0
+        assert cli('padset', 'delete', '스모크')[0] == 0
+        assert cli('pad', 'fly')[0] == 2
+        assert 'padset list' in cli('help')[1]
+        offline = subprocess.run([str(desktop), 'padset', 'list'], capture_output=True, env={**environment, 'STACKPAD_ENGINE': '127.0.0.1:1'}, timeout=30)
+        assert offline.returncode == 3 and offline.stderr, offline
     # The tray quits the engine with the token it wrote into the data folder.
     token = (Path(folder.name) / 'control-token').read_text('utf-8')
     assert client.post('/api/engine/shutdown', json={}, headers={'X-StackPad-Control': 'wrong'}).status_code == 403
     assert client.post('/api/engine/shutdown', json={}, headers={'X-StackPad-Control': token}).status_code == 200
     psutil.Process(pid).wait(timeout=10)
-    print('PACKAGE PASS: standalone executable, embedded SPA/assets, signed-in session, Windows native command, full process-tree stop, tray shutdown token', flush=True)
+    print('PACKAGE PASS: standalone executable, embedded SPA/assets, signed-in session, Windows native command, full process-tree stop, tray shutdown token'
+          + (', desktop command line' if cli_checked else ''), flush=True)
 finally:
     if pid and psutil.pid_exists(pid):
         process = psutil.Process(pid)

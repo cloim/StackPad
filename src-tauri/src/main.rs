@@ -13,6 +13,7 @@ const SCREEN_MARGIN: f64 = 8.0;
 const MIN_WIDTH: f64 = 360.0;
 const MIN_HEIGHT: f64 = 420.0;
 mod tray_usage;
+mod cli;
 
 const ENGINE: &str = "127.0.0.1:48731";
 const RELEASES: &str = "https://github.com/cloim/StackPad/releases/latest";
@@ -247,6 +248,9 @@ fn show(app: &tauri::AppHandle) {
 }
 
 fn main() {
+    // Commands such as `StackPad.exe pad list` print their answer and exit before any window or tray starts.
+    let args: Vec<String> = std::env::args().collect();
+    if cli::requested(&args) { std::process::exit(cli::run(&args[1..])); }
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _, _| show(app)))
         .plugin(tauri_plugin_updater::Builder::new().build())

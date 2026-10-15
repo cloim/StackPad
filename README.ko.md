@@ -55,6 +55,26 @@ StackPad는 `http://127.0.0.1:48731`에서 작은 관리 엔진을 실행하고,
 - **환경 설정 > 일반**: 언어, Windows 로그인 시 자동 실행, 로그 보관 기간, AI 사용량, 저장 폴더
 - 트레이 메뉴: 열기, 창 닫기(엔진과 서비스 유지), 완전 종료(서비스 유지 또는 모두 중지), 업데이트 설치
 
+## 명령줄
+
+`StackPad.exe`는 명령도 받습니다. 스크립트나 AI 코딩 에이전트가 화면 없이 패드를 관리할 수 있어요. 설치 프로그램이 StackPad 폴더를 사용자 PATH에 추가하므로 설치 후 새 터미널을 여세요.
+
+```powershell
+StackPad.exe help                     # 전체 명령, help pad는 패드 옵션과 색상
+StackPad.exe padset list              # 패드셋과 빈 슬롯
+StackPad.exe padset add 업무
+StackPad.exe pad add --name API --command "uv run main.py" --cwd D:\app --port 8000 --padset 업무
+StackPad.exe pad list --padset 업무
+StackPad.exe pad start API
+StackPad.exe pad logs API
+StackPad.exe pad show API             # input 항목을 고쳐 pad update API --json - 로 넘길 수 있습니다
+```
+
+- 패드와 패드셋은 ID 또는 이름으로 지정합니다. 슬롯은 왼쪽 위부터 행 순서로 0~15입니다.
+- 결과는 표준 출력에 JSON으로, 오류는 표준 오류로 나옵니다. 종료 코드는 0 성공, 1 실행 오류, 2 명령 형식 오류, 3 엔진 미실행입니다.
+- 그룹 패드와 원격 서버 패드는 `--json 파일` 또는 `--json -`(표준 입력)로 JSON을 넘겨 지정합니다.
+- 명령은 엔진이 `%USERPROFILE%\.config\stackpad`에 둔 토큰으로 실행 중인 엔진에 요청하므로, StackPad가 실행 중일 때 이 PC의 현재 Windows 사용자만 쓸 수 있어요. (`StackPad.exe --hidden`은 창 없이 시작합니다)
+
 ## 휴대폰
 
 - **Android:** `StackPad.apk`를 설치하고 휴대폰의 Tailscale을 켭니다. PC에서 **환경 설정 > 계정 > 휴대폰 연결**의 QR 코드를 앱으로 찍으면 연결돼요. QR 코드는 5분 동안 한 번만 쓸 수 있습니다. 연결된 휴대폰은 같은 화면에서 확인하고 해제합니다. 홈 화면을 길게 눌러 **에이전트 한도** 위젯을 추가하세요.
@@ -73,6 +93,7 @@ PC에 로그인된 AI CLI(Claude Code, Codex, Antigravity)의 5시간, 1주일 �
 - 엔진은 `127.0.0.1`에서만 열립니다. 외부 접속은 Tailscale을 거치므로 내 tailnet 기기만 닿을 수 있고, 모든 요청에 허용된 Google 계정 로그인이 필요해요.
 - 명령은 현재 Windows 사용자 권한으로 실행됩니다. 그 권한을 맡겨도 되는 계정만 추가하세요.
 - OAuth 클라이언트 보안 비밀번호는 로컬 설정 파일에 저장됩니다.
+- 명령줄은 Google 로그인 없이 동작합니다. 현재 Windows 사용자만 읽을 수 있는 엔진 토큰을 쓰고, 엔진은 이 PC에서 온 요청만 받습니다.
 
 ## 개발
 
