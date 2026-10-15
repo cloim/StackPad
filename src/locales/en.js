@@ -146,6 +146,12 @@ export default {
 
   // AI usage
   'AI 사용량': 'AI usage',
+  'CLI 로그인 필요': 'Sign in to the CLI',
+  'CLI 사용 시 갱신': 'Updated when the CLI is used',
+  'Antigravity 실행 후 표시': 'Run Antigravity to see usage',
+  '사용량 조회 실패': 'Usage unavailable',
+  '사용량 표시가 꺼져 있어요.': 'Usage display is turned off.',
+  '업데이트 가능': 'Update available',
   '{0}시간 전': '{0}h ago',
   '{0}분 전': '{0}m ago',
   '조회 실패': 'Unavailable',
