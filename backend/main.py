@@ -36,7 +36,7 @@ from i18n import request_lang, translate, translate_payload
 
 
 # Keep in step with package.json; tests/test_version.py checks it.
-VERSION = '1.0.3'
+VERSION = '1.0.4'
 
 
 def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_token=None):
@@ -360,12 +360,13 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
 
     # The widget token only reaches this read-only route; every other API still requires the login cookie.
     @app.get('/api/widget/usage')
-    def widget_usage(request: Request):
+    def widget_usage(request: Request, refresh: int = 0):
         scheme, _, token = request.headers.get('authorization', '').partition(' ')
         if scheme.lower() != 'bearer' or not widget_tokens.verify(token):
             raise HTTPException(401, '위젯 연결을 다시 설정해 주세요.')
         enabled = engine.config.get('usage_providers', [])
-        return {'providers': collect_usage(enabled=enabled), 'enabled': enabled}
+        # A widget tap sends refresh=1 so it skips the 60 second cache like the app's refresh button.
+        return {'providers': collect_usage(refresh=refresh == 1, enabled=enabled), 'enabled': enabled}
 
     @app.get('/api/services', dependencies=[Depends(authenticated)])
     def services():

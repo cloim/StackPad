@@ -40,6 +40,14 @@ class WidgetTokenTests(unittest.TestCase):
         self.assertEqual(device['name'], 'Pixel')
         self.assertNotIn('hash', device)
 
+    def test_widget_tap_skips_usage_cache(self):
+        headers = {'Authorization': 'Bearer ' + self.token}
+        with patch('main.collect_usage', return_value=PROVIDERS) as collect:
+            self.assertEqual(self.widget.get('/api/widget/usage', headers=headers).status_code, 200)
+            self.assertFalse(collect.call_args.kwargs['refresh'])
+            self.assertEqual(self.widget.get('/api/widget/usage?refresh=1', headers=headers).status_code, 200)
+            self.assertTrue(collect.call_args.kwargs['refresh'])
+
     def test_widget_token_cannot_reach_other_apis(self):
         headers = {'Authorization': 'Bearer ' + self.token}
         self.assertEqual(self.widget.get('/api/services', headers=headers).status_code, 401)

@@ -30,6 +30,12 @@ public final class WidgetStore {
     public void saveServer(String url) { preferences.edit().putString("server", url).apply(); }
     public long fetchedAt() { return preferences.getLong("fetched_at", 0); }
     public String problem() { return preferences.getString("problem", null); }
+    /** When the running refresh started, or 0; the widget shows a spinner meanwhile. */
+    public long refreshingSince() { return preferences.getLong("refreshing_since", 0); }
+    public void markRefreshing(boolean on) {
+        // commit: the widget is redrawn right after and must read the new value.
+        preferences.edit().putLong("refreshing_since", on ? System.currentTimeMillis() : 0).commit();
+    }
 
     public void connect(String id, String token, String origin) {
         preferences.edit().putString("id", id).putString("token", token).putString("origin", origin).remove("problem").apply();
