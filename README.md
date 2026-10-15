@@ -57,17 +57,17 @@ Settings, logs and sign-in records are stored in `%USERPROFILE%\.config\stackpad
 
 ## Command line
 
-`StackPad.exe` also takes commands, so scripts and AI coding agents can manage pads without the screen. The installer adds the StackPad folder to your user PATH; open a new terminal after installing.
+`stackpad-cli`, installed beside `StackPad.exe`, lets scripts and AI coding agents manage pads without the screen. The installer adds the StackPad folder to your user PATH; open a new terminal after installing. `StackPad.exe` takes the same commands, but as a windowed app it is waited for only when its output is piped (Bash, Python), so use `stackpad-cli` in PowerShell and cmd.
 
 ```powershell
-StackPad.exe help                     # every command; help pad lists the pad options and colors
-StackPad.exe padset list              # pad sets with their free slots
-StackPad.exe padset add Work
-StackPad.exe pad add --name API --command "uv run main.py" --cwd D:\app --port 8000 --padset Work
-StackPad.exe pad list --padset Work
-StackPad.exe pad start API
-StackPad.exe pad logs API
-StackPad.exe pad show API             # its "input" can be edited and passed back with pad update API --json -
+stackpad-cli help                     # every command; help pad lists the pad options and colors
+stackpad-cli padset list              # pad sets with their free slots
+stackpad-cli padset add Work
+stackpad-cli pad add --name API --command "uv run main.py" --cwd D:\app --port 8000 --padset Work
+stackpad-cli pad list --padset Work
+stackpad-cli pad start API
+stackpad-cli pad logs API
+stackpad-cli pad show API             # its "input" can be edited and passed back with pad update API --json -
 ```
 
 - Pads and pad sets are named by ID or by name. Slots are 0 to 15, row by row from the top left.

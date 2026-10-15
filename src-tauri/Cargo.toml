@@ -3,6 +3,7 @@ name = "stackpad"
 version = "1.0.5"
 description = "Local service pad controller"
 edition = "2021"
+default-run = "stackpad"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

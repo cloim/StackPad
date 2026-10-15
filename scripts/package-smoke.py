@@ -73,8 +73,11 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
     if cli_checked:
         environment = {**os.environ, 'STACKPAD_ENGINE': '127.0.0.1:48733', 'STACKPAD_CONFIG_DIR': folder.name}
 
-        def cli(*args, stdin=None):
-            done = subprocess.run([str(desktop), *args], input=(stdin or '').encode('utf-8'), capture_output=True, env=environment, cwd=root, timeout=120)
+        console = binary.parent / 'stackpad-cli.exe'
+        assert console.is_file(), console
+
+        def cli(*args, stdin=None, program=desktop):
+            done = subprocess.run([str(program), *args], input=(stdin or '').encode('utf-8'), capture_output=True, env=environment, cwd=root, timeout=120)
             return done.returncode, done.stdout.decode('utf-8'), done.stderr.decode('utf-8')
 
         code, out, err = cli('padset', 'add', '스모크')
@@ -98,6 +101,12 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
         assert cli('padset', 'delete', '스모크')[0] == 0
         assert cli('pad', 'fly')[0] == 2
         assert 'padset list' in cli('help')[1]
+        code, out, err = cli('padset', 'list', program=console)
+        assert code == 0 and json.loads(out)['padsets'], (code, out, err)
+        assert 'padset list' in cli(program=console)[1]
+        # PowerShell waits for a console program even when its output goes straight into a variable.
+        script = f"$o = & '{console}' version; if ($LASTEXITCODE -ne 0 -or -not ($o -join '' | ConvertFrom-Json).engine) {{ exit 9 }}"
+        assert subprocess.run(['powershell.exe', '-NoProfile', '-NonInteractive', '-Command', script], env=environment, stdin=subprocess.DEVNULL, capture_output=True, timeout=60).returncode == 0
         offline = subprocess.run([str(desktop), 'padset', 'list'], capture_output=True, env={**environment, 'STACKPAD_ENGINE': '127.0.0.1:1'}, timeout=30)
         assert offline.returncode == 3 and offline.stderr, offline
     # The tray quits the engine with the token it wrote into the data folder.

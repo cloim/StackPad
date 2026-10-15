@@ -14,22 +14,10 @@ const MIN_WIDTH: f64 = 360.0;
 const MIN_HEIGHT: f64 = 420.0;
 mod tray_usage;
 mod cli;
+mod shared;
+use shared::{ENGINE, config_dir, korean, text};
 
-const ENGINE: &str = "127.0.0.1:48731";
 const RELEASES: &str = "https://github.com/cloim/StackPad/releases/latest";
-
-// Tray and error texts follow the Windows display language.
-fn korean() -> bool {
-    sys_locale::get_locale().map(|locale| locale.to_lowercase().starts_with("ko")).unwrap_or(false)
-}
-
-fn text(ko: &str, en: &str) -> String {
-    if korean() { ko.into() } else { en.into() }
-}
-
-fn config_dir() -> Option<PathBuf> {
-    std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME")).map(|dir| PathBuf::from(dir).join(".config").join("stackpad"))
-}
 
 enum Probe { Ready, Other, Free }
 

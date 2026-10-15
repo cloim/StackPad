@@ -1,6 +1,6 @@
 """Build StackPad for Windows: the web screen, the engine and the desktop app.
 
-Default: a portable folder (StackPad.exe, StackPadEngine.exe, a `portable` marker) plus its zip.
+Default: a portable folder (StackPad.exe, StackPadEngine.exe, stackpad-cli.exe, a `portable` marker) plus its zip.
 --installer: also the NSIS installer and the signed updater files; needs TAURI_SIGNING_PRIVATE_KEY in the environment.
 Run inside a WMI worker on a desktop PC.
 """
@@ -38,6 +38,13 @@ run([npm, 'run', 'build'])
 run([sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean', '--onefile', '--windowed', '--name', 'StackPadEngine-x86_64-pc-windows-msvc',
      '--distpath', 'src-tauri/binaries', '--workpath', 'build/engine', '--add-data', 'dist;dist', '--paths', 'backend',
      '--collect-all', 'uvicorn', '--collect-all', 'jwt', '--hidden-import', 'psutil', 'backend/main.py'])
+# The console companion ships beside the app like the engine. The Tauri build script checks that every
+# bundled binary exists, so a placeholder stands in until the real one is built.
+companion = root / 'src-tauri/binaries/stackpad-cli-x86_64-pc-windows-msvc.exe'
+if not companion.exists():
+    companion.write_bytes(b'')
+run(['cargo', 'build', '--release', '--bin', 'stackpad-cli', '--manifest-path', 'src-tauri/Cargo.toml'])
+shutil.copy2(root / 'src-tauri/target/release/stackpad-cli.exe', companion)
 run([npm, 'run', 'desktop:build' if not args.installer else 'desktop:installer'])
 
 target = root / 'src-tauri/target/release'
@@ -46,6 +53,7 @@ release = Path(args.release_dir).resolve()
 release.mkdir(parents=True, exist_ok=True)
 shutil.copy2(desktop, release / 'StackPad.exe')
 shutil.copy2(root / 'src-tauri/binaries/StackPadEngine-x86_64-pc-windows-msvc.exe', release / 'StackPadEngine.exe')
+shutil.copy2(companion, release / 'stackpad-cli.exe')
 shutil.copy2(root / 'README.md', release / 'README.md')
 shutil.copy2(root / 'LICENSE', release / 'LICENSE')
 # The desktop app offers a download link instead of installing updates over a portable copy.
