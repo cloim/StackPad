@@ -32,7 +32,6 @@ from session_store import SessionStore, SESSION_TTL, DEVICE_TTL
 from google_auth import GoogleAuth, CALLBACK_PATH, FLOW_TTL
 import tailscale
 from widget_tokens import WidgetTokens
-import legacy
 from i18n import request_lang, translate, translate_payload
 
 
@@ -47,10 +46,6 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
     widget_tokens = WidgetTokens(lambda: engine.data_dir)
     storage_location = StorageLocation(engine, sessions, location_file or Path(data_dir) / 'storage-location.json')
     engine.bootstrap_dir = storage_location.pointer.parent
-    try:
-        legacy.migrate_startup_link(engine)
-    except Exception as error:
-        logging.error('Startup shortcut migration failed: %s', error)
     attempts = defaultdict(deque)
     SESSION_COOKIE, STATE_COOKIE = 'stackpad_session', 'stackpad_oauth'
     auth_lock = threading.RLock()
@@ -651,7 +646,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.data_dir is None:
         args.data_dir = str(Path.home() / '.config' / 'stackpad')
-        legacy.migrate_data(args.data_dir)
     bootstrap = Path(args.data_dir).resolve()
     args.data_dir = str(resolve_data_dir(bootstrap))
     root = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parents[1]))
