@@ -57,17 +57,17 @@ StackPad는 `http://127.0.0.1:48731`에서 작은 관리 엔진을 실행하고,
 
 ## 명령줄
 
-`StackPad.exe`는 명령도 받습니다. 스크립트나 AI 코딩 에이전트가 화면 없이 패드를 관리할 수 있어요. 설치 프로그램이 StackPad 폴더를 사용자 PATH에 추가하므로 설치 후 새 터미널을 여세요.
+`StackPad.exe` 옆에 설치되는 `stackpad-cli`로 스크립트나 AI 코딩 에이전트가 화면 없이 패드를 관리할 수 있어요. 설치 프로그램이 StackPad 폴더를 사용자 PATH에 추가하므로 설치 후 새 터미널을 여세요. `StackPad.exe`도 같은 명령을 받지만 창 앱이라서 출력을 파이프로 받을 때(Bash, Python)만 끝날 때까지 기다리므로, PowerShell과 cmd에서는 `stackpad-cli`를 쓰세요.
 
 ```powershell
-StackPad.exe help                     # 전체 명령, help pad는 패드 옵션과 색상
-StackPad.exe padset list              # 패드셋과 빈 슬롯
-StackPad.exe padset add 업무
-StackPad.exe pad add --name API --command "uv run main.py" --cwd D:\app --port 8000 --padset 업무
-StackPad.exe pad list --padset 업무
-StackPad.exe pad start API
-StackPad.exe pad logs API
-StackPad.exe pad show API             # input 항목을 고쳐 pad update API --json - 로 넘길 수 있습니다
+stackpad-cli help                     # 전체 명령, help pad는 패드 옵션과 색상
+stackpad-cli padset list              # 패드셋과 빈 슬롯
+stackpad-cli padset add 업무
+stackpad-cli pad add --name API --command "uv run main.py" --cwd D:\app --port 8000 --padset 업무
+stackpad-cli pad list --padset 업무
+stackpad-cli pad start API
+stackpad-cli pad logs API
+stackpad-cli pad show API             # input 항목을 고쳐 pad update API --json - 로 넘길 수 있습니다
 ```
 
 - 패드와 패드셋은 ID 또는 이름으로 지정합니다. 슬롯은 왼쪽 위부터 행 순서로 0~15입니다.

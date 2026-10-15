@@ -1,4 +1,4 @@
-"""Command line for agents: StackPad.exe forwards its arguments here and prints the result.
+"""Command line for agents: stackpad-cli and StackPad.exe forward their arguments here and print the result.
 
 Commands call the same engine methods as the screen, so every rule the screen follows applies here too.
 """
@@ -14,7 +14,7 @@ from i18n import CLI_HELP, EN, translate
 
 HELP = '''StackPad 명령줄
 
-사용법: StackPad.exe <명령> [옵션]
+사용법: stackpad-cli <명령> [옵션]
 
   help [padset|pad]          도움말
   version                    엔진 버전
@@ -85,7 +85,7 @@ class Parser(argparse.ArgumentParser):
 
 
 def parser():
-    root = Parser(prog='StackPad.exe', add_help=False)
+    root = Parser(prog='stackpad-cli', add_help=False)
     commands = root.add_subparsers(dest='area')
     commands.add_parser('help', add_help=False).add_argument('topic', nargs='?')
     commands.add_parser('version', add_help=False)
@@ -419,7 +419,7 @@ def run(engine, argv, cwd='', stdin='', lang='ko', version=''):
     try:
         args = parser().parse_args(argv)
     except UsageError as error:
-        return 2, '', translate(f'명령 형식을 확인해 주세요: {error}', lang) + '\n' + translate('StackPad.exe help로 사용법을 볼 수 있습니다.', lang)
+        return 2, '', translate(f'명령 형식을 확인해 주세요: {error}', lang) + '\n' + translate('stackpad-cli help로 사용법을 볼 수 있습니다.', lang)
     if args.area in (None, 'help'):
         topic = getattr(args, 'topic', None)
         text = translate({'pad': PAD_HELP, 'padset': PADSET_HELP}.get(topic, HELP), lang)

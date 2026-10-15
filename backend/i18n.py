@@ -164,7 +164,7 @@ EN = {
     '위젯 연결을 찾지 못했습니다.': 'Widget connection not found.',
     # Command line
     '명령 형식을 확인해 주세요: {0}': 'Check the command: {0}',
-    'StackPad.exe help로 사용법을 볼 수 있습니다.': 'Run StackPad.exe help to see the usage.',
+    'stackpad-cli help로 사용법을 볼 수 있습니다.': 'Run stackpad-cli help to see the usage.',
     'JSON 형식을 확인해 주세요: {0}': 'Check the JSON: {0}',
     '패드 설정 JSON은 객체로 입력해 주세요.': 'Write the pad settings as a JSON object.',
     '패드셋을 찾을 수 없습니다: {0}': 'Pad set not found: {0}',
@@ -249,7 +249,7 @@ def system_text(korean):
 CLI_HELP = {
     'main': '''StackPad command line
 
-Usage: StackPad.exe <command> [options]
+Usage: stackpad-cli <command> [options]
 
   help [padset|pad]          Help
   version                    Engine version

@@ -47,7 +47,7 @@ class CommandLineApiTests(unittest.TestCase):
         self.assertEqual(self.ok('version'), {'engine': VERSION})
         wrong = self.call('pad', 'fly')
         self.assertEqual(wrong['exit_code'], 2)
-        self.assertIn('StackPad.exe help', wrong['error'])
+        self.assertIn('stackpad-cli help', wrong['error'])
         self.assertTrue(self.call('pad', 'fly', lang='en')['error'].startswith('Check the command:'))
 
     def test_padsets(self):

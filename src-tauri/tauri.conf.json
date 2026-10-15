@@ -19,7 +19,8 @@
     ],
     "createUpdaterArtifacts": true,
     "externalBin": [
-      "binaries/StackPadEngine"
+      "binaries/StackPadEngine",
+      "binaries/stackpad-cli"
     ],
     "icon": [
       "icons/icon.ico",
