@@ -7,7 +7,8 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(24, 22, 20, 0.42);
+  background: #090c0da8;
+  backdrop-filter: blur(4px);
   /* 스택이 인라인 z-index를 넣기 전 첫 프레임을 위한 기본값. 실제 순서는 인라인 값이 정한다. */
   z-index: 1000;
 }
@@ -19,8 +20,10 @@
   max-height: calc(100vh - 48px);
   flex-direction: column;
   border-radius: 12px;
-  background: #ffffff;
-  box-shadow: 0 24px 60px rgba(20, 18, 15, 0.24);
+  background: #282c2e;
+  color: #d9dfdf;
+  border: 1px solid #4d5458;
+  box-shadow: 0 22px 70px #0008;
   outline: none;
   /* 드래그로 옮긴 뒤에도 오버레이 안에서 크기가 다시 계산되지 않도록 축소를 막는다. */
   flex: none;
@@ -40,7 +43,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 16px 16px 14px 20px;
-  border-bottom: 1px solid #ebe8e3;
+  border-bottom: 1px solid #3c4346;
   user-select: none;
 }
 
@@ -61,7 +64,7 @@
 .modal-title {
   min-width: 0;
   overflow: hidden;
-  color: #202634;
+  color: #e4e8e7;
   font-size: 15px;
   font-weight: 900;
   text-overflow: ellipsis;
@@ -78,13 +81,13 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: #a29c94;
+  color: #a9b5b7;
   cursor: pointer;
 }
 
 .modal-close:hover {
   background: transparent;
-  color: #4b5563;
+  color: #f1f5f4;
 }
 
 /* 본문만 스크롤한다. 헤더와 푸터는 항상 보여야 손잡이와 액션을 잃지 않는다. */
@@ -93,7 +96,7 @@
   min-height: 0;
   padding: 18px 20px;
   overflow-y: auto;
-  color: #202634;
+  color: #d9dfdf;
   font-size: 13px;
 }
 
@@ -104,7 +107,7 @@
   justify-content: flex-end;
   gap: 8px;
   padding: 14px 20px;
-  border-top: 1px solid #ebe8e3;
+  border-top: 1px solid #3c4346;
 }
 
 /* 드래그와 리사이즈가 진행되는 동안 문서 전체의 텍스트 선택과 커서를 고정한다. */
