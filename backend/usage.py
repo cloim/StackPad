@@ -14,6 +14,8 @@ from urllib.request import Request, urlopen
 _cache = {}
 _cache_lock = threading.Lock()
 CACHE_SECONDS = 60
+MIN_REFRESH_INTERVAL = 10
+API_TIMEOUT_SECONDS = 4
 
 
 def _utc(value=None):
@@ -48,7 +50,7 @@ def _fetch(provider, name, home, filename, read_token, url, headers, map_respons
         if not token or (expires_at is not None and float(expires_at) <= time.time() * 1000):
             return _result(provider, name, 'login_required', 'CLI 사용 시 갱신' if token else 'CLI 로그인 필요')
         request = Request(url, headers={**headers, **extra_headers, 'Authorization': 'Bearer ' + token})
-        with urlopen(request, timeout=8) as response:
+        with urlopen(request, timeout=API_TIMEOUT_SECONDS) as response:
             data = json.load(response)
         result['plan'], result['windows'] = map_response(data, plan)
     except FileNotFoundError:
@@ -142,7 +144,7 @@ def collect_usage(home=None, refresh=False, enabled=None):
     requested_at = time.perf_counter()
     with _cache_lock:
         cached = _cache.get(key)
-        if cached and ((not refresh and requested_at - cached[0] < CACHE_SECONDS) or cached[0] >= requested_at):
+        if cached and ((not refresh and requested_at - cached[0] < CACHE_SECONDS) or (refresh and requested_at - cached[0] < MIN_REFRESH_INTERVAL) or cached[0] >= requested_at):
             return copy.deepcopy(cached[1])
         with ThreadPoolExecutor(max_workers=3) as pool:
             results = list(pool.map(lambda name: COLLECTORS[name](home), names))

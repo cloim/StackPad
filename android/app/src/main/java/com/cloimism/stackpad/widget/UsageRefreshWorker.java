@@ -29,8 +29,8 @@ public class UsageRefreshWorker extends Worker {
     private static final String PERIODIC = "stackpad-usage-periodic";
     private static final String NOW = "stackpad-usage-now";
     private static final String TAG = "StackPadWidget";
-    /** Pauses before the second and third attempt; a tunnel or radio hiccup rarely lasts longer. */
-    private static final long[] RETRY_DELAYS = {5000, 15000};
+    /** Pauses before the second and third attempt; a short pause is enough for transient glitches. */
+    private static final long[] RETRY_DELAYS = {2000, 4000};
 
     public UsageRefreshWorker(@NonNull Context context, @NonNull WorkerParameters parameters) {
         super(context, parameters);
@@ -70,10 +70,12 @@ public class UsageRefreshWorker extends Worker {
         try {
             done = fetch(context, store, true, false, () -> false);
         } finally {
-            store.markRefreshing(false);
-            UsageWidgetProvider.renderAll(context);
+            if (done) {
+                store.markRefreshing(false);
+                UsageWidgetProvider.renderAll(context);
+            }
         }
-        // A network hiccup goes to the worker, which retries with pauses the broadcast cannot afford.
+        // A network hiccup goes to the worker, which keeps the spinner and retries with pauses the broadcast cannot afford.
         if (!done) refreshNow(context);
     }
 
@@ -104,8 +106,8 @@ public class UsageRefreshWorker extends Worker {
         HttpURLConnection connection = null;
         try {
             connection = (HttpURLConnection) new URL(store.origin() + "/api/widget/usage" + (refresh ? "?refresh=1" : "")).openConnection();
-            connection.setConnectTimeout(10000);
-            connection.setReadTimeout(20000);
+            connection.setConnectTimeout(refresh ? 3000 : 10000);
+            connection.setReadTimeout(refresh ? 5000 : 20000);
             connection.setInstanceFollowRedirects(false);
             connection.setRequestProperty("Accept", "application/json");
             // The engine answers in this language, so provider messages match the phone.
