@@ -31,7 +31,7 @@ class UsageTests(unittest.TestCase):
             path.write_text(json.dumps(data), encoding='utf-8')
 
     def response(self, request, timeout):
-        self.assertEqual(timeout, 8)
+        self.assertEqual(timeout, 4)
         if 'anthropic.com' in request.full_url:
             self.assertEqual(request.get_header('Authorization'), 'Bearer test-claude')
             self.assertEqual(request.get_header('Anthropic-beta'), 'oauth-2025-04-20')
@@ -94,9 +94,16 @@ class UsageTests(unittest.TestCase):
             first[0]['windows'].clear()
             self.assertEqual(len(usage.collect_usage(self.home)[0]['windows']), 2)
             self.assertEqual(mock.call_count, 2)
+            # Immediate refresh is throttled (under 10s) and returns cached results.
+            usage.collect_usage(self.home, refresh=True)
+            self.assertEqual(mock.call_count, 2)
+            # Refresh after throttle interval fetches fresh results.
+            key = (self.home.resolve(), tuple(usage.COLLECTORS))
+            stamp, providers = usage._cache[key]
+            usage._cache[key] = (stamp - 11, providers)
             usage.collect_usage(self.home, refresh=True)
             self.assertEqual(mock.call_count, 4)
-            key = (self.home.resolve(), tuple(usage.COLLECTORS))
+            # Expiry after CACHE_SECONDS re-fetches even without refresh.
             stamp, providers = usage._cache[key]
             usage._cache[key] = (stamp - 61, providers)
             usage.collect_usage(self.home)
