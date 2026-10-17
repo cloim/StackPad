@@ -84,3 +84,9 @@ export async function disconnectWidget(api) {
   if (id) await api(`/widget/tokens/${id}`, { method: 'DELETE' }).catch(() => {});
   await WidgetBridge.clearToken();
 }
+
+// 앱 화면이 받은 사용량을 위젯에도 넘겨, 위젯이 앱보다 오래된 값을 보이지 않게 한다.
+export function shareUsage(data) {
+  if (!isNative) return;
+  WidgetBridge.saveUsage({ usage: JSON.stringify(data) }).catch(() => {});
+}

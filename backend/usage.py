@@ -12,9 +12,12 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 _cache = {}
+# Last successful answer per (home, provider id); a failed refresh shows it instead of an error.
+_last_good = {}
 _cache_lock = threading.Lock()
 CACHE_SECONDS = 60
 MIN_REFRESH_INTERVAL = 10
+STALE_SECONDS = 600
 API_TIMEOUT_SECONDS = 4
 
 
@@ -130,6 +133,22 @@ def collect_antigravity_usage(home=None):
     return providers
 
 
+def _keep_last_good(home, provider):
+    """Provider APIs such as Claude's answer 429 to frequent calls; a transient error keeps the numbers already shown."""
+    key = (home, provider['id'])
+    if provider['status'] == 'ok':
+        _last_good[key] = copy.deepcopy(provider)
+        return provider
+    previous = _last_good.get(key)
+    if provider['status'] != 'error' or previous is None:
+        return provider
+    kept = copy.deepcopy(previous)
+    elapsed = datetime.now(timezone.utc).timestamp() - datetime.fromisoformat(kept['fetched_at']).timestamp()
+    if elapsed > STALE_SECONDS:
+        kept['stale_minutes'] = max(kept.get('stale_minutes') or 0, int(elapsed // 60))
+    return kept
+
+
 COLLECTORS = {'claude': collect_claude_usage, 'codex': collect_codex_usage, 'antigravity': collect_antigravity_usage}
 
 
@@ -148,6 +167,6 @@ def collect_usage(home=None, refresh=False, enabled=None):
             return copy.deepcopy(cached[1])
         with ThreadPoolExecutor(max_workers=3) as pool:
             results = list(pool.map(lambda name: COLLECTORS[name](home), names))
-            providers = [provider for result in results for provider in (result if isinstance(result, list) else [result])]
+            providers = [_keep_last_good(home, provider) for result in results for provider in (result if isinstance(result, list) else [result])]
         _cache[key] = (time.perf_counter(), providers)
         return copy.deepcopy(providers)
