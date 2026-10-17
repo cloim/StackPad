@@ -16,5 +16,6 @@
     <string name="widget_minutes_ago">%1$d분 전</string>
     <string name="bridge_invalid_server">PC 주소는 https://로 시작해야 합니다.</string>
     <string name="bridge_invalid_widget">위젯 연결 정보가 올바르지 않습니다.</string>
+    <string name="bridge_invalid_usage">사용량 정보가 올바르지 않습니다.</string>
     <string name="bridge_pin_unsupported">이 런처는 앱에서 위젯 추가를 지원하지 않습니다. 홈 화면을 길게 눌러 위젯에서 추가해 주세요.</string>
 </resources>

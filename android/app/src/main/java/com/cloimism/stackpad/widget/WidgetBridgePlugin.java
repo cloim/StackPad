@@ -10,6 +10,7 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import org.json.JSONObject;
 
 /** Bridges the web screen to native storage: the paired PC address and the home screen widget connection. */
 @CapacitorPlugin(name = "WidgetBridge")
@@ -61,6 +62,25 @@ public class WidgetBridgePlugin extends Plugin {
         }
         new WidgetStore(getContext()).connect(id, token, origin);
         UsageRefreshWorker.refreshNow(getContext());
+        call.resolve();
+    }
+
+    /** The app screen hands over each usage answer, so the widget never shows older numbers than the app. */
+    @PluginMethod
+    public void saveUsage(PluginCall call) {
+        String usage = call.getString("usage");
+        try {
+            new JSONObject(usage).getJSONArray("providers");
+        } catch (Exception error) {
+            call.reject(getContext().getString(R.string.bridge_invalid_usage));
+            return;
+        }
+        WidgetStore store = new WidgetStore(getContext());
+        // A widget without a connection keeps asking for sign-in instead of showing numbers it cannot refresh.
+        if (store.token() != null) {
+            store.saveUsage(usage, System.currentTimeMillis());
+            UsageWidgetProvider.renderAll(getContext());
+        }
         call.resolve();
     }
 

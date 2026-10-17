@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Clock3 } from 'lucide-react';
 import { t } from '../i18n.js';
+import { shareUsage } from '../native.js';
 
 function remaining(reset, now) {
   if (!reset) return null;
@@ -25,6 +26,7 @@ export function UsageBar({ api }) {
       pending = true;
       try {
         const data = await api('/usage');
+        shareUsage(data);
         if (active) { setProviders(data.enabled?.length ? data.providers : []); setNow(Date.now()); setError(false); }
       } catch {
         if (active) setError(true);

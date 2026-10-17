@@ -31,6 +31,8 @@ public class UsageRefreshWorker extends Worker {
     private static final String TAG = "StackPadWidget";
     /** Pauses before the second and third attempt; a short pause is enough for transient glitches. */
     private static final long[] RETRY_DELAYS = {2000, 4000};
+    /** A tap retries once inside its broadcast; two attempts stay well inside the 60 second receiver limit. */
+    private static final long[] TAP_RETRY_DELAYS = {1000};
 
     public UsageRefreshWorker(@NonNull Context context, @NonNull WorkerParameters parameters) {
         super(context, parameters);
@@ -57,7 +59,10 @@ public class UsageRefreshWorker extends Worker {
         WorkManager.getInstance(context).enqueueUniqueWork(NOW, ExistingWorkPolicy.KEEP, request);
     }
 
-    /** A tap fetches inside the click broadcast, skipping the WorkManager queue and the engine's 60 second cache. */
+    /**
+     * A tap fetches inside the click broadcast, skipping the WorkManager queue and the engine's 60 second cache.
+     * It never hands off to WorkManager, which defers work for a widget-only app by minutes or hours.
+     */
     static void refreshFromTap(Context context) {
         WidgetStore store = new WidgetStore(context);
         if (store.token() == null) {
@@ -66,17 +71,16 @@ public class UsageRefreshWorker extends Worker {
         }
         store.markRefreshing(true);
         UsageWidgetProvider.renderAll(context);
-        boolean done = false;
         try {
-            done = fetch(context, store, true, false, () -> false);
-        } finally {
-            if (done) {
-                store.markRefreshing(false);
-                UsageWidgetProvider.renderAll(context);
+            for (int attempt = 0; !fetch(context, store, true, attempt == TAP_RETRY_DELAYS.length, () -> false); attempt++) {
+                Thread.sleep(TAP_RETRY_DELAYS[attempt]);
             }
+        } catch (InterruptedException error) {
+            Thread.currentThread().interrupt();
+        } finally {
+            store.markRefreshing(false);
+            UsageWidgetProvider.renderAll(context);
         }
-        // A network hiccup goes to the worker, which keeps the spinner and retries with pauses the broadcast cannot afford.
-        if (!done) refreshNow(context);
     }
 
     @NonNull
@@ -106,8 +110,9 @@ public class UsageRefreshWorker extends Worker {
         HttpURLConnection connection = null;
         try {
             connection = (HttpURLConnection) new URL(store.origin() + "/api/widget/usage" + (refresh ? "?refresh=1" : "")).openConnection();
-            connection.setConnectTimeout(refresh ? 3000 : 10000);
-            connection.setReadTimeout(refresh ? 5000 : 20000);
+            // Waking the mobile radio and opening the tunnel's TLS session often takes more than 3 seconds.
+            connection.setConnectTimeout(refresh ? 6000 : 10000);
+            connection.setReadTimeout(refresh ? 8000 : 20000);
             connection.setInstanceFollowRedirects(false);
             connection.setRequestProperty("Accept", "application/json");
             // The engine answers in this language, so provider messages match the phone.

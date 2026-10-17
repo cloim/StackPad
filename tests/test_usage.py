@@ -20,6 +20,7 @@ class UsageTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.home = Path(self.temp.name)
         usage._cache.clear()
+        usage._last_good.clear()
 
     def credentials(self, expired=False):
         for name, data in [('.claude/.credentials.json', {'claudeAiOauth': {
@@ -108,6 +109,28 @@ class UsageTests(unittest.TestCase):
             usage._cache[key] = (stamp - 61, providers)
             usage.collect_usage(self.home)
             self.assertEqual(mock.call_count, 6)
+
+    def test_failed_refresh_keeps_last_good_numbers(self):
+        self.credentials()
+        with patch.object(usage, 'urlopen', side_effect=self.response):
+            first = usage.collect_usage(self.home, enabled=['claude', 'codex'])
+        throttled = HTTPError('https://test', 429, 'Too Many Requests', {}, None)
+        for key in list(usage._cache):
+            stamp, providers = usage._cache[key]
+            usage._cache[key] = (stamp - 11, providers)
+        with patch.object(usage, 'urlopen', side_effect=throttled):
+            second = usage.collect_usage(self.home, refresh=True, enabled=['claude', 'codex'])
+        self.assertEqual(second, first)
+        # An answer older than ten minutes is marked so the bar and widget show its age.
+        for value in usage._last_good.values():
+            value['fetched_at'] = (datetime.now(timezone.utc) - timedelta(minutes=25)).isoformat()
+        for key in list(usage._cache):
+            stamp, providers = usage._cache[key]
+            usage._cache[key] = (stamp - 11, providers)
+        with patch.object(usage, 'urlopen', side_effect=throttled):
+            third = usage.collect_usage(self.home, refresh=True, enabled=['claude', 'codex'])
+        self.assertEqual([provider['status'] for provider in third], ['ok', 'ok'])
+        self.assertEqual([provider['stale_minutes'] for provider in third], [25, 25])
 
     def test_disabled_providers_are_not_read(self):
         self.credentials()
