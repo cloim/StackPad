@@ -21,8 +21,12 @@ class AlertsTests(unittest.IsolatedAsyncioTestCase):
         self.engine = self.app.state.engine
         self.transport = httpx.ASGITransport(app=self.app, client=('127.0.0.1', 50000))
         self.client = httpx.AsyncClient(transport=self.transport, base_url='http://127.0.0.1')
-        self.addCleanup(self.client.aclose)
         sign_in(self.app, self.client)
+
+    async def asyncTearDown(self):
+        await self.client.aclose()
+        self.engine.closed.set()
+        self.engine.wake.set()
 
     def test_alert_recording_and_notification_filtering(self):
         published = []

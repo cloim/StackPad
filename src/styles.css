@@ -316,10 +316,87 @@
 .pad-schedules-summary .summary-list li { margin: 2px 0; }
 
 /* Stage 6: UX LogViewer and Pad Progress */
-.pad.assigned { position: relative; overflow: hidden; }
-.pad-progress-bar { position: absolute; bottom: 0; left: 0; height: 3px; background: var(--pad-color, #22c55e); transition: width 0.2s ease; z-index: 2; }
+.pad.assigned { position: relative; }
+.pad-progress-bar { position: absolute; bottom: 0; left: 0; height: 3px; background: var(--pad-color, #22c55e); transition: width 0.2s ease; z-index: 2; border-bottom-left-radius: 7px; border-bottom-right-radius: 7px; }
 .pad-error-badge { display: block; max-width: 100%; font-size: 10px; color: #ff8b94; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; padding: 2px 6px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; text-align: left; }
 .pad-error-badge:hover { background: rgba(239, 68, 68, 0.25); border-color: rgba(239, 68, 68, 0.5); }
+
+/* Stage 7: LED Ring, DotMatrix LCD, and Feedback */
+.pad.running::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: 0 0 calc(6px + 14px * var(--cpu, 0)) var(--pad-color);
+  opacity: calc(0.5 + 0.3 * var(--cpu, 0));
+  animation: led-breathe calc(3.2s - 2.2s * var(--cpu, 0)) ease-in-out infinite alternate;
+}
+
+@keyframes led-breathe {
+  0% { opacity: 0.35; }
+  100% { opacity: calc(0.7 + 0.3 * var(--cpu, 0)); }
+}
+
+.pad.starting::after, .pad.restarting::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(from 0deg, transparent 0deg, var(--pad-color, #f2c278) 60deg, transparent 120deg);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: ring-rotate 2s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes ring-rotate {
+  to { transform: rotate(360deg); }
+}
+
+.pad.error::after, .pad.unhealthy::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: 0 0 10px #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.6);
+  animation: error-ring-flash 1.6s ease-out forwards;
+  opacity: 0.6;
+}
+
+@keyframes error-ring-flash {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  40% { opacity: 0.2; }
+  60% { opacity: 1; }
+  80% { opacity: 0.3; }
+  100% { opacity: 0.6; }
+}
+
+@media (max-width: 650px) {
+  .pad.running::after {
+    box-shadow: 0 0 calc(3px + 7px * var(--cpu, 0)) var(--pad-color);
+  }
+}
+
+.lcd-head {
+  cursor: pointer;
+  user-select: none;
+}
+.lcd-head:hover {
+  opacity: 0.85;
+}
+
+.dot-matrix-svg {
+  display: block;
+  margin: 10px 0 12px;
+}
 
 /* LogViewer toolbar and container */
 .log-toolbar { display: flex; align-items: center; gap: 8px; margin-left: auto; }

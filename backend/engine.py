@@ -196,6 +196,8 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices, SceneManager
         self.scene_threads = {}
         self.schedule_last_run = {}
         self.scheduler_thread = None
+        self.history = {}
+        self.last_history_tick = 0
         self.closed = threading.Event()
         self.config = json.loads(self.path.read_text('utf-8')) if self.path.exists() else {'services': []}
         # Google sign-in replaced the former app password.
@@ -579,6 +581,7 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices, SceneManager
                 raise ValueError('서비스를 중지한 다음 삭제해 주세요.')
             self.config['services'].remove(service)
             self.samples.pop(service_id, None)
+            self.history.pop(service_id, None)
             self.forget_remote(service_id)
             self.clean_scenes_for_pad(service_id)
             self.clean_schedules_for_target(service_id)
@@ -1048,6 +1051,21 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                     if current and current.get('container') == service['container'] and current.get('kind') == 'docker' and service['id'] not in self.docker_busy:
                         self.samples[service['id']] = sample
             self.notify_services()
+            now_wall = time.time()
+            if self.last_history_tick == 0 or now_wall - self.last_history_tick >= 10:
+                self.last_history_tick = now_wall
+                with self.lock:
+                    for s in services:
+                        sid = s['id']
+                        proc = self.owned(s)
+                        if proc:
+                            samp = self.samples.get(sid, {})
+                            c = round(float(samp.get('cpu', 0.0)), 1)
+                            m = round(float(samp.get('memory', 0.0)), 1)
+                        else:
+                            c = 0.0
+                            m = 0.0
+                        self.history.setdefault(sid, deque(maxlen=60)).append((c, m))
             with self.lock:
                 has_owned = any(self.owned(s) for s in self.config['services'])
                 docker_active = any(s.get('kind') == 'docker' and self.docker_state(s)['active'] for s in self.config['services'])
@@ -1056,6 +1074,42 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
             interval = 2 if (has_owned or docker_active or busy) else 10
             self.wake.wait(interval)
             self.wake.clear()
+
+    def service_history(self, pad_id):
+        with self.lock:
+            group = next((g for g in self.config.get('groups', []) if g['id'] == pad_id), None)
+            if group:
+                member_ids = group.get('member_ids', [])
+                local_members = [mid for mid in member_ids if self.service(mid).get('kind', 'local') == 'local']
+                if not local_members:
+                    return {'interval': 10, 'cpu': [], 'memory': []}
+                member_hists = [list(self.history.get(mid, [])) for mid in local_members]
+                max_len = max((len(h) for h in member_hists), default=0)
+                if max_len == 0:
+                    return {'interval': 10, 'cpu': [], 'memory': []}
+                cpu_list = []
+                mem_list = []
+                for offset in range(max_len, 0, -1):
+                    c_sum = 0.0
+                    m_sum = 0.0
+                    for h in member_hists:
+                        if len(h) >= offset:
+                            c_sum += h[-offset][0]
+                            m_sum += h[-offset][1]
+                    cpu_list.append(round(c_sum, 1))
+                    mem_list.append(round(m_sum, 1))
+                return {'interval': 10, 'cpu': cpu_list, 'memory': mem_list}
+            service = next((s for s in self.config['services'] if s['id'] == pad_id), None)
+            if not service:
+                raise KeyError('서비스를 찾을 수 없습니다.')
+            if service.get('kind', 'local') != 'local':
+                return {'interval': 10, 'cpu': [], 'memory': []}
+            hist = list(self.history.get(pad_id, []))
+            return {
+                'interval': 10,
+                'cpu': [h[0] for h in hist],
+                'memory': [h[1] for h in hist],
+            }
 
     @property
     def startup_path(self):

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Ansi from 'ansi-to-react';
 import { createRoot } from 'react-dom/client';
-import { Bell, Code, Film, Folder, Gauge, Globe, Languages, History, Monitor, Info, LoaderCircle, MoreVertical, Play, Plus, Power, RefreshCw, ScanSearch, Settings as Gear, Settings2, SlidersHorizontal, Square, Terminal, Trash2 } from 'lucide-react';
+import { Bell, Code, Film, Folder, Gauge, Globe, Languages, History, Monitor, Info, LoaderCircle, MoreVertical, Play, Plus, Power, RefreshCw, ScanSearch, Settings as Gear, Settings2, SlidersHorizontal, Square, Terminal, Trash2, Volume2 } from 'lucide-react';
 import { Modal } from './components/Modal/Modal.jsx';
 import { PadForm } from './components/PadForm.jsx';
 import { SelectControl } from './components/SelectControl.jsx';
@@ -11,6 +11,8 @@ import { UsageBar } from './components/UsageBar.jsx';
 import { AccountSettings } from './components/AccountSettings.jsx';
 import { SceneSettings } from './components/SceneSettings.jsx';
 import { LogViewer } from './components/LogViewer.jsx';
+import DotMatrix from './components/DotMatrix.jsx';
+import { press, success as feedbackSuccess, failure as feedbackFailure, getFeedbackSettings, saveFeedbackSettings } from './feedback.js';
 import { SignIn } from './components/SignIn.jsx';
 import { connectWidget, disconnectWidget, getAlertStatus, isNative, loadServer, nativeHeaders, serverOrigin, setAlertStatus } from './native.js';
 import { PairPhone } from './components/PairPhone.jsx';
@@ -96,7 +98,9 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
     const idle = active.length === 0 && (members.some(s => s.status === 'conflict') ? 'conflict' : members.some(s => s.status === 'external') ? 'external' : null);
     const failed = members.some(s => s.status === 'error') ? 'error' : 'unreachable';
     const status = idle ? idle : members.some(s => ['unhealthy', 'error', 'unreachable'].includes(s.status)) ? (active.length ? 'unhealthy' : failed) : active.length === 0 ? (members.some(s => s.status === 'checking') ? 'checking' : 'stopped') : active.length < members.length ? 'partial' : members.some(s => s.status === 'starting') ? 'starting' : 'running';
-    return { ...group, isGroup: true, members, status, active: active.length > 0, busy: members.some(s => s.busy), pid: active.find(s => s.pid)?.pid };
+    const cpu = members.reduce((sum, s) => sum + (s.cpu || 0), 0);
+    const memory = members.reduce((sum, s) => sum + (s.memory || 0), 0);
+    return { ...group, isGroup: true, members, status, active: active.length > 0, busy: members.some(s => s.busy), pid: active.find(s => s.pid)?.pid, cpu, memory };
   })];
   const remoteOnly = pad => (pad.isGroup ? pad.members : [pad]).every(s => s.kind === 'remote');
   const current = pads.find(s => s.id === selected);
@@ -106,6 +110,50 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
   const logService = current?.isGroup ? current.members.find(s => s.id === componentId) || current.members[0] : current;
   const logId = logService?.id;
   const remoteLog = logService?.kind === 'remote';
+  const [history, setHistory] = useState({ cpu: [], memory: [] });
+  const [historyMetric, setHistoryMetric] = useState('cpu');
+
+  useEffect(() => {
+    if (!logId || remoteLog || logService?.kind === 'docker') {
+      setHistory({ cpu: [], memory: [] });
+      return;
+    }
+    let disposed = false;
+    let timer = null;
+
+    async function loadHistory() {
+      try {
+        const data = await api(`/services/${logId}/history`);
+        if (!disposed) setHistory(data);
+      } catch (_) {}
+    }
+
+    function schedule() {
+      clearInterval(timer);
+      if (document.visibilityState !== 'hidden') {
+        timer = setInterval(loadHistory, 10000);
+      }
+    }
+
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        loadHistory();
+        schedule();
+      } else {
+        clearInterval(timer);
+      }
+    }
+
+    loadHistory();
+    schedule();
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      disposed = true;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [logId, remoteLog, logService?.kind]);
   useEffect(() => {
     if (!logId) { setLogs(''); return; }
     let disposed = false;
@@ -182,7 +230,9 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
     if (!connected) return;
     try {
       await api(`/scenes/${scene.id}/${action}`, { method: 'POST' });
+      feedbackSuccess(action);
     } catch (e) {
+      feedbackFailure();
       onError(e.message);
     }
   }
@@ -203,13 +253,27 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
     if (busy.has(service.id) || !connected) return;
     if (!service.active && service.status === 'external' && !confirmed) { setTakeover(service); return; }
     setBusy(value => new Set([...value, service.id]));
-    try { await api(`/${service.isGroup ? 'groups' : 'services'}/${service.id}/${service.active ? 'stop' : 'start'}${confirmed ? '?takeover=true' : ''}`, { method: 'POST' }); await refresh(); }
-    catch (e) { onError(e.message); } finally { setBusy(value => { const next = new Set(value); next.delete(service.id); return next; }); }
+    const wasActive = service.active;
+    try {
+      await api(`/${service.isGroup ? 'groups' : 'services'}/${service.id}/${wasActive ? 'stop' : 'start'}${confirmed ? '?takeover=true' : ''}`, { method: 'POST' });
+      feedbackSuccess(wasActive ? 'stop' : 'start');
+      await refresh();
+    }
+    catch (e) {
+      feedbackFailure();
+      onError(e.message);
+    } finally { setBusy(value => { const next = new Set(value); next.delete(service.id); return next; }); }
   }
   async function restart(service) {
     setBusy(value => new Set([...value, service.id]));
-    try { await api(`/services/${service.id}/restart`, { method: 'POST' }); }
-    catch (error) { onError(error.message); }
+    try {
+      await api(`/services/${service.id}/restart`, { method: 'POST' });
+      feedbackSuccess('start');
+    }
+    catch (error) {
+      feedbackFailure();
+      onError(error.message);
+    }
     finally { await refresh(); setBusy(value => { const next = new Set(value); next.delete(service.id); return next; }); }
   }
   async function remove() {
@@ -345,8 +409,9 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
           progressPct = Math.round(((done + (phase === 'waiting' ? 0.5 : 0)) / total) * 100);
         }
         const errorLine = (service.isGroup ? service.members : [service]).find(s => s.error_line)?.error_line;
-        return <div key={slot} className={`pad-wrap ${selected === service.id ? 'chosen' : ''} ${dragged === service.id ? 'dragging' : ''}`} style={{ '--pad-color': service.color }}>
-          <button className={`pad assigned ${service.status}`} disabled={pending || !connected} onClick={() => toggle(service)} aria-label={`${service.name} ${service.active ? t('종료') : t('실행')}`} aria-pressed={!!service.active}>
+        const cpuVal = Math.min(1, Math.max(0, (service.cpu || 0) / 100));
+        return <div key={slot} className={`pad-wrap ${selected === service.id ? 'chosen' : ''} ${dragged === service.id ? 'dragging' : ''}`} style={{ '--pad-color': service.color, '--cpu': cpuVal }}>
+          <button className={`pad assigned ${service.status}`} style={{ '--cpu': cpuVal }} disabled={pending || !connected} onClick={() => toggle(service)} onPointerDown={() => press()} aria-label={`${service.name} ${service.active ? t('종료') : t('실행')}`} aria-pressed={!!service.active}>
             <span className="pad-top">{pending ? <LoaderCircle className="spin" size={14} /> : <Power size={14} />}</span>
             <span className="pad-port">{tags.length ? tags.map(s => <span key={s.id} title={s.kind === 'remote' ? s.remote.host : undefined}>{s.name}{s.kind === 'remote' ? ` @${s.remote.host}` : s.kind === 'docker' ? ` ${s.container_ports?.length ? s.container_ports.map(port => `:${port}`).join(', ') : t(':포트 없음')}` : s.port ? ` :${s.port}` : t(' :포트 없음')}</span>) : t('명령 실행')}</span>
             <span className="pad-state"><i />{stateText}</span>
@@ -385,6 +450,36 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
           {logService.kind === 'docker' && <div><dt>{t('컨테이너 ID')}</dt><dd><code>{logService.container?.slice(0, 12)}</code></dd></div>}
           {logService.kind === 'remote' && <><div><dt>{t('호스트')}</dt><dd>{logService.remote.host}</dd></div><div><dt>{t('마지막 확인')}</dt><dd>{logService.checked_ago == null ? t('확인 중') : t('{0} 전', timeLabel(logService.checked_ago))}</dd></div><div><dt>{t('마지막 명령')}</dt><dd>{lastCommand(logService.last)}</dd></div></>}
         </dl>
+        {logService.kind !== 'docker' && logService.kind !== 'remote' && (history.cpu?.length > 0 || history.memory?.length > 0) && (() => {
+          const isCpu = historyMetric === 'cpu';
+          const list = isCpu ? history.cpu : history.memory;
+          const currentVal = list.length > 0 ? list[list.length - 1] : 0;
+          const maxVal = list.length > 0 ? Math.max(...list) : 0;
+          return (
+            <div className="lcd">
+              <div
+                className="lcd-head"
+                role="button"
+                tabIndex={0}
+                onClick={() => setHistoryMetric(m => m === 'cpu' ? 'memory' : 'cpu')}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setHistoryMetric(m => m === 'cpu' ? 'memory' : 'cpu'); } }}
+                title={t('클릭하여 CPU / MEM 전환')}
+              >
+                <span>{isCpu ? 'CPU USAGE' : 'MEM USAGE'}</span>
+                <span>{t('최대: {0}', isCpu ? `${maxVal}%` : `${maxVal} MB`)}</span>
+              </div>
+              <div className="lcd-value">
+                {currentVal}
+                <span>{isCpu ? '%' : 'MB'}</span>
+              </div>
+              <DotMatrix data={list} type={historyMetric} />
+              <div className="lcd-bottom">
+                <span>10M AGO</span>
+                <span>NOW</span>
+              </div>
+            </div>
+          );
+        })()}
         {(logService.error_line || logService.error || logService.message) && <p className="detail-message">{logService.error_line || logService.error || logService.message}</p>}
         {logService.last?.output && <pre className="command-output" aria-label={t('마지막 명령 출력')}>{logService.last.output}</pre>}
         <div className="detail-buttons"><button className="secondary" disabled={!connected || busy.has(current.id) || busy.has(logId) || current.busy || logService.busy} onClick={() => restart(logService)} aria-label={t('{0} 재시작', logService.name)}><RefreshCw size={13} />{t('재시작')}</button></div>
@@ -450,7 +545,18 @@ function Settings({ auth, settings, padsets, services, groups, scenes = [], sche
   const [busy, setBusy] = useState(false);
   const [roots, setRoots] = useState(null);
   const [phoneAlert, setPhoneAlert] = useState(false);
+  const [feedbackSettings, setFeedbackSettingsState] = useState(getFeedbackSettings);
   useEffect(() => { if (isNative) getAlertStatus().then(setPhoneAlert); }, []);
+  function toggleFeedback(key) {
+    const next = { ...feedbackSettings, [key]: !feedbackSettings[key] };
+    setFeedbackSettingsState(next);
+    saveFeedbackSettings(next);
+    if (key === 'haptics' && next.haptics) {
+      press();
+    } else if (key === 'sound' && next.sound) {
+      feedbackSuccess('start');
+    }
+  }
   async function togglePhoneAlert(enabled) {
     setBusy(true);
     try {
@@ -538,6 +644,11 @@ function Settings({ auth, settings, padsets, services, groups, scenes = [], sche
     <section className="settings-card vertical"><div className="section-heading"><Gauge size={22} /><div><h2>{t('AI 사용량')}</h2><p>{t('이 PC에 로그인된 AI CLI의 사용 한도를 패드 위와 휴대폰 위젯에 표시합니다. 각 CLI의 비공개 API를 읽기만 하므로 응답 형식이 바뀌면 표시되지 않을 수 있어요.')}</p></div></div>
       <div className="usage-switches">{[['claude', 'Claude Code'], ['codex', 'Codex'], ['antigravity', 'Antigravity']].map(([id, name]) => <label key={id} className="usage-switch"><span>{name}</span><button type="button" className={`switch ${settings?.usage_providers?.includes(id) ? 'on' : ''}`} role="switch" aria-checked={!!settings?.usage_providers?.includes(id)} aria-label={t('{0} 사용량 표시', name)} disabled={busy || !settings} onClick={() => changeUsage(id, !settings.usage_providers.includes(id))}><span /></button></label>)}</div>
       <p className="optional">{t('Antigravity는 상태줄이 저장한 스냅샷 파일을 읽습니다:')} <code>~/.gemini/antigravity-cli/usage-snapshot.json</code></p></section>
+    <section className="settings-card vertical"><div className="section-heading"><Volume2 size={22} /><div><h2>{t('이 기기의 피드백')}</h2><p>{t('패드를 조작하거나 실행 상태가 바뀔 때 촉각(진동)과 효과음을 재생합니다.')}</p></div></div>
+      <div className="usage-switches">
+        <label className="usage-switch"><span>{t('촉각 피드백')}</span><button type="button" className={`switch ${feedbackSettings.haptics ? 'on' : ''}`} role="switch" aria-checked={feedbackSettings.haptics} aria-label={t('촉각 피드백')} onClick={() => toggleFeedback('haptics')}><span /></button></label>
+        <label className="usage-switch"><span>{t('소리 피드백')}</span><button type="button" className={`switch ${feedbackSettings.sound ? 'on' : ''}`} role="switch" aria-checked={feedbackSettings.sound} aria-label={t('소리 피드백')} onClick={() => toggleFeedback('sound')}><span /></button></label>
+      </div></section>
     <section className="settings-card vertical"><div className="settings-actions storage-heading"><div className="section-heading"><Folder size={18} /><div><h2>{t('설정과 로그 저장 위치')}</h2></div></div><button className="secondary" disabled={busy || !settings?.can_select_data_dir} onClick={selectDataDirectory} title={settings?.can_select_data_dir ? t('빈 폴더를 선택하면 바로 적용됩니다.') : t('StackPad가 실행 중인 PC에서 선택해 주세요.')}>{busy ? t('처리 중…') : t('폴더 선택')}</button></div><code className="path-code">{settings?.data_dir || t('불러오는 중…')}</code></section></>}
     {category === 'recommend' && <section className="settings-card vertical"><div className="section-heading"><ScanSearch size={22} /><div><h2>{t('등록 추천 스캔 폴더')}</h2><p>{t('이 폴더 아래에서 실행 중인 Python, Node 서버를 등록 추천 대상으로 찾습니다. 한 줄에 폴더 하나씩 입력하세요.')}</p></div></div><textarea aria-label={t('등록 추천 스캔 폴더')} rows={3} value={roots ?? settings?.recommend_roots?.join('\n') ?? ''} onChange={e => setRoots(e.target.value)} /><div className="settings-actions"><button className="primary" disabled={busy || roots === null} onClick={saveRoots}>{t('저장')}</button></div>
       {!!settings?.recommend_hidden?.length && <div className="hidden-recommendations"><div className="settings-actions"><h3>{t('숨긴 추천 {0}개', settings.recommend_hidden.length)}</h3><button className="secondary" disabled={busy} onClick={resetHidden}>{t('모두 다시 표시')}</button></div><div className="component-list">{settings.recommend_hidden.map(entry => <div className="component-row" key={entry.key}>

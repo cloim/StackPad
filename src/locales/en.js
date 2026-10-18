@@ -400,4 +400,10 @@ export default {
   '{0}/{1} {2} 준비 중': '{0}/{1} {2} waiting',
   '{0}/{1} {2} 시작 중': '{0}/{1} {2} starting',
   '진행 중': 'In progress',
+  '이 기기의 피드백': 'Device feedback',
+  '패드를 조작하거나 실행 상태가 바뀔 때 촉각(진동)과 효과음을 재생합니다.': 'Plays haptic vibration and sound effects when interacting with pads or changing service state.',
+  '촉각 피드백': 'Haptic feedback',
+  '소리 피드백': 'Sound feedback',
+  '클릭하여 CPU / MEM 전환': 'Click to toggle CPU / MEM',
+  '최대: {0}': 'Max: {0}',
 };

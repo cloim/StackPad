@@ -466,7 +466,7 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
         schedule: bool = True
 
     @app.put('/api/settings/notifications', dependencies=[Depends(authenticated)])
-    def update_notifications(values: NotificationSettings, request: Request):
+    async def update_notifications(values: NotificationSettings, request: Request):
         with engine.lock:
             engine.config['notifications'] = values.model_dump()
             engine.save()
@@ -712,6 +712,13 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
     @app.get('/api/services/{service_id}/logs', dependencies=[Depends(authenticated)])
     def logs(service_id: str, file: str | None = None, offset: str | None = None):
         return engine.logs_offset(service_id, file, offset)
+
+    @app.get('/api/services/{service_id}/history', dependencies=[Depends(authenticated)])
+    def service_history(service_id: str):
+        try:
+            return engine.service_history(service_id)
+        except KeyError as error:
+            raise HTTPException(404, str(error))
 
     class Shutdown(BaseModel):
         stop_services: bool = False

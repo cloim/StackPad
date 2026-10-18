@@ -62,7 +62,7 @@ class ScheduleManager:
             except Exception as e:
                 import logging
                 logging.error('Scheduler check error: %s', e)
-            self.wake.wait(30.0)
+            self.closed.wait(30.0)
 
     def get_schedules(self):
         with self.lock:
