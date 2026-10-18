@@ -29,6 +29,8 @@ from groups import GroupManager, PAD_COLORS, nearest_color
 from padsets import Padsets
 from docker_services import DockerServices, DockerServiceInput, docker_cli, container_name
 from remote import LOCAL_KEYS, RemoteServices, RemoteSpec
+from scenes import SceneManager, SceneInput
+from schedules import ScheduleManager, ScheduleInput
 
 
 def pad_color(value):
@@ -166,7 +168,7 @@ def vscode_path():
     return next((str(path) for path in candidates if path.is_file()), None)
 
 
-class Engine(GroupManager, RemoteServices, Padsets, DockerServices):
+class Engine(GroupManager, RemoteServices, Padsets, DockerServices, SceneManager, ScheduleManager):
     def __init__(self, data_dir, desktop_exe=None):
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -189,6 +191,10 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices):
         self.alerts = deque(maxlen=100)
         self._alert_counter = 0
         self._last_unhealthy = set()
+        self.scene_progress = {}
+        self.scene_threads = {}
+        self.schedule_last_run = {}
+        self.scheduler_thread = None
         self.closed = threading.Event()
         self.config = json.loads(self.path.read_text('utf-8')) if self.path.exists() else {'services': []}
         # Google sign-in replaced the former app password.
@@ -210,6 +216,7 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices):
             self.config['usage_providers'] = ['claude', 'codex', 'antigravity'] if self.config['services'] else []
         self.migrate_legacy_files()
         self.purge_expired_logs()
+        self.start_scheduler()
         self.monitor = threading.Thread(target=self.watch, daemon=True)
         self.remote_init()
 
@@ -352,6 +359,9 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices):
                 'groups': self.config.get('groups', []),
                 'links': self.pad_links(),
                 'padsets': self.config.get('padsets', []),
+                'scenes': self.get_scenes(),
+                'scene_progress': dict(self.scene_progress),
+                'schedules': self.get_schedules(),
             }
 
     def notify_services(self):
@@ -568,6 +578,8 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices):
             self.config['services'].remove(service)
             self.samples.pop(service_id, None)
             self.forget_remote(service_id)
+            self.clean_scenes_for_pad(service_id)
+            self.clean_schedules_for_target(service_id)
             shutil.rmtree(self.data_dir / 'services' / service_id, ignore_errors=True)
             self.save()
 

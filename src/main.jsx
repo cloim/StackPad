@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Ansi from 'ansi-to-react';
 import { createRoot } from 'react-dom/client';
-import { Bell, Code, Folder, Gauge, Globe, Languages, History, Monitor, Info, LoaderCircle, Plus, Power, RefreshCw, ScanSearch, Settings as Gear, Settings2, SlidersHorizontal, Terminal, Trash2 } from 'lucide-react';
+import { Bell, Code, Film, Folder, Gauge, Globe, Languages, History, Monitor, Info, LoaderCircle, MoreVertical, Play, Plus, Power, RefreshCw, ScanSearch, Settings as Gear, Settings2, SlidersHorizontal, Square, Terminal, Trash2 } from 'lucide-react';
 import { Modal } from './components/Modal/Modal.jsx';
 import { PadForm } from './components/PadForm.jsx';
 import { SelectControl } from './components/SelectControl.jsx';
@@ -9,6 +9,7 @@ import { Tabs } from './components/Tabs.jsx';
 import { PadsetSettings } from './components/PadsetSettings.jsx';
 import { UsageBar } from './components/UsageBar.jsx';
 import { AccountSettings } from './components/AccountSettings.jsx';
+import { SceneSettings } from './components/SceneSettings.jsx';
 import { SignIn } from './components/SignIn.jsx';
 import { connectWidget, disconnectWidget, getAlertStatus, isNative, loadServer, nativeHeaders, serverOrigin, setAlertStatus } from './native.js';
 import { PairPhone } from './components/PairPhone.jsx';
@@ -68,7 +69,7 @@ function Logo({ small = false }) {
   return <div className={`logo ${small ? 'small' : ''}`} aria-hidden="true">{[0, 1, 2, 3].map(i => <span key={i} />)}</div>;
 }
 
-function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, loading, settings, refresh, onError, connected, local }) {
+function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, loading, settings, refresh, onError, connected, local, scenes = [], sceneProgress = {}, schedules = [], onOpenSettings }) {
   const [selected, setSelected] = useState(null);
   const [padEditor, setPadEditor] = useState(null);
   const [busy, setBusy] = useState(new Set());
@@ -80,6 +81,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
   const [dragged, setDragged] = useState(null);
   const [dropSlot, setDropSlot] = useState(null);
   const [padMenu, setPadMenu] = useState(null);
+  const [sceneMenu, setSceneMenu] = useState(null);
   const dragging = useRef(null);
   const menuRef = useRef(null);
   const suppressClick = useRef(0);
@@ -168,11 +170,31 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
     };
   }, [logId, remoteLog]);
   useEffect(() => {
-    if (!padMenu) return;
-    const close = () => setPadMenu(null);
+    if (!padMenu && !sceneMenu) return;
+    const close = () => { setPadMenu(null); setSceneMenu(null); };
     window.addEventListener('resize', close);
     return () => window.removeEventListener('resize', close);
-  }, [padMenu]);
+  }, [padMenu, sceneMenu]);
+  async function triggerScene(scene, action = 'start') {
+    setSceneMenu(null);
+    if (!connected) return;
+    try {
+      await api(`/scenes/${scene.id}/${action}`, { method: 'POST' });
+    } catch (e) {
+      onError(e.message);
+    }
+  }
+  function openSceneMenu(e, scene) {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    setSceneMenu({
+      scene,
+      style: {
+        left: `${Math.min(window.innerWidth - 180, Math.max(10, rect.left))}px`,
+        top: `${rect.bottom + 6}px`
+      }
+    });
+  }
   useEffect(() => { if (logPane.current && follow.current) logPane.current.scrollTop = logPane.current.scrollHeight; }, [logs]);
   async function toggle(service, confirmed = false) {
     if (Date.now() < suppressClick.current) return;
@@ -263,7 +285,41 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
   return <>
     <section className="pad-deck" aria-label={t('서비스 컨트롤 패드')}>
       <UsageBar api={api} />
-      <Tabs label={t('패드셋')} tabs={padsets.map(set => ({ ...set, badge: pads.filter(p => p.padset_id === set.id).length }))} value={padsetId} onChange={onPadsetChange} prefix="padsets" />
+      <div className="padset-bar-row">
+        <Tabs label={t('패드셋')} tabs={padsets.map(set => ({ ...set, badge: pads.filter(p => p.padset_id === set.id).length }))} value={padsetId} onChange={onPadsetChange} prefix="padsets" />
+        {scenes.length > 0 && <div className="scene-chips-bar" aria-label={t('장면 목록')}>
+          {scenes.map(sc => {
+            const padIds = sc.pad_ids || [];
+            const activeCount = padIds.filter(id => pads.some(p => p.id === id && p.active)).length;
+            const totalCount = padIds.length;
+            const progress = sceneProgress?.[sc.id];
+            const isRunning = progress || (totalCount > 0 && activeCount === totalCount);
+            const isPartial = totalCount > 0 && activeCount > 0 && activeCount < totalCount;
+            const pct = totalCount > 0 ? (progress ? Math.round(progress.done / progress.total * 100) : Math.round(activeCount / totalCount * 100)) : 0;
+            return <div key={sc.id} className="scene-chip-wrap" style={{ '--scene-color': sc.color, '--scene-progress': `${pct}%` }}>
+              <button
+                type="button"
+                className={`scene-chip ${isRunning ? 'running' : ''} ${isPartial ? 'partial' : ''} ${progress ? 'in-progress' : ''}`}
+                onClick={() => triggerScene(sc, 'start')}
+                onContextMenu={e => { e.preventDefault(); openSceneMenu(e, sc); }}
+                title={t("클릭하여 '{0}' 시작, 우클릭으로 메뉴", sc.name)}
+              >
+                <span className="scene-chip-dot" />
+                <span className="scene-chip-name">{sc.name}</span>
+                {totalCount > 0 && <span className="scene-chip-ratio">{progress ? `${progress.done}/${progress.total}` : `${activeCount}/${totalCount}`}</span>}
+              </button>
+              <button
+                type="button"
+                className="scene-chip-menu-btn"
+                aria-label={t('{0} 장면 메뉴', sc.name)}
+                onClick={e => openSceneMenu(e, sc)}
+              >
+                <MoreVertical size={13} />
+              </button>
+            </div>;
+          })}
+        </div>}
+      </div>
       <div className="pads" role="tabpanel" id="padsets-panel" aria-labelledby={`padsets-tab-${padsetId}`}>{Array.from({ length: 16 }, (_, slot) => {
         const service = pads.find(s => s.padset_id === padsetId && s.slot === slot);
         if (loading) return <div key={slot} className="pad skeleton" />;
@@ -287,6 +343,13 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
         {links[menuPad.id]?.domain && <button role="menuitem" onClick={() => openLink(menuPad, 'domain')}><Globe size={14} />{t('도메인으로 열기')}</button>}
         {local && links[menuPad.id]?.local && <button role="menuitem" onClick={() => openLink(menuPad, 'local')}><Monitor size={14} />{t('로컬로 열기')}</button>}
         {settings?.tools?.vscode !== false && (menuPad.isGroup ? menuPad.members : [menuPad]).some(s => !s.kind || s.kind === 'local') && <button role="menuitem" disabled={!connected} onClick={() => openInCode(menuPad)}><Code size={14} />{t('VSCode로 열기')}</button>}
+      </div>
+    </div>}
+    {sceneMenu && <div className="pad-menu-layer" onPointerDown={() => setSceneMenu(null)} onContextMenu={event => { event.preventDefault(); setSceneMenu(null); }}>
+      <div className="pad-menu" role="menu" aria-label={t('{0} 메뉴', sceneMenu.scene.name)} style={sceneMenu.style} onPointerDown={event => event.stopPropagation()}>
+        <button role="menuitem" autoFocus onClick={() => triggerScene(sceneMenu.scene, 'start')}><Play size={14} />{t('장면 시작')}</button>
+        <button role="menuitem" onClick={() => triggerScene(sceneMenu.scene, 'stop')}><Square size={14} />{t('장면 정지')}</button>
+        <button role="menuitem" onClick={() => { setSceneMenu(null); onOpenSettings?.('scenes'); }}><Gear size={14} />{t('장면 설정')}</button>
       </div>
     </div>}
     <Modal isOpen={!!current} onClose={() => setSelected(null)} title={current?.name || t('서비스 상세')} storageKey="service-detail" size="lg">{current && <>
@@ -362,8 +425,8 @@ function FolderOnboarding({ onDone, onError }) {
   </Modal>;
 }
 
-function Settings({ auth, settings, padsets, services, groups, refresh, onError, onNotice, onLogout }) {
-  const [category, setCategory] = useState('general');
+function Settings({ auth, settings, padsets, services, groups, scenes = [], schedules = [], initialCategory = 'general', refresh, onError, onNotice, onLogout }) {
+  const [category, setCategory] = useState(initialCategory);
   const [busy, setBusy] = useState(false);
   const [roots, setRoots] = useState(null);
   const [phoneAlert, setPhoneAlert] = useState(false);
@@ -432,7 +495,7 @@ function Settings({ auth, settings, padsets, services, groups, refresh, onError,
     } catch (e) { onError(e.message); } finally { setBusy(false); }
   }
   return <>
-    <Tabs label={t('환경 설정 카테고리')} tabs={[{ id: 'general', name: t('일반') }, { id: 'recommend', name: t('등록 추천') }, { id: 'padsets', name: t('패드셋') }, { id: 'account', name: t('계정') }]} value={category} onChange={setCategory} prefix="settings" />
+    <Tabs label={t('환경 설정 카테고리')} tabs={[{ id: 'general', name: t('일반') }, { id: 'scenes', name: t('장면 및 예약') }, { id: 'recommend', name: t('등록 추천') }, { id: 'padsets', name: t('패드셋') }, { id: 'account', name: t('계정') }]} value={category} onChange={setCategory} prefix="settings" />
     <div className="settings-stack compact-settings" role="tabpanel" id="settings-panel" aria-labelledby={`settings-tab-${category}`}>
     {category === 'general' && <><section className="settings-card"><div className="settings-icon"><Power size={22} /></div><div><h2>{t('Windows 로그인 시 자동 실행')}</h2></div><button className={`switch ${settings?.autostart ? 'on' : ''}`} role="switch" aria-checked={!!settings?.autostart} aria-label={t('Windows 로그인 시 자동 실행')} disabled={busy || !settings} onClick={() => change(!settings.autostart)}><span /></button></section>
     <section className="settings-card"><div className="settings-icon"><Languages size={22} /></div><div><h2>{t('언어')}</h2></div><div className="retention-control"><SelectControl aria-label={t('언어')} value={locale} onChange={e => setLocale(e.target.value)}>
@@ -461,6 +524,7 @@ function Settings({ auth, settings, padsets, services, groups, refresh, onError,
         <div><strong>{entry.name}</strong><p><code>{entry.command}</code></p><p>{entry.cwd}</p></div>
         <div className="component-actions"><button className="secondary" disabled={busy} onClick={() => unhide(entry)} aria-label={t('{0} 다시 표시', entry.name)}>{t('다시 표시')}</button></div>
       </div>)}</div></div>}</section>}
+    {category === 'scenes' && <SceneSettings {...{ scenes, schedules, services, groups, colors, colorNames, api, refresh, onError, onNotice }} />}
     {category === 'padsets' && <PadsetSettings {...{ padsets, services, groups, api, refresh, onError }} />}
     {category === 'account' && <AccountSettings {...{ auth, api, onError }} onLogout={onLogout} />}</div>
   </>;
@@ -472,6 +536,9 @@ function App() {
   const [services, setServices] = useState([]);
   const [groups, setGroups] = useState([]);
   const [padsets, setPadsets] = useState([]);
+  const [scenes, setScenes] = useState([]);
+  const [sceneProgress, setSceneProgress] = useState({});
+  const [schedules, setSchedules] = useState([]);
   const [activePadset, setActivePadset] = useState(() => { try { return localStorage.getItem('stackpad-padset') || 'default'; } catch { return 'default'; } });
   const padsetId = padsets.some(s => s.id === activePadset) ? activePadset : padsets[0]?.id || 'default';
   function onPadsetChange(id) { setActivePadset(id); try { localStorage.setItem('stackpad-padset', id); } catch { /* 세션 내 선택 유지 */ } }
@@ -483,6 +550,7 @@ function App() {
   const [connected, setConnected] = useState(false);
   const [notice, setNotice] = useState(null);
   const [panel, setPanel] = useState(window.location.pathname === '/settings' ? 'settings' : null);
+  const [settingsCategory, setSettingsCategory] = useState('general');
   const inFlight = useRef(false);
   const checkAuth = useCallback(async () => {
     // A phone that has not scanned a PC's QR code yet has no engine to ask.
@@ -512,7 +580,16 @@ function App() {
     inFlight.current = true;
     try {
       const [data, info] = await Promise.all([api('/services'), api('/settings')]);
-      setServices(data.services); setPadsets(data.padsets || []); setGroups(data.groups || []); setLinks(data.links || {}); setSettings(info); setConnected(true); setLoading(false);
+      setServices(data.services);
+      setPadsets(data.padsets || []);
+      setGroups(data.groups || []);
+      setLinks(data.links || {});
+      setScenes(data.scenes || []);
+      setSceneProgress(data.scene_progress || {});
+      setSchedules(data.schedules || []);
+      setSettings(info);
+      setConnected(true);
+      setLoading(false);
     } catch (e) { setConnected(false); if (e.status === 401) { checkAuth(); } }
     finally { inFlight.current = false; }
   }, [checkAuth]);
@@ -527,10 +604,24 @@ function App() {
           setPadsets(data.padsets || []);
           setGroups(data.groups || []);
           setLinks(data.links || {});
+          setScenes(data.scenes || []);
+          setSceneProgress(data.scene_progress || {});
+          setSchedules(data.schedules || []);
           setConnected(true);
           setLoading(false);
         } else if (topic === 'settings') {
           setSettings(data);
+        } else if (topic === 'progress') {
+          if (data?.scene_id) {
+            setSceneProgress(prev => {
+              if (data.phase === 'finished') {
+                const next = { ...prev };
+                delete next[data.scene_id];
+                return next;
+              }
+              return { ...prev, [data.scene_id]: data };
+            });
+          }
         }
       },
       onConnectedChange: val => setConnected(val),
@@ -566,13 +657,13 @@ function App() {
       <div className="toolbar-actions">
         <button className="tool-button" disabled={!connected} onClick={() => setPanel('recommend')} title={t('등록 추천')} aria-label={t('등록 추천')}><ScanSearch size={17} /></button>
         <button className="tool-button" disabled={!connected} onClick={() => { const slot = Array.from({ length: 16 }, (_, i) => i).find(i => !services.some(s => s.padset_id === padsetId && s.slot === i)); if (slot === undefined) onError(t('빈 패드를 확보해 주세요.')); else setRegistrationSlot(slot); }} title={t('서비스 등록')} aria-label={t('서비스 등록')}><Plus size={17} /></button>
-        <button className="tool-button" onClick={() => setPanel('settings')} title={t('환경 설정')} aria-label={t('환경 설정')}><Gear size={17} /></button>
+        <button className="tool-button" onClick={() => { setSettingsCategory('general'); setPanel('settings'); }} title={t('환경 설정')} aria-label={t('환경 설정')}><Gear size={17} /></button>
       </div>
     </header>
-    <main aria-label={t('서비스 패드')}><Deck {...{ padsets, padsetId, onPadsetChange, services, groups, links, loading, settings, refresh, onError, connected }} local={auth.local} /></main>
-    {registrationSlot !== null && <PadForm {...{ padsets, padsetId }} defaultCwd={settings?.recommend_roots?.[0] || ''} tools={settings?.tools} slot={registrationSlot} preset={preset} local={auth.local} {...{ services, api, colors, colorNames, onError }} onClose={() => { setRegistrationSlot(null); setPreset(null); }} onSaved={refresh} />}
+    <main aria-label={t('서비스 패드')}><Deck {...{ padsets, padsetId, onPadsetChange, services, groups, links, loading, settings, refresh, onError, connected, scenes, sceneProgress, schedules }} onOpenSettings={cat => { setSettingsCategory(cat || 'general'); setPanel('settings'); }} local={auth.local} /></main>
+    {registrationSlot !== null && <PadForm {...{ padsets, padsetId, schedules }} defaultCwd={settings?.recommend_roots?.[0] || ''} tools={settings?.tools} slot={registrationSlot} preset={preset} local={auth.local} {...{ services, api, colors, colorNames, onError }} onClose={() => { setRegistrationSlot(null); setPreset(null); }} onSaved={refresh} />}
     <Modal isOpen={!!panel} onClose={() => setPanel(null)} title={panel === 'settings' ? t('환경 설정') : t('등록 추천')} size="lg" storageKey="common-settings">
-      {panel === 'settings' ? <Settings {...{ auth, settings, padsets, services, groups, refresh, onError, onNotice }} onLogout={() => { setPanel(null); logout(); }} /> : panel === 'recommend' ? <Recommendations onError={onError} onRegister={candidate => { const slot = Array.from({ length: 16 }, (_, i) => i).find(i => !services.some(s => s.padset_id === padsetId && s.slot === i)); if (slot === undefined) { onError(t('빈 패드를 확보해 주세요.')); return; } setPanel(null); setPreset(candidate); setRegistrationSlot(slot); }} /> : null}
+      {panel === 'settings' ? <Settings {...{ auth, settings, padsets, services, groups, scenes, schedules, initialCategory: settingsCategory, refresh, onError, onNotice }} onLogout={() => { setPanel(null); logout(); }} /> : panel === 'recommend' ? <Recommendations onError={onError} onRegister={candidate => { const slot = Array.from({ length: 16 }, (_, i) => i).find(i => !services.some(s => s.padset_id === padsetId && s.slot === i)); if (slot === undefined) { onError(t('빈 패드를 확보해 주세요.')); return; } setPanel(null); setPreset(candidate); setRegistrationSlot(slot); }} /> : null}
     </Modal>
     {settings && !settings.onboarding_done && auth.local && <FolderOnboarding onDone={refresh} onError={onError} />}
     <Modal isOpen={!!notice} onClose={() => setNotice(null)} title={notice?.title || ''} size="sm" draggable={false} footer={<>{notice?.link && <button className="secondary" onClick={() => { window.open(notice.link, '_blank'); setNotice(null); }}>{t('내려받기')}</button>}<button className="primary" onClick={() => setNotice(null)}>{t('확인')}</button></>}><p className="notice-text">{notice?.message}</p></Modal>

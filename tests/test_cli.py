@@ -136,6 +136,40 @@ class CommandLineApiTests(unittest.TestCase):
         self.assertEqual(ambiguous['exit_code'], 1)
         self.assertIn('ID', ambiguous['error'])
 
+    def test_scene_and_schedule_commands(self):
+        pad = self.ok('pad', 'add', '--name', 'Web', '--command', 'a')['pad']
+
+        # scene add
+        scene = self.ok('scene', 'add', '--name', 'Dev', '--pads', 'Web', '--color', '#10b981')
+        self.assertEqual(scene['name'], 'Dev')
+        self.assertEqual(scene['pad_ids'], [pad['id']])
+
+        # scene list & show
+        scenes = self.ok('scene', 'list')
+        self.assertEqual(len(scenes), 1)
+        shown = self.ok('scene', 'show', 'Dev')
+        self.assertEqual(shown['id'], scene['id'])
+
+        # schedule add
+        sched = self.ok('schedule', 'add', '--scene', 'Dev', '--action', 'start', '--time', '09:00', '--days', 'mon-fri')
+        self.assertEqual(sched['target_type'], 'scene')
+        self.assertEqual(sched['target_id'], scene['id'])
+        self.assertEqual(sched['days'], [0, 1, 2, 3, 4])
+
+        # schedule list
+        scheds = self.ok('schedule', 'list')
+        self.assertEqual(len(scheds), 1)
+
+        # schedule disable & delete
+        toggled = self.ok('schedule', 'disable', sched['id'])
+        self.assertFalse(toggled['enabled'])
+        self.ok('schedule', 'delete', sched['id'])
+        self.assertEqual(len(self.ok('schedule', 'list')), 0)
+
+        # scene delete
+        self.ok('scene', 'delete', 'Dev')
+        self.assertEqual(len(self.ok('scene', 'list')), 0)
+
 
 if __name__ == '__main__':
     unittest.main()

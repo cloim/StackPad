@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 BACKEND = Path(__file__).resolve().parents[1] / 'backend'
 sys.path.insert(0, str(BACKEND))
 import i18n
+import cli
 from main import create_app
 from auth_helper import sign_in
 

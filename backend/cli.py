@@ -10,13 +10,15 @@ from pydantic import ValidationError
 
 from groups import PAD_COLORS, PadInput
 from padsets import PadsetInput
+from scenes import SceneInput
+from schedules import ScheduleInput
 from i18n import CLI_HELP, EN, translate
 
 HELP = '''StackPad 명령줄
 
 사용법: stackpad-cli <명령> [옵션]
 
-  help [padset|pad]          도움말
+  help [padset|pad|scene|schedule] 도움말
   version                    엔진 버전
 
   padset list                패드셋 목록, 패드 수와 빈 슬롯
@@ -36,9 +38,41 @@ HELP = '''StackPad 명령줄
   pad restart <패드>
   pad logs <패드> [--component C]
 
-패드와 패드셋은 ID 또는 이름(대소문자 무시)으로 지정합니다.
+  scene list                 장면 목록
+  scene show <장면>          장면 상세
+  scene add [옵션]           장면 추가 (--name, --pads, --color)
+  scene update <장면> [옵션] 장면 수정
+  scene delete <장면>        장면 삭제
+  scene start <장면>         장면 순차 시작
+  scene stop <장면>          장면 역순 정지
+
+  schedule list              예약 목록
+  schedule add [옵션]        예약 추가 (--scene/--pad, --action, --time, --days)
+  schedule delete <예약ID>   예약 삭제
+  schedule enable <예약ID>   예약 활성화
+  schedule disable <예약ID>  예약 비활성화
+
+패드와 패드셋, 장면은 ID 또는 이름(대소문자 무시)으로 지정합니다.
 결과는 JSON으로 출력하며 pad logs와 help만 텍스트입니다.
 종료 코드: 0 성공, 1 실행 오류, 2 명령 형식 오류, 3 엔진 연결 실패'''
+
+SCENE_HELP = '''scene 명령어
+
+  scene list
+  scene show <장면>
+  scene add --name N [--pads P1,P2] [--color C]
+  scene update <장면> [--name N] [--pads P1,P2] [--color C]
+  scene delete <장면>
+  scene start <장면>
+  scene stop <장면>'''
+
+SCHEDULE_HELP = '''schedule 명령어
+
+  schedule list
+  schedule add (--scene S | --pad P) --action start|stop --time HH:MM [--days all|mon-fri|0,1,2]
+  schedule delete <예약ID>
+  schedule enable <예약ID>
+  schedule disable <예약ID>'''
 
 PAD_HELP = '''pad add, pad update 옵션
 
@@ -74,7 +108,13 @@ PADSET_HELP = '''padset 명령
   padset delete <패드셋>     패드를 옮기거나 지운 다음 삭제할 수 있습니다'''
 
 
-EN.update({HELP: CLI_HELP['main'], PAD_HELP: CLI_HELP['pad'], PADSET_HELP: CLI_HELP['padset']})
+EN.update({
+    HELP: CLI_HELP['main'],
+    PAD_HELP: CLI_HELP['pad'],
+    PADSET_HELP: CLI_HELP['padset'],
+    SCENE_HELP: CLI_HELP['scene'],
+    SCHEDULE_HELP: CLI_HELP['schedule'],
+})
 
 
 class UsageError(Exception):
@@ -136,6 +176,30 @@ def parser():
     logs = pad.add_parser('logs', add_help=False)
     logs.add_argument('pad')
     logs.add_argument('--component')
+
+    scene = commands.add_parser('scene', add_help=False).add_subparsers(dest='action', required=True)
+    scene.add_parser('list', add_help=False)
+    for act in ('show', 'delete', 'start', 'stop'):
+        scene.add_parser(act, add_help=False).add_argument('scene')
+    for act in ('add', 'update'):
+        sc_cmd = scene.add_parser(act, add_help=False)
+        if act == 'update':
+            sc_cmd.add_argument('scene')
+        sc_cmd.add_argument('--name')
+        sc_cmd.add_argument('--pads')
+        sc_cmd.add_argument('--color')
+
+    schedule = commands.add_parser('schedule', add_help=False).add_subparsers(dest='action', required=True)
+    schedule.add_parser('list', add_help=False)
+    for act in ('delete', 'enable', 'disable'):
+        schedule.add_parser(act, add_help=False).add_argument('schedule')
+    sc_add = schedule.add_parser('add', add_help=False)
+    sc_add.add_argument('--scene')
+    sc_add.add_argument('--pad')
+    sc_add.add_argument('--action', dest='target_action', choices=['start', 'stop'], required=True)
+    sc_add.add_argument('--time', required=True)
+    sc_add.add_argument('--days', default='all')
+
     return root
 
 
@@ -403,6 +467,109 @@ def run_pad(engine, args, context):
     return pad_result(engine, pad['id'])
 
 
+
+def find_scene(engine, ref):
+    scenes = engine.get_scenes()
+    found = [s for s in scenes if s['id'] == ref] or [s for s in scenes if s['name'].casefold() == ref.strip().casefold()]
+    if not found:
+        raise KeyError(f'장면을 찾을 수 없습니다: {ref}')
+    return found[0]
+
+
+def parse_days(value: str) -> list[int]:
+    val = value.strip().lower()
+    if val in ('all', 'everyday', 'daily'):
+        return list(range(7))
+    if val in ('mon-fri', 'weekdays'):
+        return list(range(5))
+    if val in ('sat-sun', 'weekend', 'weekends'):
+        return [5, 6]
+    name_map = {'mon': 0, 'tue': 1, 'wed': 2, 'thu': 3, 'fri': 4, 'sat': 5, 'sun': 6}
+    days = []
+    for part in val.split(','):
+        part = part.strip()
+        if not part:
+            continue
+        if part in name_map:
+            days.append(name_map[part])
+        elif part.isdigit():
+            d = int(part)
+            if 0 <= d <= 6:
+                days.append(d)
+            else:
+                raise ValueError(f'요일 숫자는 0(월)~6(일) 사이여야 합니다: {part}')
+        else:
+            raise ValueError(f'올바르지 않은 요일입니다: {part}')
+    if not days:
+        raise ValueError('요일을 하나 이상 지정해 주세요.')
+    return sorted(list(set(days)))
+
+
+def run_scene(engine, args, context):
+    if args.action == 'list':
+        return engine.get_scenes()
+    if args.action == 'add':
+        if not args.name:
+            raise ValueError('장면 이름을 지정해 주세요: --name')
+        pads = []
+        if args.pads:
+            for p in args.pads.split(','):
+                p = p.strip()
+                if p:
+                    pads.append(find_pad(engine, p)['id'])
+        return engine.save_scene(None, SceneInput(name=args.name, color=args.color or '#10b981', pad_ids=pads))
+    scene = find_scene(engine, args.scene)
+    if args.action == 'show':
+        return scene
+    if args.action == 'update':
+        name = args.name or scene['name']
+        color = args.color or scene.get('color', '#10b981')
+        if args.pads is not None:
+            pads = []
+            for p in args.pads.split(','):
+                p = p.strip()
+                if p:
+                    pads.append(find_pad(engine, p)['id'])
+        else:
+            pads = scene.get('pad_ids', [])
+        return engine.save_scene(scene['id'], SceneInput(name=name, color=color, pad_ids=pads))
+    if args.action == 'delete':
+        return engine.delete_scene(scene['id'])
+    if args.action == 'start':
+        return engine.scene_action(scene['id'], 'start')
+    if args.action == 'stop':
+        return engine.scene_action(scene['id'], 'stop')
+
+
+def run_schedule(engine, args, context):
+    if args.action == 'list':
+        return engine.get_schedules()
+    if args.action == 'delete':
+        return engine.delete_schedule(args.schedule)
+    if args.action == 'enable':
+        return engine.toggle_schedule(args.schedule, True)
+    if args.action == 'disable':
+        return engine.toggle_schedule(args.schedule, False)
+    if args.action == 'add':
+        if args.scene:
+            target_type = 'scene'
+            target_id = find_scene(engine, args.scene)['id']
+        elif args.pad:
+            target_type = 'pad'
+            target_id = find_pad(engine, args.pad)['id']
+        else:
+            raise ValueError('--scene 또는 --pad를 지정해 주세요.')
+        days = parse_days(args.days)
+        return engine.save_schedule(None, ScheduleInput(
+            target_type=target_type,
+            target_id=target_id,
+            action=args.target_action,
+            time=args.time,
+            days=days,
+            enabled=True
+        ))
+
+
 def message(error, lang):
     if isinstance(error, ValidationError):
         lines = []
@@ -426,7 +593,7 @@ def run(engine, argv, cwd='', stdin='', lang='ko', version=''):
         return 2, '', translate(f'명령 형식을 확인해 주세요: {error}', lang) + '\n' + translate('stackpad-cli help로 사용법을 볼 수 있습니다.', lang)
     if args.area in (None, 'help'):
         topic = getattr(args, 'topic', None)
-        text = translate({'pad': PAD_HELP, 'padset': PADSET_HELP}.get(topic, HELP), lang)
+        text = translate({'pad': PAD_HELP, 'padset': PADSET_HELP, 'scene': SCENE_HELP, 'schedule': SCHEDULE_HELP}.get(topic, HELP), lang)
         if topic == 'pad':
             text += ' ' + ' '.join(PAD_COLORS)
         return 0, text + '\n', ''
@@ -434,7 +601,8 @@ def run(engine, argv, cwd='', stdin='', lang='ko', version=''):
         if args.area == 'version':
             result = {'engine': version}
         else:
-            result = (run_padset if args.area == 'padset' else run_pad)(engine, args, context)
+            handlers = {'padset': run_padset, 'pad': run_pad, 'scene': run_scene, 'schedule': run_schedule}
+            result = handlers[args.area](engine, args, context)
     except (ValueError, KeyError, RuntimeError, OSError) as error:
         return 1, '', message(error, lang)
     if isinstance(result, str):

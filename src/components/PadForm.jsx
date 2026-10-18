@@ -5,9 +5,10 @@ import { SelectControl } from './SelectControl.jsx';
 import { Tabs } from './Tabs.jsx';
 import { Modal } from './Modal/Modal.jsx';
 import { emptyRemote, KindSwitch, RemoteFields } from './RemoteFields.jsx';
+import { formatNextRun } from './SceneSettings.jsx';
 import { t } from '../i18n.js';
 
-export function PadForm({ pad, preset, services, slot, padsetId = 'default', padsets = [], api, colors, colorNames, local, defaultCwd = '', tools, onClose, onSaved, onError }) {
+export function PadForm({ pad, preset, services, slot, padsetId = 'default', padsets = [], schedules = [], api, colors, colorNames, local, defaultCwd = '', tools, onClose, onSaved, onError }) {
   const initialComponents = pad?.isGroup ? pad.members : pad ? [pad] : preset ? [preset] : [{ name: '', command: '', cwd: defaultCwd, port: '', health_url: '', restart_policy: 'never', restart_max: 3 }];
   const [form, setForm] = useState({ name: pad?.name || preset?.name || '', color: pad?.color || colors.find(color => !services.some(s => s.color === color)) || colors[slot % colors.length], autostart: pad?.autostart || false, domain_url: pad?.domain_url || '', local_url: pad?.local_url || '', wait_ready: pad?.wait_ready || false, slot: pad?.slot ?? slot, padset_id: pad?.padset_id || padsetId, components: initialComponents.map(s => ({ ...(s.id ? { id: s.id } : {}), container: s.container || '', kind: s.kind || 'local', name: s.name, command: s.command || '', cwd: s.cwd || defaultCwd, port: s.port || '', health_url: s.health_url || '', restart_policy: s.restart_policy || 'never', restart_max: s.restart_max ?? 3, remote: s.remote || emptyRemote })) });
   const [tab, setTab] = useState('general');
@@ -76,6 +77,18 @@ export function PadForm({ pad, preset, services, slot, padsetId = 'default', pad
         <fieldset className="color-field" disabled={readOnly || pending}><legend>{t('패드 색상')}</legend><div className="colors">{colors.map((color, index) => <button type="button" key={color} className={common.color === color ? 'selected' : ''} style={{ '--color': color }} onClick={() => set('color', color)} aria-label={colorNames[index]} aria-pressed={common.color === color} />)}</div></fieldset>
         {allRemote ? <p className="optional">{t('원격 서버 서비스는 서버에서 관리하므로 자동 실행 대상에서 제외됩니다.')}</p> : <label className="check-row"><input type="checkbox" disabled={readOnly || pending} checked={common.autostart} onChange={e => set('autostart', e.target.checked)} /><span>{t('관리 엔진 시작 시 패드 자동 실행')}{someRemote ? t(' (원격 서버 서비스 제외)') : ''}</span></label>}
         {displayed.length > 1 && <label className="check-row"><input type="checkbox" disabled={readOnly || pending} checked={common.wait_ready} onChange={e => set('wait_ready', e.target.checked)} /><span>{t('앞 서비스가 정상 응답한 뒤 다음 서비스 실행')}</span></label>}
+        {pad?.id && (() => {
+          const padSchedules = schedules.filter(s => s.target_type === 'pad' && s.target_id === pad.id);
+          if (!padSchedules.length) return null;
+          return <div className="pad-schedules-summary">
+            <span className="summary-title">{t('예약 실행')}</span>
+            <ul className="summary-list">
+              {padSchedules.map(s => <li key={s.id}>
+                <span>{s.action === 'start' ? t('시작') : t('정지')}</span> {s.time} ({formatNextRun(s)})
+              </li>)}
+            </ul>
+          </div>;
+        })()}
       </div>
       <div hidden={tab !== 'services'}><div className="registration-services">{displayed.map((component, index) => {
         const current = readOnly && component.id ? services.find(s => s.id === component.id) || component : component;

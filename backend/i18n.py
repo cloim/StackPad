@@ -180,6 +180,24 @@ EN = {
     '패드셋에 빈 슬롯이 없습니다.': 'The pad set has no free slot.',
     '--name으로 패드 이름을 입력해 주세요.': 'Enter the pad name with --name.',
     '--command, --container 또는 --json으로 구성을 입력해 주세요.': 'Enter the component with --command, --container or --json.',
+    # Scenes and schedules
+    '장면 이름을 한 줄로 입력해 주세요.': 'Enter the scene name on one line.',
+    '등록되지 않은 장면입니다.': 'Scene not found.',
+    '장면을 찾을 수 없습니다: {0}': 'Scene not found: {0}',
+    '장면 이름을 지정해 주세요: --name': 'Specify the scene name: --name',
+    '장면 \'{0}\' 실행 중 \'{1}\' 시작 실패: {2}': 'Failed to start \'{1}\' while running scene \'{0}\': {2}',
+    '장면 \'{0}\' 정지 중 \'{1}\' 정지 실패: {2}': 'Failed to stop \'{1}\' while stopping scene \'{0}\': {2}',
+    '등록되지 않은 예약입니다.': 'Schedule not found.',
+    'HH:MM 형식으로 입력해 주세요.': 'Enter the time in HH:MM format.',
+    '올바른 시각(00:00~23:59)을 입력해 주세요.': 'Enter a valid time (00:00 to 23:59).',
+    '요일을 하나 이상 선택해 주세요.': 'Choose at least one day.',
+    '요일을 하나 이상 지정해 주세요.': 'Specify at least one day.',
+    '요일 값은 0부터 6 사이여야 합니다.': 'Day value must be between 0 and 6.',
+    '올바르지 않은 요일입니다: {0}': 'Invalid day of week: {0}',
+    '요일 숫자는 0(월)~6(일) 사이여야 합니다: {0}': 'Day number must be between 0 (Mon) and 6 (Sun): {0}',
+    '--scene 또는 --pad를 지정해 주세요.': 'Specify either --scene or --pad.',
+    '예약 실행: \'{0}\' {1}': 'Run schedule: \'{0}\' {1}',
+    '예약 실행 실패 ({0}): {1}': 'Failed to run schedule ({0}): {1}',
 }
 
 # Text written to Windows or into files follows the Windows display language instead of a browser.
@@ -256,7 +274,7 @@ CLI_HELP = {
 
 Usage: stackpad-cli <command> [options]
 
-  help [padset|pad]          Help
+  help [padset|pad|scene|schedule] Help
   version                    Engine version
 
   padset list                Pad sets with their pad count and free slots
@@ -276,7 +294,21 @@ Usage: stackpad-cli <command> [options]
   pad restart <pad>
   pad logs <pad> [--component C]
 
-Pads and pad sets are named by ID or by name (case does not matter).
+  scene list                 List scenes
+  scene show <scene>         Scene details
+  scene add [options]        Add a scene (--name, --pads, --color)
+  scene update <scene> [options] Update a scene
+  scene delete <scene>       Delete a scene
+  scene start <scene>        Start pads in the scene in order
+  scene stop <scene>         Stop pads in the scene in reverse order
+
+  schedule list              List schedules
+  schedule add [options]     Add a schedule (--scene/--pad, --action, --time, --days)
+  schedule delete <id>       Delete a schedule
+  schedule enable <id>       Enable a schedule
+  schedule disable <id>      Disable a schedule
+
+Pads, pad sets, and scenes are named by ID or by name (case does not matter).
 Results are printed as JSON; only pad logs and help print text.
 Exit codes: 0 success, 1 failed, 2 wrong command, 3 engine not reachable''',
     'pad': '''pad add and pad update options
@@ -310,4 +342,20 @@ Colors:''',
   padset rename <padset> <new name>
   padset order <padset>...
   padset delete <padset>     Move or delete its pads first''',
+    'scene': '''scene commands
+
+  scene list
+  scene show <scene>
+  scene add --name N [--pads P1,P2] [--color C]
+  scene update <scene> [--name N] [--pads P1,P2] [--color C]
+  scene delete <scene>
+  scene start <scene>
+  scene stop <scene>''',
+    'schedule': '''schedule commands
+
+  schedule list
+  schedule add (--scene S | --pad P) --action start|stop --time HH:MM [--days all|mon-fri|0,1,2]
+  schedule delete <id>
+  schedule enable <id>
+  schedule disable <id>''',
 }

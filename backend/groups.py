@@ -167,6 +167,14 @@ class GroupManager:
             for sid in ids:
                 self.samples.pop(sid, None)
                 self.forget_remote(sid)
+                if hasattr(self, 'clean_scenes_for_pad'):
+                    self.clean_scenes_for_pad(sid)
+                if hasattr(self, 'clean_schedules_for_target'):
+                    self.clean_schedules_for_target(sid)
+            if hasattr(self, 'clean_scenes_for_pad'):
+                self.clean_scenes_for_pad(pad_id)
+            if hasattr(self, 'clean_schedules_for_target'):
+                self.clean_schedules_for_target(pad_id)
 
     def save_pad(self, values, pad_id=None):
         # Import after engine module initialization; reuse the existing command validation.

@@ -29,6 +29,8 @@ import cli
 from usage import collect_usage
 from groups import GroupInput, PadInput
 from padsets import PadsetInput
+from scenes import SceneInput
+from schedules import ScheduleInput
 from folder_picker import select_folder
 from storage_location import StorageLocation, resolve_data_dir
 from session_store import SessionStore, SESSION_TTL, DEVICE_TTL
@@ -547,6 +549,57 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
     def delete_padset(padset_id: str):
         engine.delete_padset(padset_id)
         return {'ok': True}
+
+    @app.get('/api/scenes', dependencies=[Depends(authenticated)])
+    def get_scenes():
+        return {'scenes': engine.get_scenes()}
+
+    @app.post('/api/scenes', dependencies=[Depends(authenticated)])
+    def add_scene(values: SceneInput, request: Request):
+        if any(touches_remote(pid) for pid in values.pad_ids):
+            guard_remote(request, True)
+        return engine.save_scene(None, values)
+
+    @app.put('/api/scenes/{scene_id}', dependencies=[Depends(authenticated)])
+    def update_scene(scene_id: str, values: SceneInput, request: Request):
+        if any(touches_remote(pid) for pid in values.pad_ids):
+            guard_remote(request, True)
+        return engine.save_scene(scene_id, values)
+
+    @app.delete('/api/scenes/{scene_id}', dependencies=[Depends(authenticated)])
+    def delete_scene(scene_id: str):
+        return engine.delete_scene(scene_id)
+
+    @app.post('/api/scenes/{scene_id}/start', dependencies=[Depends(authenticated)])
+    def start_scene(scene_id: str):
+        return engine.scene_action(scene_id, 'start')
+
+    @app.post('/api/scenes/{scene_id}/stop', dependencies=[Depends(authenticated)])
+    def stop_scene(scene_id: str):
+        return engine.scene_action(scene_id, 'stop')
+
+    @app.get('/api/schedules', dependencies=[Depends(authenticated)])
+    def get_schedules():
+        return {'schedules': engine.get_schedules()}
+
+    @app.post('/api/schedules', dependencies=[Depends(authenticated)])
+    def add_schedule(values: ScheduleInput):
+        return engine.save_schedule(None, values)
+
+    class ScheduleToggle(BaseModel):
+        enabled: bool
+
+    @app.put('/api/schedules/{schedule_id}', dependencies=[Depends(authenticated)])
+    def update_schedule(schedule_id: str, values: ScheduleInput):
+        return engine.save_schedule(schedule_id, values)
+
+    @app.put('/api/schedules/{schedule_id}/toggle', dependencies=[Depends(authenticated)])
+    def toggle_schedule(schedule_id: str, values: ScheduleToggle):
+        return engine.toggle_schedule(schedule_id, values.enabled)
+
+    @app.delete('/api/schedules/{schedule_id}', dependencies=[Depends(authenticated)])
+    def delete_schedule(schedule_id: str):
+        return engine.delete_schedule(schedule_id)
 
     @app.get('/api/docker/containers', dependencies=[Depends(authenticated)])
     def docker_containers():
