@@ -314,3 +314,32 @@
 .pad-schedules-summary .summary-title { font-size: 12px; font-weight: 600; color: #97f7da; display: block; margin-bottom: 4px; }
 .pad-schedules-summary .summary-list { margin: 0; padding-left: 18px; font-size: 12px; }
 .pad-schedules-summary .summary-list li { margin: 2px 0; }
+
+/* Stage 6: UX LogViewer and Pad Progress */
+.pad.assigned { position: relative; overflow: hidden; }
+.pad-progress-bar { position: absolute; bottom: 0; left: 0; height: 3px; background: var(--pad-color, #22c55e); transition: width 0.2s ease; z-index: 2; }
+.pad-error-badge { display: block; max-width: 100%; font-size: 10px; color: #ff8b94; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; padding: 2px 6px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; text-align: left; }
+.pad-error-badge:hover { background: rgba(239, 68, 68, 0.25); border-color: rgba(239, 68, 68, 0.5); }
+
+/* LogViewer toolbar and container */
+.log-toolbar { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.log-search-input-wrap { position: relative; display: flex; align-items: center; }
+.log-search-input-wrap .search-icon { position: absolute; left: 8px; opacity: 0.5; pointer-events: none; }
+.log-search-input-wrap input { height: 26px; padding: 2px 24px 2px 26px; font-size: 11px; width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 4px; color: inherit; }
+.log-search-input-wrap input:focus { border-color: var(--orange, #f97316); width: 180px; }
+.log-search-input-wrap .clear-btn { position: absolute; right: 4px; padding: 2px !important; width: 18px; height: 18px; min-height: 18px !important; }
+.search-nav { display: flex; align-items: center; gap: 2px; font-size: 11px; opacity: 0.8; }
+.search-count { font-variant-numeric: tabular-nums; margin-right: 4px; }
+.search-nav button { padding: 2px !important; min-height: 22px !important; width: 22px; }
+.filter-btn { display: inline-flex; align-items: center; gap: 4px; height: 26px; min-height: 26px !important; padding: 2px 8px !important; font-size: 11px !important; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 4px; color: inherit; cursor: pointer; }
+.filter-btn.active { background: rgba(239, 68, 68, 0.2); border-color: #ef4444; color: #ff8b94; font-weight: 600; }
+
+.log-container { height: 380px; overflow-y: auto; background: #111415; border-radius: 6px; padding: 6px 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; line-height: 20px; outline: none; }
+.log-placeholder { padding: 20px; text-align: center; opacity: 0.6; font-size: 12px; margin: 0; }
+.log-scroll-content { position: relative; }
+.log-line { display: flex; align-items: center; padding: 0 10px; white-space: pre; overflow: hidden; text-overflow: ellipsis; }
+.log-line-num { width: 36px; flex-shrink: 0; opacity: 0.35; font-size: 10px; text-align: right; margin-right: 12px; user-select: none; font-variant-numeric: tabular-nums; }
+.log-line-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.log-line.error-line { background: rgba(239, 68, 68, 0.08); border-left: 3px solid #ef4444; }
+.log-line.current-match { background: rgba(249, 115, 22, 0.2); }
+.log-search-match { background: #facc15; color: #000; border-radius: 2px; padding: 0 2px; }

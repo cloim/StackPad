@@ -372,7 +372,13 @@ class GroupManager:
         try:
             if action == 'stop':
                 errors = []
-                for sid in reversed(ids):
+                for idx, sid in enumerate(reversed(ids)):
+                    prog = {'done': idx, 'total': len(ids), 'current_id': sid, 'phase': 'stopping'}
+                    with self.lock:
+                        if hasattr(self, 'group_progress'):
+                            self.group_progress[group_id] = prog
+                    if hasattr(self, 'events'):
+                        self.events.publish('progress', {'group_id': group_id, **prog})
                     try:
                         self.stop(sid)
                     except Exception as error:
@@ -380,13 +386,25 @@ class GroupManager:
                 if errors:
                     raise ValueError('\n'.join(errors))
                 return
-            for sid in ids:
+            for idx, sid in enumerate(ids):
+                prog = {'done': idx, 'total': len(ids), 'current_id': sid, 'phase': 'starting'}
+                with self.lock:
+                    if hasattr(self, 'group_progress'):
+                        self.group_progress[group_id] = prog
+                if hasattr(self, 'events'):
+                    self.events.publish('progress', {'group_id': group_id, **prog})
                 if not self.active(sid):
                     self.start(sid, takeover=takeover)
                     started.append(sid)
                     if not self.active(sid):
                         raise ValueError(f"{self.service(sid)['name']}: 실행에 실패했습니다. 로그를 확인해 주세요.")
                 if group['wait_ready']:
+                    prog = {'done': idx, 'total': len(ids), 'current_id': sid, 'phase': 'waiting'}
+                    with self.lock:
+                        if hasattr(self, 'group_progress'):
+                            self.group_progress[group_id] = prog
+                    if hasattr(self, 'events'):
+                        self.events.publish('progress', {'group_id': group_id, **prog})
                     deadline = time.monotonic() + 30
                     while True:
                         with self.lock:
@@ -412,3 +430,7 @@ class GroupManager:
             with self.lock:
                 for sid in ids:
                     self.group_operations.pop(sid, None)
+                if hasattr(self, 'group_progress'):
+                    self.group_progress.pop(group_id, None)
+            if hasattr(self, 'events'):
+                self.events.publish('progress', {'group_id': group_id, 'phase': 'finished', 'done': len(ids), 'total': len(ids), 'current_id': None})

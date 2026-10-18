@@ -191,6 +191,7 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices, SceneManager
         self.alerts = deque(maxlen=100)
         self._alert_counter = 0
         self._last_unhealthy = set()
+        self.group_progress = {}
         self.scene_progress = {}
         self.scene_threads = {}
         self.schedule_last_run = {}
@@ -359,6 +360,7 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices, SceneManager
                 'groups': self.config.get('groups', []),
                 'links': self.pad_links(),
                 'padsets': self.config.get('padsets', []),
+                'group_progress': dict(getattr(self, 'group_progress', {})),
                 'scenes': self.get_scenes(),
                 'scene_progress': dict(self.scene_progress),
                 'schedules': self.get_schedules(),

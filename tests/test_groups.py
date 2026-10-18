@@ -159,6 +159,28 @@ class GroupTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.engine.pad_folder(self.ids[2])
 
+    def test_group_progress_events(self):
+        published = []
+        class DummyEvents:
+            def publish(self, topic, data):
+                if topic == 'progress':
+                    published.append(dict(data))
+        self.engine.events = DummyEvents()
+
+        self.engine.group_action(self.group_id, 'start')
+        phases = [p['phase'] for p in published]
+        self.assertEqual(phases, ['starting', 'starting', 'finished'])
+        self.assertEqual(published[0]['current_id'], self.ids[0])
+        self.assertEqual(published[1]['current_id'], self.ids[1])
+        self.assertEqual(published[-1]['done'], 2)
+
+        published.clear()
+        self.engine.group_action(self.group_id, 'stop')
+        stop_phases = [p['phase'] for p in published]
+        self.assertEqual(stop_phases, ['stopping', 'stopping', 'finished'])
+        self.assertEqual(published[0]['current_id'], self.ids[1])
+        self.assertEqual(published[1]['current_id'], self.ids[0])
+
 
 if __name__ == '__main__':
     unittest.main()

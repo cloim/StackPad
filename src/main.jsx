@@ -10,6 +10,7 @@ import { PadsetSettings } from './components/PadsetSettings.jsx';
 import { UsageBar } from './components/UsageBar.jsx';
 import { AccountSettings } from './components/AccountSettings.jsx';
 import { SceneSettings } from './components/SceneSettings.jsx';
+import { LogViewer } from './components/LogViewer.jsx';
 import { SignIn } from './components/SignIn.jsx';
 import { connectWidget, disconnectWidget, getAlertStatus, isNative, loadServer, nativeHeaders, serverOrigin, setAlertStatus } from './native.js';
 import { PairPhone } from './components/PairPhone.jsx';
@@ -69,7 +70,7 @@ function Logo({ small = false }) {
   return <div className={`logo ${small ? 'small' : ''}`} aria-hidden="true">{[0, 1, 2, 3].map(i => <span key={i} />)}</div>;
 }
 
-function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, loading, settings, refresh, onError, connected, local, scenes = [], sceneProgress = {}, schedules = [], onOpenSettings }) {
+function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, loading, settings, refresh, onError, connected, local, scenes = [], sceneProgress = {}, groupProgress = {}, schedules = [], onOpenSettings }) {
   const [selected, setSelected] = useState(null);
   const [padEditor, setPadEditor] = useState(null);
   const [busy, setBusy] = useState(new Set());
@@ -78,6 +79,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
   const [deleting, setDeleting] = useState(null);
   const [takeover, setTakeover] = useState(null);
   const [componentId, setComponentId] = useState(null);
+  const [targetError, setTargetError] = useState(null);
   const [dragged, setDragged] = useState(null);
   const [dropSlot, setDropSlot] = useState(null);
   const [padMenu, setPadMenu] = useState(null);
@@ -326,11 +328,30 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
         if (!service) return <button key={slot} data-empty-slot={slot} className={`pad empty ${dropSlot === slot ? 'drop-target' : ''}`} aria-label={t('패드 {0} 서비스 등록', slot + 1)} onClick={() => { if (Date.now() >= suppressClick.current) setPadEditor({ slot }); }} onDragOver={event => { if (dragging.current && connected) { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; setDropSlot(slot); } }} onDragLeave={() => setDropSlot(null)} onDrop={event => { event.preventDefault(); const source = dragging.current; dragging.current = null; setDragged(null); setDropSlot(null); suppressClick.current = Date.now() + 400; if (source) move(source.id, slot); }}><Plus size={20} /></button>;
         const pending = busy.has(service.id) || service.busy || service.members?.some(s => busy.has(s.id));
         const tags = (service.isGroup ? service.members : [service]).filter(s => s.kind === 'remote' || s.kind === 'docker' || s.port);
+        const groupProg = groupProgress?.[service.id];
+        let stateText = pending ? t('처리 중') : labels[service.status];
+        let progressPct = null;
+        if (groupProg && groupProg.phase !== 'finished') {
+          const { done, total, phase, current_id } = groupProg;
+          const curMem = service.members?.find(m => m.id === current_id);
+          const memName = curMem?.name || '';
+          if (phase === 'stopping') {
+            stateText = t('{0}/{1} 정지 중', done + 1, total);
+          } else if (phase === 'waiting') {
+            stateText = t('{0}/{1} {2} 준비 중', done + 1, total, memName);
+          } else {
+            stateText = t('{0}/{1} {2} 시작 중', done + 1, total, memName);
+          }
+          progressPct = Math.round(((done + (phase === 'waiting' ? 0.5 : 0)) / total) * 100);
+        }
+        const errorLine = (service.isGroup ? service.members : [service]).find(s => s.error_line)?.error_line;
         return <div key={slot} className={`pad-wrap ${selected === service.id ? 'chosen' : ''} ${dragged === service.id ? 'dragging' : ''}`} style={{ '--pad-color': service.color }}>
           <button className={`pad assigned ${service.status}`} disabled={pending || !connected} onClick={() => toggle(service)} aria-label={`${service.name} ${service.active ? t('종료') : t('실행')}`} aria-pressed={!!service.active}>
             <span className="pad-top">{pending ? <LoaderCircle className="spin" size={14} /> : <Power size={14} />}</span>
             <span className="pad-port">{tags.length ? tags.map(s => <span key={s.id} title={s.kind === 'remote' ? s.remote.host : undefined}>{s.name}{s.kind === 'remote' ? ` @${s.remote.host}` : s.kind === 'docker' ? ` ${s.container_ports?.length ? s.container_ports.map(port => `:${port}`).join(', ') : t(':포트 없음')}` : s.port ? ` :${s.port}` : t(' :포트 없음')}</span>) : t('명령 실행')}</span>
-            <span className="pad-state"><i />{pending ? t('처리 중') : labels[service.status]}</span>
+            <span className="pad-state"><i />{stateText}</span>
+            {errorLine && <span className="pad-error-badge" title={errorLine} onClick={e => { e.stopPropagation(); setSelected(service.id); setTargetError(errorLine); }}>{errorLine}</span>}
+            {progressPct !== null && <div className="pad-progress-bar" style={{ width: `${progressPct}%` }} />}
           </button><button className="pad-move" disabled={!connected || pending} title={t('드래그하여 빈 패드로 이동')} aria-label={t('{0} 자리 이동', service.name)} onPointerDown={event => touchDrag(event, service)} onPointerMove={touchMove} onPointerUp={event => endTouch(event)} onPointerCancel={event => endTouch(event, true)}>{service.name}</button><button className="pad-detail" onClick={event => openPadMenu(event, service)} aria-label={t('{0} 메뉴', service.name)} aria-haspopup="menu" aria-expanded={padMenu?.id === service.id}><SlidersHorizontal size={13} /></button>
         </div>;
       })}</div>
@@ -352,8 +373,8 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
         <button role="menuitem" onClick={() => { setSceneMenu(null); onOpenSettings?.('scenes'); }}><Gear size={14} />{t('장면 설정')}</button>
       </div>
     </div>}
-    <Modal isOpen={!!current} onClose={() => setSelected(null)} title={current?.name || t('서비스 상세')} storageKey="service-detail" size="lg">{current && <>
-      <Tabs label={t('등록된 서비스')} tabs={(current.isGroup ? current.members : [current]).map(service => ({ id: service.id, name: service.name }))} value={logId} onChange={setComponentId} prefix="service-detail" />
+    <Modal isOpen={!!current} onClose={() => { setSelected(null); setTargetError(null); }} title={current?.name || t('서비스 상세')} storageKey="service-detail" size="lg">{current && <>
+      <Tabs label={t('등록된 서비스')} tabs={(current.isGroup ? current.members : [current]).map(service => ({ id: service.id, name: service.name, badge: groupProgress?.[current.id]?.current_id === service.id ? t('진행 중') : undefined }))} value={logId} onChange={setComponentId} prefix="service-detail" />
       {logService && <div role="tabpanel" id="service-detail-panel" aria-labelledby={`service-detail-tab-${logId}`}>
         <dl>
           <div><dt>{t('타입')}</dt><dd>{logService.kind === 'docker' ? t('도커') : logService.kind === 'remote' ? t('원격 서버') : t('로컬 프로세스')}</dd></div>
@@ -364,12 +385,11 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
           {logService.kind === 'docker' && <div><dt>{t('컨테이너 ID')}</dt><dd><code>{logService.container?.slice(0, 12)}</code></dd></div>}
           {logService.kind === 'remote' && <><div><dt>{t('호스트')}</dt><dd>{logService.remote.host}</dd></div><div><dt>{t('마지막 확인')}</dt><dd>{logService.checked_ago == null ? t('확인 중') : t('{0} 전', timeLabel(logService.checked_ago))}</dd></div><div><dt>{t('마지막 명령')}</dt><dd>{lastCommand(logService.last)}</dd></div></>}
         </dl>
-        {(logService.error || logService.message) && <p className="detail-message">{logService.error || logService.message}</p>}
+        {(logService.error_line || logService.error || logService.message) && <p className="detail-message">{logService.error_line || logService.error || logService.message}</p>}
         {logService.last?.output && <pre className="command-output" aria-label={t('마지막 명령 출력')}>{logService.last.output}</pre>}
         <div className="detail-buttons"><button className="secondary" disabled={!connected || busy.has(current.id) || busy.has(logId) || current.busy || logService.busy} onClick={() => restart(logService)} aria-label={t('{0} 재시작', logService.name)}><RefreshCw size={13} />{t('재시작')}</button></div>
-    <section className="log-panel"><div className="log-head"><div className="panel-title"><Terminal size={16} /><h2>{t('실행 로그')}</h2>{logService && <span>{logService.name}</span>}</div></div>
-      <pre ref={logPane} onScroll={e => { follow.current = e.currentTarget.scrollHeight - e.currentTarget.scrollTop - e.currentTarget.clientHeight < 30; }}><Ansi linkify={false}>{logsLoading ? t('로그를 불러오는 중…') : selected ? (logs || t('아직 기록된 로그가 없습니다. 서비스를 실행하면 여기에 표시됩니다.')) : t('서비스를 선택하면 실행 로그가 여기에 표시됩니다.')}</Ansi></pre>
-    </section></div>}
+        <LogViewer rawLogs={logs} serviceName={logService?.name} loading={logsLoading} targetErrorLine={targetError} />
+      </div>}
     </>}</Modal>
     {padEditor && <PadForm pad={editingPad} slot={padEditor.slot} defaultCwd={settings?.recommend_roots?.[0] || ''} tools={settings?.tools} {...{ padsets, padsetId, services, api, colors, colorNames, local, onError }} onClose={() => setPadEditor(null)} onSaved={async id => { await refresh(); if (padEditor.id) setSelected(id); }} />}
     <Modal isOpen={!!takeover} onClose={() => setTakeover(null)} title={t('외부 실행 넘겨받기')} size="sm" draggable={false} footer={<><button className="secondary" onClick={() => setTakeover(null)}>{t('취소')}</button><button className="primary" onClick={() => { const pad = takeover; setTakeover(null); toggle(pad, true); }}>{t('종료 후 다시 실행')}</button></>}><p className="notice-text">{t('{0} 서버가 StackPad 밖에서 실행 중입니다. 외부에서 실행한 서버를 종료하고 StackPad에서 다시 실행할까요?', takeover?.name)}</p></Modal>
@@ -538,6 +558,7 @@ function App() {
   const [padsets, setPadsets] = useState([]);
   const [scenes, setScenes] = useState([]);
   const [sceneProgress, setSceneProgress] = useState({});
+  const [groupProgress, setGroupProgress] = useState({});
   const [schedules, setSchedules] = useState([]);
   const [activePadset, setActivePadset] = useState(() => { try { return localStorage.getItem('stackpad-padset') || 'default'; } catch { return 'default'; } });
   const padsetId = padsets.some(s => s.id === activePadset) ? activePadset : padsets[0]?.id || 'default';
@@ -586,6 +607,7 @@ function App() {
       setLinks(data.links || {});
       setScenes(data.scenes || []);
       setSceneProgress(data.scene_progress || {});
+      setGroupProgress(data.group_progress || {});
       setSchedules(data.schedules || []);
       setSettings(info);
       setConnected(true);
@@ -606,12 +628,23 @@ function App() {
           setLinks(data.links || {});
           setScenes(data.scenes || []);
           setSceneProgress(data.scene_progress || {});
+          setGroupProgress(data.group_progress || {});
           setSchedules(data.schedules || []);
           setConnected(true);
           setLoading(false);
         } else if (topic === 'settings') {
           setSettings(data);
         } else if (topic === 'progress') {
+          if (data?.group_id) {
+            setGroupProgress(prev => {
+              if (data.phase === 'finished') {
+                const next = { ...prev };
+                delete next[data.group_id];
+                return next;
+              }
+              return { ...prev, [data.group_id]: data };
+            });
+          }
           if (data?.scene_id) {
             setSceneProgress(prev => {
               if (data.phase === 'finished') {
@@ -660,7 +693,7 @@ function App() {
         <button className="tool-button" onClick={() => { setSettingsCategory('general'); setPanel('settings'); }} title={t('환경 설정')} aria-label={t('환경 설정')}><Gear size={17} /></button>
       </div>
     </header>
-    <main aria-label={t('서비스 패드')}><Deck {...{ padsets, padsetId, onPadsetChange, services, groups, links, loading, settings, refresh, onError, connected, scenes, sceneProgress, schedules }} onOpenSettings={cat => { setSettingsCategory(cat || 'general'); setPanel('settings'); }} local={auth.local} /></main>
+    <main aria-label={t('서비스 패드')}><Deck {...{ padsets, padsetId, onPadsetChange, services, groups, links, loading, settings, refresh, onError, connected, scenes, sceneProgress, groupProgress, schedules }} onOpenSettings={cat => { setSettingsCategory(cat || 'general'); setPanel('settings'); }} local={auth.local} /></main>
     {registrationSlot !== null && <PadForm {...{ padsets, padsetId, schedules }} defaultCwd={settings?.recommend_roots?.[0] || ''} tools={settings?.tools} slot={registrationSlot} preset={preset} local={auth.local} {...{ services, api, colors, colorNames, onError }} onClose={() => { setRegistrationSlot(null); setPreset(null); }} onSaved={refresh} />}
     <Modal isOpen={!!panel} onClose={() => setPanel(null)} title={panel === 'settings' ? t('환경 설정') : t('등록 추천')} size="lg" storageKey="common-settings">
       {panel === 'settings' ? <Settings {...{ auth, settings, padsets, services, groups, scenes, schedules, initialCategory: settingsCategory, refresh, onError, onNotice }} onLogout={() => { setPanel(null); logout(); }} /> : panel === 'recommend' ? <Recommendations onError={onError} onRegister={candidate => { const slot = Array.from({ length: 16 }, (_, i) => i).find(i => !services.some(s => s.padset_id === padsetId && s.slot === i)); if (slot === undefined) { onError(t('빈 패드를 확보해 주세요.')); return; } setPanel(null); setPreset(candidate); setRegistrationSlot(slot); }} /> : null}
