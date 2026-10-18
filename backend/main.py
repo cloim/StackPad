@@ -1,4 +1,5 @@
 import argparse
+import asyncio
 import contextlib
 import html
 import json
@@ -15,7 +16,8 @@ from pathlib import Path
 
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
+from starlette.datastructures import MutableHeaders
 from urllib.parse import urlencode
 import httpx
 from pydantic import BaseModel, Field
@@ -74,6 +76,7 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
         threading.Thread(target=boot, daemon=True).start()
         yield
         engine.closed.set()
+        engine.wake.set()
 
     app = FastAPI(title='StackPad', lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.engine = engine
@@ -81,29 +84,76 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
     app.state.sessions = sessions
     app.state.google = google
 
-    @app.middleware('http')
-    async def guards(request, call_next):
-        if request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
-            origin = request.headers.get('origin', '')
-            expected = f"{request.url.scheme}://{request.headers.get('host', '')}"
-            # The Android app sends requests natively without Origin; a custom header cannot be added cross-site without a CORS preflight.
-            native_app = not origin and request.headers.get('x-stackpad-client') == 'android'
-            # The desktop tray proves itself with the token the engine wrote into the user's own folder.
-            desktop_tray = bool(control_token) and secrets.compare_digest(request.headers.get('x-stackpad-control', ''), control_token)
-            if origin != expected and not native_app and not desktop_tray:
-                return JSONResponse({'detail': translate('같은 앱 화면에서 요청해 주세요.', request_lang(request.headers))}, status_code=403)
-        response = await call_next(request)
-        response.headers['X-Content-Type-Options'] = 'nosniff'
-        response.headers['Referrer-Policy'] = 'no-referrer'
-        response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'"
-        response.headers['Cache-Control'] = 'no-store' if request.url.path.startswith('/api') else 'no-cache'
-        lang = request_lang(request.headers)
-        if lang != 'ko' and response.headers.get('content-type', '').startswith('application/json'):
-            # Messages are written in Korean; English clients get them translated without touching user data.
-            body = b''.join([chunk async for chunk in response.body_iterator])
-            headers = {key: value for key, value in response.headers.items() if key.lower() not in ('content-length', 'content-type')}
-            return JSONResponse(translate_payload(json.loads(body), lang), status_code=response.status_code, headers=headers)
-        return response
+    class GuardsMiddleware:
+        def __init__(self, inner):
+            self.app = inner
+
+        async def __call__(self, scope, receive, send):
+            if scope['type'] != 'http':
+                return await self.app(scope, receive, send)
+
+            request = Request(scope, receive)
+            if request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
+                origin = request.headers.get('origin', '')
+                expected = f"{request.url.scheme}://{request.headers.get('host', '')}"
+                native_app = not origin and request.headers.get('x-stackpad-client') == 'android'
+                desktop_tray = bool(control_token) and secrets.compare_digest(request.headers.get('x-stackpad-control', ''), control_token)
+                if origin != expected and not native_app and not desktop_tray:
+                    resp = JSONResponse({'detail': translate('같은 앱 화면에서 요청해 주세요.', request_lang(request.headers))}, status_code=403)
+                    return await resp(scope, receive, send)
+
+            is_events = scope.get('path') == '/api/events'
+            lang = request_lang(request.headers)
+
+            if is_events:
+                async def send_wrapper(message):
+                    if message['type'] == 'http.response.start':
+                        headers = MutableHeaders(scope=message)
+                        headers['x-content-type-options'] = 'nosniff'
+                        headers['referrer-policy'] = 'no-referrer'
+                        headers['content-security-policy'] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'"
+                        headers['cache-control'] = 'no-cache'
+                        headers['x-accel-buffering'] = 'no'
+                    await send(message)
+                return await self.app(scope, receive, send_wrapper)
+
+            response_status = 200
+            response_headers = None
+            response_body = []
+            started = False
+
+            async def send_wrapper(message):
+                nonlocal response_status, response_headers, response_body, started
+                if message['type'] == 'http.response.start':
+                    response_status = message['status']
+                    response_headers = MutableHeaders(scope=message)
+                    response_headers['x-content-type-options'] = 'nosniff'
+                    response_headers['referrer-policy'] = 'no-referrer'
+                    response_headers['content-security-policy'] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'"
+                    response_headers['cache-control'] = 'no-store' if scope.get('path', '').startswith('/api') else 'no-cache'
+                elif message['type'] == 'http.response.body':
+                    content_type = response_headers.get('content-type', '') if response_headers else ''
+                    if lang != 'ko' and content_type.startswith('application/json'):
+                        response_body.append(message.get('body', b''))
+                        if not message.get('more_body', False):
+                            full = b''.join(response_body)
+                            try:
+                                translated = translate_payload(json.loads(full), lang)
+                                new_body = json.dumps(translated, ensure_ascii=False).encode('utf-8')
+                            except Exception:
+                                new_body = full
+                            response_headers['content-length'] = str(len(new_body))
+                            await send({'type': 'http.response.start', 'status': response_status, 'headers': response_headers.raw})
+                            await send({'type': 'http.response.body', 'body': new_body, 'more_body': False})
+                    else:
+                        if not started:
+                            started = True
+                            await send({'type': 'http.response.start', 'status': response_status, 'headers': response_headers.raw})
+                        await send(message)
+
+            await self.app(scope, receive, send_wrapper)
+
+    app.add_middleware(GuardsMiddleware)
 
     for exception_type, status_code in ((ValueError, 409), (KeyError, 404), (RuntimeError, 500)):
         async def handler(request, error, code=status_code):
@@ -120,8 +170,9 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
         raise HTTPException(401, '로그인해 주세요.')
 
     def is_local(request):
+        host = request.client.host if request.client else '127.0.0.1'
         # Tailscale keeps the original Host and adds X-Forwarded-For, so proxied requests never pass as this PC.
-        return (request.client.host in ('127.0.0.1', '::1') and request.url.hostname in ('localhost', '127.0.0.1', '::1')
+        return (host in ('127.0.0.1', '::1') and request.url.hostname in ('localhost', '127.0.0.1', '::1')
                 and not request.headers.get('x-forwarded-for') and not tailscale.same_origin(google.external_url, request.url.scheme, request.headers.get('host')))
 
     def local_only(request: Request):
@@ -137,8 +188,9 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
     def limit(request, name, per_client=10, overall=50):
         # Also cap globally to bound work when proxy source identities vary.
         now = time.time()
+        client_host = request.client.host if request.client else '127.0.0.1'
         with auth_lock:
-            for key in (f'{name}:global', f'{name}:{request.client.host}'):
+            for key in (f'{name}:global', f'{name}:{client_host}'):
                 queue = attempts[key]
                 while queue and queue[0] < now - 300:
                     queue.popleft()
@@ -382,13 +434,68 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
         # A widget tap sends refresh=1 so it skips the 60 second cache like the app's refresh button.
         return {'providers': collect_usage(refresh=refresh == 1, enabled=enabled), 'enabled': enabled}
 
+    def settings_payload(request: Request):
+        return {'tools': {'vscode': bool(vscode_path()), 'docker': bool(shutil.which('docker'))}, 'autostart': engine.startup_path.exists(), 'data_dir': str(engine.data_dir),
+                'can_select_data_dir': is_local(request),
+                'log_retention_days': engine.config.get('log_retention_days', 14),
+                'recommend_roots': engine.config.get('recommend', {}).get('roots') or recommend.DEFAULT_ROOTS, 'recommend_hidden': recommend.hidden_entries(engine.config),
+                'onboarding_done': bool(engine.config.get('onboarding_done')), 'usage_providers': engine.config.get('usage_providers', [])}
+
     @app.get('/api/services', dependencies=[Depends(authenticated)])
     def services():
-        result = engine.snapshot()
-        for item in result:
-            item.pop('_cpu_time', None)
-            item.pop('_sample_time', None)
-        return {'services': result, 'groups': engine.config.get('groups', []), 'links': engine.pad_links(), 'padsets': engine.config['padsets']}
+        engine.last_services_poll = time.time()
+        return engine.services_payload()
+
+    @app.get('/api/events')
+    async def events_stream(request: Request, topics: str = 'services,settings,alert,progress'):
+        requested_topics = {t.strip() for t in topics.split(',') if t.strip()}
+        session_record = current_session(request)
+        control = request.headers.get('x-stackpad-control', '')
+        is_desktop = bool(control_token) and is_local(request) and secrets.compare_digest(control, control_token)
+        scheme, _, auth_token = request.headers.get('authorization', '').partition(' ')
+        widget_token_cand = auth_token if scheme.lower() == 'bearer' else request.query_params.get('token', '')
+        is_widget = bool(widget_token_cand) and widget_tokens.verify(widget_token_cand)
+
+        if is_widget:
+            if requested_topics - {'alert'}:
+                raise HTTPException(403, '위젯 토큰은 알림만 수신할 수 있습니다.')
+            active_topics = requested_topics & {'alert'}
+        elif session_record or is_desktop:
+            active_topics = requested_topics
+        else:
+            raise HTTPException(401, '로그인해 주세요.')
+
+        async def stream_with_pings():
+            yield ": connected\n\n"
+            event_id = 0
+            if 'services' in active_topics:
+                event_id += 1
+                payload_str = json.dumps(engine.services_payload(), ensure_ascii=False)
+                yield f"id: {event_id}\nevent: services\ndata: {payload_str}\n\n"
+            if 'settings' in active_topics:
+                event_id += 1
+                payload_str = json.dumps(settings_payload(request), ensure_ascii=False)
+                yield f"id: {event_id}\nevent: settings\ndata: {payload_str}\n\n"
+
+            queue, unsub = engine.events.register(active_topics)
+            try:
+                while True:
+                    try:
+                        topic, data = await asyncio.wait_for(queue.get(), timeout=15.0)
+                        event_id += 1
+                        payload_str = json.dumps(data, ensure_ascii=False, default=str)
+                        yield f"id: {event_id}\nevent: {topic}\ndata: {payload_str}\n\n"
+                    except asyncio.TimeoutError:
+                        yield ": ping\n\n"
+            finally:
+                unsub()
+
+        headers = {
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no',
+            'Connection': 'keep-alive',
+        }
+        return StreamingResponse(stream_with_pings(), media_type='text/event-stream', headers=headers)
 
     @app.post('/api/padsets', dependencies=[Depends(authenticated)])
     def add_padset(values: PadsetInput):
@@ -520,8 +627,8 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
         return {'ok': True}
 
     @app.get('/api/services/{service_id}/logs', dependencies=[Depends(authenticated)])
-    def logs(service_id: str):
-        return {'text': engine.tail(service_id)}
+    def logs(service_id: str, file: str | None = None, offset: str | None = None):
+        return engine.logs_offset(service_id, file, offset)
 
     class Shutdown(BaseModel):
         stop_services: bool = False
@@ -537,21 +644,18 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
 
     @app.get('/api/settings', dependencies=[Depends(authenticated)])
     def settings(request: Request):
-        return {'tools': {'vscode': bool(vscode_path()), 'docker': bool(shutil.which('docker'))}, 'autostart': engine.startup_path.exists(), 'data_dir': str(engine.data_dir),
-                'can_select_data_dir': is_local(request),
-                'log_retention_days': engine.config.get('log_retention_days', 14),
-                'recommend_roots': engine.config.get('recommend', {}).get('roots') or recommend.DEFAULT_ROOTS, 'recommend_hidden': recommend.hidden_entries(engine.config),
-                'onboarding_done': bool(engine.config.get('onboarding_done')), 'usage_providers': engine.config.get('usage_providers', [])}
+        return settings_payload(request)
 
     class LogRetention(BaseModel):
         days: int = Field(ge=0, le=365)
 
     @app.put('/api/settings/log-retention', dependencies=[Depends(authenticated)])
-    def log_retention(values: LogRetention):
+    def log_retention(values: LogRetention, request: Request):
         with engine.lock:
             engine.config['log_retention_days'] = values.days
             engine.save()
             engine.purge_expired_logs()
+        engine.events.publish('settings', settings_payload(request))
         return {'ok': True, 'log_retention_days': values.days}
 
     @app.post('/api/settings/data-directory', dependencies=[Depends(authenticated)])
@@ -572,8 +676,9 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
         enabled: bool
 
     @app.put('/api/settings/autostart', dependencies=[Depends(authenticated)])
-    def startup(values: Startup):
+    def startup(values: Startup, request: Request):
         engine.autostart(values.enabled)
+        engine.events.publish('settings', settings_payload(request))
         return {'ok': True}
 
     class RecommendRoots(BaseModel):
@@ -593,39 +698,44 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
         return recommend.scan(engine)
 
     @app.post('/api/recommendations/hidden', dependencies=[Depends(authenticated)])
-    def hide_recommendation(values: RecommendHide):
+    def hide_recommendation(values: RecommendHide, request: Request):
         recommend.hide(engine, values.key, values.name, values.cwd, values.command)
+        engine.events.publish('settings', settings_payload(request))
         return {'ok': True}
 
     @app.post('/api/recommendations/unhide', dependencies=[Depends(authenticated)])
-    def unhide_recommendation(values: RecommendKey):
+    def unhide_recommendation(values: RecommendKey, request: Request):
         recommend.unhide(engine, values.key)
+        engine.events.publish('settings', settings_payload(request))
         return {'ok': True}
 
     @app.delete('/api/recommendations/hidden', dependencies=[Depends(authenticated)])
-    def reset_recommendations():
+    def reset_recommendations(request: Request):
         recommend.reset_hidden(engine)
+        engine.events.publish('settings', settings_payload(request))
         return {'ok': True}
 
     class UsageProviders(BaseModel):
         providers: list[Literal['claude', 'codex', 'antigravity']] = Field(max_length=3)
 
     @app.put('/api/settings/usage', dependencies=[Depends(authenticated)])
-    def usage_providers(values: UsageProviders):
+    def usage_providers(values: UsageProviders, request: Request):
         with engine.lock:
             engine.config['usage_providers'] = [name for name in ('claude', 'codex', 'antigravity') if name in values.providers]
             engine.save()
+        engine.events.publish('settings', settings_payload(request))
         return {'providers': engine.config['usage_providers']}
 
     class Onboarding(BaseModel):
         roots: list[str] = Field(default_factory=list, max_length=10)
 
     @app.put('/api/settings/onboarding', dependencies=[Depends(authenticated)])
-    def finish_onboarding(values: Onboarding):
+    def finish_onboarding(values: Onboarding, request: Request):
         roots = recommend.save_roots(engine, values.roots) if any(r.strip() for r in values.roots) else []
         with engine.lock:
             engine.config['onboarding_done'] = True
             engine.save()
+        engine.events.publish('settings', settings_payload(request))
         return {'roots': roots}
 
     @app.post('/api/settings/pick-folder', dependencies=[Depends(local_only), Depends(authenticated)])
@@ -638,8 +748,10 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
             storage_location.selection_lock.release()
 
     @app.put('/api/settings/recommend', dependencies=[Depends(authenticated)])
-    def recommend_roots(values: RecommendRoots):
-        return {'roots': recommend.save_roots(engine, values.roots)}
+    def recommend_roots(values: RecommendRoots, request: Request):
+        saved = recommend.save_roots(engine, values.roots)
+        engine.events.publish('settings', settings_payload(request))
+        return {'roots': saved}
 
     @app.get('/{path:path}')
     def frontend(path: str):

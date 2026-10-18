@@ -1,5 +1,6 @@
 """Owned-process service supervisor. Windows launches are detached through WMI."""
 import base64
+import hashlib
 import json
 import logging
 import os
@@ -13,6 +14,8 @@ import time
 import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
+
+from events import EventHub
 
 from i18n import system_text
 from typing import Annotated, Literal, Union
@@ -168,6 +171,18 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices):
         self.logs.mkdir(exist_ok=True)
         self.path = self.data_dir / 'config.json'
         self.lock = threading.RLock()
+        self.events = EventHub()
+        self.wake = threading.Event()
+        self.stats = {'listener_calls': 0, 'ticks': 0}
+        self.last_services_poll = 0
+        self.last_activity = time.time()
+        self._last_services_hash = None
+        self.docker_busy = set()
+        self.desktop_exe = desktop_exe
+        self.samples = {}
+        self.externals = {}
+        self.group_operations = {}
+        self.closed = threading.Event()
         self.config = json.loads(self.path.read_text('utf-8')) if self.path.exists() else {'services': []}
         # Google sign-in replaced the former app password.
         if self.config.pop('password', None) is not None:
@@ -188,12 +203,6 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices):
             self.config['usage_providers'] = ['claude', 'codex', 'antigravity'] if self.config['services'] else []
         self.migrate_legacy_files()
         self.purge_expired_logs()
-        self.docker_busy = set()
-        self.desktop_exe = desktop_exe
-        self.samples = {}
-        self.externals = {}
-        self.group_operations = {}
-        self.closed = threading.Event()
         self.monitor = threading.Thread(target=self.watch, daemon=True)
         self.remote_init()
 
@@ -325,10 +334,38 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices):
                 except ValueError:
                     pass
 
+    def services_payload(self):
+        with self.lock:
+            result = self.snapshot()
+            for item in result:
+                item.pop('_cpu_time', None)
+                item.pop('_sample_time', None)
+            return {
+                'services': result,
+                'groups': self.config.get('groups', []),
+                'links': self.pad_links(),
+                'padsets': self.config.get('padsets', []),
+            }
+
+    def notify_services(self):
+        try:
+            payload = self.services_payload()
+            digest = hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str).encode('utf-8')).hexdigest()
+            if digest != getattr(self, '_last_services_hash', None):
+                self._last_services_hash = digest
+                self.events.publish('services', payload)
+        except Exception as error:
+            logging.warning('notify_services failed: %s', error)
+
     def save(self):
         temporary = self.path.with_suffix('.tmp')
         temporary.write_text(json.dumps(self.config, ensure_ascii=False, indent=2), 'utf-8')
         os.replace(temporary, self.path)
+        self.last_activity = time.time()
+        if hasattr(self, 'wake'):
+            self.wake.set()
+        if hasattr(self, 'events'):
+            self.notify_services()
 
     def service(self, service_id):
         for service in self.config['services']:
@@ -620,19 +657,106 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                 result.append({**{k: v for k, v in service.items() if k != 'runtime'}, **sample, 'status': status, 'pid': process.pid if process else None, 'external_pid': found['pid'] if found else None, 'active': bool(process), 'uptime': int(time.time() - process.create_time()) if process else 0})
             return result
 
-    def tail(self, service_id):
+    def logs_offset(self, service_id, file=None, offset=None):
         service = self.service(service_id)
         if service.get('kind') == 'docker':
-            return docker_cli('logs', '--tail', '300', container_name(service['container']))[-48000:]
+            cid = container_name(service['container'])
+            if file != cid or not offset:
+                try:
+                    output = docker_cli('logs', '--timestamps', '--tail', '300', cid)
+                except Exception:
+                    output = ''
+                lines = output.splitlines(keepends=True)
+                clean_lines = []
+                last_ts = None
+                for line in lines:
+                    ts, sep, content = line.partition(' ')
+                    if sep:
+                        last_ts = ts
+                        clean_lines.append(content)
+                    else:
+                        clean_lines.append(line)
+                return {'text': ''.join(clean_lines)[-48000:], 'file': cid, 'offset': last_ts or '', 'reset': True}
+            else:
+                try:
+                    output = docker_cli('logs', '--timestamps', '--since', str(offset), cid)
+                except Exception:
+                    output = ''
+                lines = output.splitlines(keepends=True)
+                clean_lines = []
+                last_ts = str(offset)
+                for line in lines:
+                    ts, sep, content = line.partition(' ')
+                    if sep and ts > str(offset):
+                        last_ts = ts
+                        clean_lines.append(content)
+                    elif not sep:
+                        clean_lines.append(line)
+                return {'text': ''.join(clean_lines), 'file': cid, 'offset': last_ts, 'reset': False}
+
         if self.is_remote(service_id):
-            return self.remote_tail(service_id)
+            text = self.remote_tail(service_id)
+            digest = hashlib.sha256(text.encode('utf-8')).hexdigest()
+            if offset == digest:
+                return {'unchanged': True, 'text': '', 'offset': digest, 'reset': False}
+            return {'unchanged': False, 'text': text, 'offset': digest, 'reset': True}
+
         self.sync_service_log(service_id)
         path = self.latest_service_log(service_id)
         if not path.exists():
-            return ''
-        with path.open('rb') as source:
-            source.seek(max(0, path.stat().st_size - 48_000))
-            return source.read().decode('utf-8', errors='replace')
+            return {'text': '', 'file': path.name, 'offset': 0, 'reset': True}
+        file_size = path.stat().st_size
+        try:
+            num_offset = int(offset) if offset is not None else None
+        except (ValueError, TypeError):
+            num_offset = None
+
+        if file != path.name or num_offset is None or num_offset > file_size or num_offset < 0:
+            seek_pos = max(0, file_size - 48_000)
+            with path.open('rb') as source:
+                source.seek(seek_pos)
+                raw = source.read()
+            if seek_pos > 0:
+                idx = 0
+                while idx < len(raw) and (raw[idx] & 0xC0) == 0x80:
+                    idx += 1
+                raw = raw[idx:]
+                seek_pos += idx
+            valid_len = len(raw)
+            while valid_len > 0:
+                try:
+                    text = raw[:valid_len].decode('utf-8')
+                    break
+                except UnicodeDecodeError as e:
+                    if e.reason == 'unexpected end of data':
+                        valid_len = e.start
+                    else:
+                        text = raw[:valid_len].decode('utf-8', errors='replace')
+                        break
+            else:
+                text = ''
+            return {'text': text, 'file': path.name, 'offset': seek_pos + valid_len, 'reset': True}
+        else:
+            with path.open('rb') as source:
+                source.seek(num_offset)
+                raw = source.read(256 * 1024)
+            valid_len = len(raw)
+            while valid_len > 0:
+                try:
+                    text = raw[:valid_len].decode('utf-8')
+                    break
+                except UnicodeDecodeError as e:
+                    if e.reason == 'unexpected end of data':
+                        valid_len = e.start
+                    else:
+                        text = raw[:valid_len].decode('utf-8', errors='replace')
+                        break
+            else:
+                text = ''
+            return {'text': text, 'file': path.name, 'offset': num_offset + valid_len, 'reset': False}
+
+    def tail(self, service_id):
+        return self.logs_offset(service_id)['text']
 
     def sync_service_log(self, service_id):
         with self.lock:
@@ -680,7 +804,10 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
     def watch(self):
         opener = build_opener(ProxyHandler({}))
         last_purge = time.time()
+        last_listeners_time = 0
+        cached_ports = {}
         while not self.closed.is_set():
+            self.stats['ticks'] += 1
             if time.time() - last_purge > 3600:
                 last_purge = time.time()
                 try:
@@ -691,10 +818,19 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                 services = [dict(s) for s in self.config['services'] if s.get('kind', 'local') == 'local']
                 containers = [dict(s) for s in self.config['services'] if s.get('kind') == 'docker']
                 owned = self.owned_pids()
-            try:
-                ports = self.listeners()
-            except (psutil.Error, OSError):
-                ports = {}
+            has_stopped_port = any(s.get('port') and not self.owned(s) for s in services)
+            actively_viewed = (self.events.subscribers > 0) or (time.time() - self.last_services_poll < 10)
+            now = time.time()
+            if has_stopped_port and (actively_viewed or now - last_listeners_time >= 10):
+                try:
+                    ports = self.listeners()
+                    self.stats['listener_calls'] += 1
+                    last_listeners_time = now
+                    cached_ports = ports
+                except (psutil.Error, OSError):
+                    ports = cached_ports
+            else:
+                ports = cached_ports
             for service in services:
                 try:
                     self.sync_service_log(service['id'])
@@ -747,7 +883,14 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                     current = next((s for s in self.config['services'] if s['id'] == service['id']), None)
                     if current and current.get('container') == service['container'] and current.get('kind') == 'docker' and service['id'] not in self.docker_busy:
                         self.samples[service['id']] = sample
-            self.closed.wait(2)
+            self.notify_services()
+            with self.lock:
+                has_owned = any(self.owned(s) for s in self.config['services'])
+                docker_active = any(s.get('kind') == 'docker' and self.docker_state(s)['active'] for s in self.config['services'])
+                busy = bool(self.group_operations) or (time.time() - self.last_activity < 15)
+            interval = 2 if (has_owned or docker_active or busy) else 10
+            self.wake.wait(interval)
+            self.wake.clear()
 
     @property
     def startup_path(self):

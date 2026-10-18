@@ -105,6 +105,7 @@ EN = {
     'StackPad 앱으로 돌아가 주세요. 이 창은 닫아도 됩니다.': 'Go back to the StackPad app. You can close this window.',
     '먼저 Tailscale로 외부 주소를 연결해 주세요.': 'Connect a remote address with Tailscale first.',
     '위젯 연결을 다시 설정해 주세요.': 'Connect the widget again.',
+    '위젯 토큰은 알림만 수신할 수 있습니다.': 'Widget tokens can only receive alerts.',
     '이 PC에서 접속한 화면에서 열 수 있습니다.': 'This opens only from the screen on this PC.',
     '이 PC에서 접속한 화면에서 저장 폴더를 선택해 주세요.': 'Choose the storage folder from the screen on this PC.',
     '열려 있는 폴더 선택 창을 먼저 닫아 주세요.': 'Close the open folder picker first.',
