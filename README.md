@@ -6,6 +6,10 @@ StackPad turns the servers on your Windows PC into a pad of buttons. Tap a pad t
 
 - 16 pads per pad set, as many pad sets as you like
 - Local commands, Docker containers and remote servers over SSH, alone or grouped into one pad with ordered start and reverse stop
+- Scenes to chain multiple pads in sequence, and schedules to trigger pads or scenes automatically by time and day
+- Automatic crash restart with backoff, error line detection, and instant failure alerts (PC toast and Android persistent foreground notifications)
+- Real-time SSE push updates, incremental log streaming, and log search with error line filtering
+- Breathing LED ring, 60-slot LCD dot-matrix sparklines for CPU and memory, and synthesized haptic & audio feedback
 - Suggestions for servers already running under your project folder
 - Sign in with your Google account; reach the PC from your phone through Tailscale
 - Android app with a home screen widget for Claude Code, Codex and Antigravity usage limits
@@ -49,10 +53,15 @@ Settings, logs and sign-in records are stored in `%USERPROFILE%\.config\stackpad
 ## Everyday use
 
 - Tap an empty pad (or **+**) to add a service: a command and working folder, a Docker container, or a remote server with start, stop and status commands. Add more services to make a group pad.
+- Configure auto-restart policies (`on-failure` with exponential backoff up to a maximum retry limit) and toast/push notifications for crash alerts.
+- Group multiple pads into **Scenes** to start them in sequence and stop them in reverse order.
+- Schedule automatic pad or scene starts and stops by local time and day of the week under **Scenes > Schedules**.
 - Tap a pad to start it, tap again to stop. The pad menu has details and logs, settings, open in browser and open in VS Code.
+- Search service logs in real time, toggle the "Errors only" filter, and jump directly to crash error lines.
+- Enjoy dynamic breathing LED rings matching CPU activity, 60-slot dot-matrix LCD sparklines for CPU and memory history, and synthesized click/audio-haptic feedback.
 - Drag pads to rearrange them; on touch screens use the handle at the top left.
 - A server you started outside StackPad shows as **Running outside**; tap it to let StackPad take it over.
-- **Settings > General**: language, start with Windows, log retention, AI usage and the storage folder.
+- **Settings > General**: language, start with Windows, log retention, AI usage, device haptic/audio feedback, and the storage folder.
 - Tray menu: open, close the window (engine and services keep running), quit StackPad (optionally stopping every service), and install updates.
 
 ## Command line
@@ -63,14 +72,17 @@ Settings, logs and sign-in records are stored in `%USERPROFILE%\.config\stackpad
 stackpad-cli help                     # every command; help pad lists the pad options and colors
 stackpad-cli padset list              # pad sets with their free slots
 stackpad-cli padset add Work
-stackpad-cli pad add --name API --command "uv run main.py" --cwd D:\app --port 8000 --padset Work
+stackpad-cli pad add --name API --command "uv run main.py" --cwd D:\app --port 8000 --padset Work --restart on-failure
 stackpad-cli pad list --padset Work
 stackpad-cli pad start API
 stackpad-cli pad logs API
 stackpad-cli pad show API             # its "input" can be edited and passed back with pad update API --json -
+stackpad-cli scene add --name DevStack --pads API,Web
+stackpad-cli scene start DevStack
+stackpad-cli schedule add --scene DevStack --action start --time 09:00 --days mon-fri
 ```
 
-- Pads and pad sets are named by ID or by name. Slots are 0 to 15, row by row from the top left.
+- Pads, scenes, and pad sets are named by ID or by name. Slots are 0 to 15, row by row from the top left.
 - Results are JSON on standard output, errors go to standard error. Exit codes: 0 success, 1 failed, 2 wrong command, 3 engine not running.
 - Group pads and remote server pads are written as JSON with `--json FILE` or `--json -` (standard input).
 - Commands talk to the running engine with the token it keeps in `%USERPROFILE%\.config\stackpad`, so they work only on this PC, for this Windows user, while StackPad is running (`StackPad.exe --hidden` starts it without the window).
@@ -78,6 +90,7 @@ stackpad-cli pad show API             # its "input" can be edited and passed bac
 ## Phone
 
 - **Android:** install `StackPad.apk`, turn on Tailscale on the phone, then on the PC open **Settings > Account > Connect a phone** and scan the QR code with the app. The code works once for five minutes. Connected phones are listed there and can be disconnected. Long-press the home screen to add the **Agent limits** widget.
+  - The Android app includes a persistent Foreground Service that keeps an SSE connection with the engine to deliver immediate failure and crash alert notifications even when the app is in the background. For uninterrupted notifications, disable battery optimization and allow background autostart for StackPad in your device settings.
 - **iPhone and others:** open the Tailscale address in Safari or Chrome, sign in with Google and add it to the home screen.
 
 ## AI usage (optional)
