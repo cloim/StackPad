@@ -326,4 +326,9 @@ export default {
   '응답 이상 알림': 'Unhealthy alert',
   '예약 실행': 'Scheduled run',
   '예약 실행 알림': 'Schedule alert',
+  '휴대폰 알림을 켰습니다.': 'Phone alerts enabled.',
+  '휴대폰 알림을 껐습니다.': 'Phone alerts disabled.',
+  '휴대폰 알림 받기': 'Receive phone alerts',
+  'PC의 서비스가 비정상 종료되거나 상태 확인에 실패했을 때 알림을 받습니다.': 'Get notified when a service on your PC crashes or fails health checks.',
+  '백그라운드에서 끊김 없이 알림을 받으려면 휴대폰 설정에서 StackPad의 배터리 최적화를 제외해 주세요.': 'To receive alerts continuously in the background, exclude StackPad from battery optimization in phone settings.',
 };

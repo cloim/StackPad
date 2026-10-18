@@ -107,6 +107,85 @@ fn watch_usage(app: AppHandle) {
     });
 }
 
+fn show_alert_toast(app: &AppHandle, alert: &Value) {
+    use tauri_plugin_notification::NotificationExt;
+    let pad_name = alert["pad_name"].as_str().unwrap_or("StackPad");
+    let message = alert["message"].as_str().unwrap_or("");
+    let kind = alert["kind"].as_str().unwrap_or("");
+    let title = match kind {
+        "crashed" => format!("{pad_name}: {}", text("비정상 종료", "Crashed")),
+        "restarted" => format!("{pad_name}: {}", text("자동 재시작", "Restarted")),
+        "gave_up" => format!("{pad_name}: {}", text("재시작 포기", "Gave up restarting")),
+        "unhealthy" => format!("{pad_name}: {}", text("응답 이상", "Unhealthy")),
+        "schedule_failed" => format!("{pad_name}: {}", text("예약 실행 실패", "Schedule failed")),
+        "scene_failed" => format!("{pad_name}: {}", text("장면 실행 실패", "Scene failed")),
+        _ => pad_name.to_string(),
+    };
+    let _ = app.notification().builder().title(title).body(message).show();
+}
+
+fn watch_alerts(app: AppHandle) {
+    thread::spawn(move || {
+        let mut backoff = 1;
+        loop {
+            let res = (|| -> Result<(), Box<dyn std::error::Error>> {
+                let token = fs::read_to_string(config_dir().ok_or("no config dir")?.join("control-token"))?;
+                let address: SocketAddr = ENGINE.parse()?;
+                let mut stream = TcpStream::connect_timeout(&address, Duration::from_millis(1000))?;
+                stream.set_read_timeout(Some(Duration::from_secs(30)))?;
+                let request = format!(
+                    "GET /api/events?topics=alert HTTP/1.1\r\nHost: {ENGINE}\r\nX-StackPad-Control: {}\r\nAccept: text/event-stream\r\nConnection: keep-alive\r\n\r\n",
+                    token.trim()
+                );
+                stream.write_all(request.as_bytes())?;
+                let mut reader = std::io::BufReader::new(stream);
+                let mut status_line = String::new();
+                use std::io::BufRead;
+                reader.read_line(&mut status_line)?;
+                if !status_line.starts_with("HTTP/1.1 200") {
+                    return Err("HTTP error".into());
+                }
+                loop {
+                    let mut header = String::new();
+                    reader.read_line(&mut header)?;
+                    if header == "\r\n" || header == "\n" || header.is_empty() {
+                        break;
+                    }
+                }
+                backoff = 1;
+                let mut current_event = String::new();
+                let mut current_data = String::new();
+                loop {
+                    let mut line = String::new();
+                    if reader.read_line(&mut line)? == 0 {
+                        break;
+                    }
+                    let line = line.trim_end_matches(['\r', '\n']);
+                    if line.is_empty() {
+                        if current_event == "alert" && !current_data.is_empty() {
+                            if let Ok(alert) = serde_json::from_str::<Value>(&current_data) {
+                                show_alert_toast(&app, &alert);
+                            }
+                        }
+                        current_event.clear();
+                        current_data.clear();
+                    } else if let Some(ev) = line.strip_prefix("event: ") {
+                        current_event = ev.trim().to_string();
+                    } else if let Some(dt) = line.strip_prefix("data: ") {
+                        current_data = dt.to_string();
+                    }
+                }
+                Ok(())
+            })();
+
+            if res.is_err() {
+                thread::sleep(Duration::from_secs(backoff));
+                backoff = (backoff * 2).min(60);
+            }
+        }
+    });
+}
+
 fn check_updates(app: AppHandle) {
     tauri::async_runtime::spawn(async move {
         loop {
@@ -241,6 +320,7 @@ fn main() {
     if cli::requested(&args) { std::process::exit(cli::run(&args[1..])); }
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _, _| show(app)))
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             if let Err(error) = start_engine() {
@@ -302,6 +382,7 @@ fn main() {
                 }).build(app)?;
             check_updates(app.handle().clone());
             watch_usage(app.handle().clone());
+            watch_alerts(app.handle().clone());
             Ok(())
         })
         .run(tauri::generate_context!())

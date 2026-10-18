@@ -22,4 +22,10 @@
     <string name="bridge_invalid_widget">The widget connection details are invalid.</string>
     <string name="bridge_invalid_usage">The usage data is invalid.</string>
     <string name="bridge_pin_unsupported">This launcher cannot add widgets from the app. Long-press the home screen and add it from Widgets.</string>
+    <string name="alert_channel_connection">PC connection</string>
+    <string name="alert_channel_connection_desc">Maintains connection to StackPad PC for alerts</string>
+    <string name="alert_channel_alerts">Service Alerts</string>
+    <string name="alert_channel_alerts_desc">Notifies about crashes and health check failures</string>
+    <string name="alert_service_connected">Connected to StackPad PC</string>
+    <string name="alert_service_connecting">Connecting to StackPad PC…</string>
 </resources>

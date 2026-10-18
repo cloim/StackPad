@@ -4,6 +4,7 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 // 교차 출처 제약 없이 로그인 쿠키를 함께 보낼 수 있다. 외부 주소는 QR 페어링으로 받아 기기에 저장한다.
 export const isNative = Capacitor.isNativePlatform();
 const WidgetBridge = isNative ? registerPlugin('WidgetBridge') : null;
+const AlertBridge = isNative ? registerPlugin('AlertBridge') : null;
 let server = '';
 
 // 에뮬레이터 검증용 빌드(VITE_ANDROID_TEST=1)만 adb reverse로 연결한 http://localhost 엔진과 페어링할 수 있다.
@@ -89,4 +90,23 @@ export async function disconnectWidget(api) {
 export function shareUsage(data) {
   if (!isNative) return;
   WidgetBridge.saveUsage({ usage: JSON.stringify(data) }).catch(() => {});
+}
+
+export async function getAlertStatus() {
+  if (!isNative || !AlertBridge) return false;
+  try {
+    const res = await AlertBridge.status();
+    return !!res?.enabled;
+  } catch {
+    return false;
+  }
+}
+
+export async function setAlertStatus(enabled) {
+  if (!isNative || !AlertBridge) return;
+  if (enabled) {
+    await AlertBridge.start();
+  } else {
+    await AlertBridge.stop();
+  }
 }

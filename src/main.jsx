@@ -10,7 +10,7 @@ import { PadsetSettings } from './components/PadsetSettings.jsx';
 import { UsageBar } from './components/UsageBar.jsx';
 import { AccountSettings } from './components/AccountSettings.jsx';
 import { SignIn } from './components/SignIn.jsx';
-import { connectWidget, disconnectWidget, isNative, loadServer, nativeHeaders, serverOrigin } from './native.js';
+import { connectWidget, disconnectWidget, getAlertStatus, isNative, loadServer, nativeHeaders, serverOrigin, setAlertStatus } from './native.js';
 import { PairPhone } from './components/PairPhone.jsx';
 import './components/Modal/modal.css';
 import './styles.css';
@@ -366,6 +366,20 @@ function Settings({ auth, settings, padsets, services, groups, refresh, onError,
   const [category, setCategory] = useState('general');
   const [busy, setBusy] = useState(false);
   const [roots, setRoots] = useState(null);
+  const [phoneAlert, setPhoneAlert] = useState(false);
+  useEffect(() => { if (isNative) getAlertStatus().then(setPhoneAlert); }, []);
+  async function togglePhoneAlert(enabled) {
+    setBusy(true);
+    try {
+      await setAlertStatus(enabled);
+      setPhoneAlert(enabled);
+      onNotice(enabled ? t('휴대폰 알림을 켰습니다.') : t('휴대폰 알림을 껐습니다.'));
+    } catch (e) {
+      onError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
     async function selectDataDirectory() {
       setBusy(true);
       try {
@@ -431,6 +445,7 @@ function Settings({ auth, settings, padsets, services, groups, refresh, onError,
       <option value={90}>{t('90일')}</option>
       <option value={0}>{t('무제한')}</option>
     </SelectControl></div></section>
+    {isNative && <section className="settings-card vertical"><div className="settings-actions"><div className="section-heading"><Bell size={22} /><div><h2>{t('휴대폰 알림 받기')}</h2><p>{t('PC의 서비스가 비정상 종료되거나 상태 확인에 실패했을 때 알림을 받습니다.')}</p></div></div><button className={`switch ${phoneAlert ? 'on' : ''}`} role="switch" aria-checked={phoneAlert} aria-label={t('휴대폰 알림 받기')} disabled={busy} onClick={() => togglePhoneAlert(!phoneAlert)}><span /></button></div><p className="optional">{t('백그라운드에서 끊김 없이 알림을 받으려면 휴대폰 설정에서 StackPad의 배터리 최적화를 제외해 주세요.')}</p></section>}
     <section className="settings-card vertical"><div className="section-heading"><Bell size={22} /><div><h2>{t('장애 및 예약 알림')}</h2><p>{t('서비스가 예기치 않게 종료되거나 상태 확인에 실패했을 때, 그리고 예약이 실행되었을 때 알림을 보냅니다.')}</p></div></div>
       <div className="usage-switches">
         <label className="usage-switch"><span>{t('비정상 종료')}</span><button type="button" className={`switch ${settings?.notifications?.crash !== false ? 'on' : ''}`} role="switch" aria-checked={settings?.notifications?.crash !== false} aria-label={t('비정상 종료 알림')} disabled={busy || !settings} onClick={() => changeNotifications('crash', settings?.notifications?.crash === false)}><span /></button></label>

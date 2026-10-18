@@ -1,1 +1,1 @@
-{}
+{"default":{"identifier":"default","description":"Default capabilities for StackPad desktop","local":true,"windows":["main"],"permissions":["core:default","notification:default"]}}
