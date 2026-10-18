@@ -84,6 +84,8 @@ class ComponentInput(BaseModel):
     health_url: str = Field(default='', max_length=1000)
     remote: RemoteSpec | None = None
     container: str = ''
+    restart_policy: Literal['never', 'on-failure'] = 'never'
+    restart_max: int = Field(default=3, ge=1, le=10)
 
 
 class PadInput(BaseModel):
@@ -201,7 +203,7 @@ class GroupManager:
                         raise ValueError('이미 등록된 컨테이너입니다.')
                     validated.append(data)
                 else:
-                    validated.append(ServiceInput(name=c.name, command=c.command, cwd=c.cwd, port=c.port, health_url=c.health_url, slot=values.slot, color=values.color, autostart=values.autostart).model_dump())
+                    validated.append(ServiceInput(name=c.name, command=c.command, cwd=c.cwd, port=c.port, health_url=c.health_url, slot=values.slot, color=values.color, autostart=values.autostart, restart_policy=c.restart_policy, restart_max=c.restart_max).model_dump())
             for data in validated:
                 data['padset_id'] = values.padset_id
             prepared = []

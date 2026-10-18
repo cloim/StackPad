@@ -65,15 +65,18 @@ class CommandLineApiTests(unittest.TestCase):
 
     def test_single_pad_lifecycle(self):
         self.ok('padset', 'add', '업무')
-        added = self.ok('pad', 'add', '--name', 'API', '--command', 'uv run main.py', '--port', '8000', '--padset', '업무', '--color', '#3B82F6')['pad']
+        added = self.ok('pad', 'add', '--name', 'API', '--command', 'uv run main.py', '--port', '8000', '--padset', '업무', '--color', '#3B82F6', '--restart', 'on-failure', '--restart-max', '5')['pad']
         self.assertEqual((added['slot'], added['padset'], added['type'], added['color']), (0, '업무', 'single', '#3b82f6'))
         self.assertEqual(added['components'][0]['cwd'], str(self.work.resolve()))
+        self.assertEqual(added['components'][0]['restart_policy'], 'on-failure')
+        self.assertEqual(added['components'][0]['restart_max'], 5)
         second = self.ok('pad', 'add', '--name', 'Web', '--command', 'npm run dev', '--cwd', '.', '--padset', '업무')['pad']
         self.assertEqual(second['slot'], 1)
         shown = self.ok('pad', 'show', 'api')
         self.assertEqual(shown['input']['components'][0]['id'], added['id'])
-        updated = self.ok('pad', 'update', 'API', '--port', 'none', '--name', 'Backend', '--autostart')['pad']
+        updated = self.ok('pad', 'update', 'API', '--port', 'none', '--name', 'Backend', '--autostart', '--restart', 'never')['pad']
         self.assertEqual((updated['id'], updated['name'], updated['components'][0]['port'], updated['autostart']), (added['id'], 'Backend', None, True))
+        self.assertEqual(updated['components'][0]['restart_policy'], 'never')
         self.assertEqual(updated['components'][0]['command'], 'uv run main.py')
         self.assertEqual(self.call('pad', 'move', 'Backend', '--slot', '1')['exit_code'], 1)
         moved = self.ok('pad', 'move', 'Backend', '--slot', '5', '--padset', 'default')['pad']

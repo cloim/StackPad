@@ -42,6 +42,10 @@ EN = {
     '명령이 곧바로 종료되었습니다. 로그를 확인해 주세요.': 'The command exited right away. Check the logs.',
     '실행 중인 서비스 로그의 새 저장 위치를 확인해 주세요.': 'Check the new location of the running service logs.',
     '프로세스가 종료되었습니다. 로그를 확인해 주세요.': 'The process exited. Check the logs.',
+    '재시작 한도를 초과했습니다. 로그를 확인해 주세요.': 'Exceeded restart limit. Check the logs.',
+    '재시작 대기 중': 'Waiting to restart',
+    '재시작 중': 'Restarting',
+    '응답 이상이 감지되었습니다.': 'Unhealthy response detected.',
     # Folder picker
     'Windows PC에서 폴더를 선택해 주세요.': 'Choose the folder on the Windows PC.',
     '폴더 선택 창을 다시 열어 주세요.': 'Open the folder picker again.',
@@ -290,6 +294,8 @@ Single component options
   --port N                  Port to check; none clears it
   --health-url U            Local health check address
   --container NAME          Docker container
+  --restart never|on-failure  Auto-restart policy on failure
+  --restart-max N           Maximum restart attempts in 10 min (default 3)
 
 --json FILE|-  The whole pad as a JSON file or standard input. Use it for group pads and remote server pads.
   {"name": "App", "components": [{"kind": "local", "name": "API", "command": "uv run main.py", "cwd": "D:/app", "port": 8000},

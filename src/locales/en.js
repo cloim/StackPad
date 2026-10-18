@@ -315,4 +315,15 @@ export default {
   'StackPad {0}을 내려받을 수 있어요. 설치하면 지금 앱 위에 업데이트됩니다.': 'StackPad {0} is available. Installing it updates this app in place.',
   '내려받기': 'Download',
   'Google OAuth 클라이언트가 테스트 상태라면 추가한 계정을 Google 인증 플랫폼의 테스트 사용자에도 넣어 주세요.': 'If your Google OAuth client is in testing, also add the account to the test users in the Google Auth Platform.',
+  // Restart policy and alerts
+  '비정상 종료 시 자동 재시작': 'Auto-restart on abnormal exit',
+  '최대 재시작 횟수': 'Maximum restarts',
+  '알림 설정을 반영했습니다.': 'Notification settings updated.',
+  '장애 및 예약 알림': 'Failure and schedule alerts',
+  '서비스가 예기치 않게 종료되거나 상태 확인에 실패했을 때, 그리고 예약이 실행되었을 때 알림을 보냅니다.': 'Send alerts when a service crashes, fails health checks, or runs on schedule.',
+  '비정상 종료': 'Crash',
+  '비정상 종료 알림': 'Crash alert',
+  '응답 이상 알림': 'Unhealthy alert',
+  '예약 실행': 'Scheduled run',
+  '예약 실행 알림': 'Schedule alert',
 };

@@ -1,5 +1,6 @@
 """Owned-process service supervisor. Windows launches are detached through WMI."""
 import base64
+from collections import deque
 import hashlib
 import json
 import logging
@@ -48,6 +49,8 @@ class ServiceInput(BaseModel):
     autostart: bool = False
     slot: int = Field(ge=0, le=15)
     padset_id: str = 'default'
+    restart_policy: Literal['never', 'on-failure'] = 'never'
+    restart_max: int = Field(default=3, ge=1, le=10)
 
     @field_validator('name', 'command', 'cwd')
     @classmethod
@@ -182,6 +185,10 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices):
         self.samples = {}
         self.externals = {}
         self.group_operations = {}
+        self.restarts = {}
+        self.alerts = deque(maxlen=100)
+        self._alert_counter = 0
+        self._last_unhealthy = set()
         self.closed = threading.Event()
         self.config = json.loads(self.path.read_text('utf-8')) if self.path.exists() else {'services': []}
         # Google sign-in replaced the former app password.
@@ -356,6 +363,54 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices):
                 self.events.publish('services', payload)
         except Exception as error:
             logging.warning('notify_services failed: %s', error)
+
+    def last_error_line(self, service_id: str) -> str:
+        try:
+            path = self.latest_service_log(service_id)
+            if not path.exists():
+                return ''
+            size = path.stat().st_size
+            read_bytes = min(size, 8192)
+            with path.open('rb') as f:
+                if size > read_bytes:
+                    f.seek(size - read_bytes)
+                raw = f.read()
+            text = raw.decode('utf-8', errors='replace')
+            clean = re.sub(r'\x1b\[[0-9;]*[a-zA-Z]', '', text)
+            pattern = re.compile(r'\b(error|exception|traceback|fatal|failed|panic|errno)\b', re.IGNORECASE)
+            matched = ''
+            for line in clean.splitlines():
+                if pattern.search(line):
+                    matched = line.strip()
+            return matched[:200]
+        except Exception:
+            return ''
+
+    def record_alert(self, pad_id: str, pad_name: str, kind: str, message: str):
+        with self.lock:
+            self._alert_counter += 1
+            alert_id = self._alert_counter
+            item = {
+                'id': alert_id,
+                'time': int(time.time()),
+                'pad_id': pad_id,
+                'pad_name': pad_name,
+                'kind': kind,
+                'message': message,
+            }
+            self.alerts.append(item)
+            notifications = self.config.get('notifications', {'crash': True, 'unhealthy': True, 'schedule': True})
+            should_publish = True
+            if kind in ('crashed', 'restarted', 'gave_up') and not notifications.get('crash', True):
+                should_publish = False
+            elif kind == 'unhealthy' and not notifications.get('unhealthy', True):
+                should_publish = False
+            elif kind in ('schedule_failed', 'scene_failed') and not notifications.get('schedule', True):
+                should_publish = False
+
+            if should_publish and hasattr(self, 'events'):
+                self.events.publish('alert', item)
+            return item
 
     def save(self):
         temporary = self.path.with_suffix('.tmp')
@@ -548,6 +603,7 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices):
         if self.is_remote(service_id):
             return self.remote_action(service_id, 'start')
         with self.lock:
+            self.restarts.pop(service_id, None)
             self.check_group_busy(service_id)
             service = self.service(service_id)
             if self.owned(service) or (service.get('kind') == 'docker' and self.docker_state(service)['active']):
@@ -616,6 +672,7 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
         if self.is_remote(service_id):
             return self.remote_action(service_id, 'stop')
         with self.lock:
+            self.restarts.pop(service_id, None)
             self.check_group_busy(service_id)
             service = self.service(service_id)
             process = self.owned(service)
@@ -653,7 +710,16 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                 process = self.owned(service)
                 sample = self.samples.get(service['id'], {})
                 found = None if process else self.externals.get(service['id'])
-                status = sample.get('status', 'starting') if process else found['kind'] if found else ('error' if service.get('error') else 'stopped')
+                if process:
+                    status = sample.get('status', 'starting')
+                elif sample.get('status') == 'restarting':
+                    status = 'restarting'
+                elif found:
+                    status = found['kind']
+                elif service.get('error'):
+                    status = 'error'
+                else:
+                    status = 'stopped'
                 result.append({**{k: v for k, v in service.items() if k != 'runtime'}, **sample, 'status': status, 'pid': process.pid if process else None, 'external_pid': found['pid'] if found else None, 'active': bool(process), 'uptime': int(time.time() - process.create_time()) if process else 0})
             return result
 
@@ -814,6 +880,24 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                     self.purge_expired_logs()
                 except Exception:
                     pass
+            now_time = time.time()
+            to_restart = []
+            with self.lock:
+                for sid, r in list(self.restarts.items()):
+                    if r.get('next_at') and now_time >= r['next_at']:
+                        if sid not in self.group_operations:
+                            to_restart.append(sid)
+            for sid in to_restart:
+                try:
+                    with self.lock:
+                        srv = next((s for s in self.config['services'] if s['id'] == sid), None)
+                        if srv and not self.owned(srv):
+                            r = self.restarts.get(sid)
+                            if r:
+                                r['next_at'] = 0
+                            self.start(sid)
+                except Exception as error:
+                    logging.error('Auto restart execution failed for %s: %s', sid, error)
             with self.lock:
                 services = [dict(s) for s in self.config['services'] if s.get('kind', 'local') == 'local']
                 containers = [dict(s) for s in self.config['services'] if s.get('kind') == 'docker']
@@ -848,8 +932,60 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                         current = next((s for s in self.config['services'] if s['id'] == service['id']), None)
                         if current and current.get('runtime') == service.get('runtime') and current.get('runtime'):
                             self.sync_service_log(service['id'])
-                            current.update(runtime=None, error='프로세스가 종료되었습니다. 로그를 확인해 주세요.')
-                            self.save()
+                            error_line = self.last_error_line(service['id'])
+                            policy = current.get('restart_policy', 'never')
+                            max_attempts = current.get('restart_max', 3)
+
+                            record = self.restarts.setdefault(service['id'], {'attempts': [], 'next_at': 0})
+                            now_time = time.time()
+                            record['attempts'] = [t for t in record['attempts'] if now_time - t < 600]
+
+                            can_restart = (
+                                policy == 'on-failure'
+                                and len(record['attempts']) < max_attempts
+                                and service['id'] not in self.group_operations
+                            )
+
+                            if can_restart:
+                                backoffs = [2, 4, 8, 16, 32, 60]
+                                delay = backoffs[min(len(record['attempts']), len(backoffs) - 1)]
+                                record['attempts'].append(now_time)
+                                record['next_at'] = now_time + delay
+                                attempt_num = len(record['attempts'])
+                                msg = f"{attempt_num}/{max_attempts} {system_text('재시작 대기 중')}"
+                                current.update(runtime=None, error=msg)
+                                self.samples[service['id']] = {
+                                    'status': 'restarting',
+                                    'message': msg,
+                                    'error_line': error_line,
+                                }
+                                self.save()
+                                self.record_alert(
+                                    service['id'],
+                                    service['name'],
+                                    'restarted',
+                                    f"[{service['name']}] {msg}"
+                                )
+                            else:
+                                if policy == 'on-failure' and len(record['attempts']) >= max_attempts:
+                                    kind = 'gave_up'
+                                    error_msg = '재시작 한도를 초과했습니다. 로그를 확인해 주세요.'
+                                else:
+                                    kind = 'crashed'
+                                    error_msg = '프로세스가 종료되었습니다. 로그를 확인해 주세요.'
+                                current.update(runtime=None, error=error_msg)
+                                self.samples[service['id']] = {
+                                    'status': 'error',
+                                    'message': error_msg,
+                                    'error_line': error_line,
+                                }
+                                self.save()
+                                self.record_alert(
+                                    service['id'],
+                                    service['name'],
+                                    kind,
+                                    f"[{service['name']}] {error_msg}" + (f" ({error_line})" if error_line else '')
+                                )
                     continue
                 ready = True
                 message = ''
@@ -873,8 +1009,22 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                     age = time.time() - process.create_time()
                     with self.lock:
                         current = next((s for s in self.config['services'] if s['id'] == service['id']), None)
+                    sample_status = 'running' if ready else ('starting' if age < 20 else 'unhealthy')
+                    if sample_status == 'unhealthy' and service['id'] not in self._last_unhealthy:
+                        self._last_unhealthy.add(service['id'])
+                        err_line = self.last_error_line(service['id'])
+                        self.record_alert(
+                            service['id'],
+                            service['name'],
+                            'unhealthy',
+                            f"[{service['name']}] {system_text('응답 이상이 감지되었습니다.')}" + (f" ({err_line})" if err_line else '')
+                        )
+                    elif sample_status == 'running':
+                        self._last_unhealthy.discard(service['id'])
+                    with self.lock:
+                        current = next((s for s in self.config['services'] if s['id'] == service['id']), None)
                         if current and current.get('runtime') == service.get('runtime'):
-                            self.samples[service['id']] = {'status': 'running' if ready else ('starting' if age < 20 else 'unhealthy'), 'memory': round(memory, 1), 'cpu': round(cpu, 1), 'message': message, '_cpu_time': cpu_time, '_sample_time': now}
+                            self.samples[service['id']] = {'status': sample_status, 'memory': round(memory, 1), 'cpu': round(cpu, 1), 'message': message, '_cpu_time': cpu_time, '_sample_time': now}
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     pass
             for service in containers:
@@ -887,7 +1037,8 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
             with self.lock:
                 has_owned = any(self.owned(s) for s in self.config['services'])
                 docker_active = any(s.get('kind') == 'docker' and self.docker_state(s)['active'] for s in self.config['services'])
-                busy = bool(self.group_operations) or (time.time() - self.last_activity < 15)
+                has_restarts = any(r.get('next_at') for r in self.restarts.values())
+                busy = bool(self.group_operations) or has_restarts or (time.time() - self.last_activity < 15)
             interval = 2 if (has_owned or docker_active or busy) else 10
             self.wake.wait(interval)
             self.wake.clear()

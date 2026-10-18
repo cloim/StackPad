@@ -439,7 +439,37 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
                 'can_select_data_dir': is_local(request),
                 'log_retention_days': engine.config.get('log_retention_days', 14),
                 'recommend_roots': engine.config.get('recommend', {}).get('roots') or recommend.DEFAULT_ROOTS, 'recommend_hidden': recommend.hidden_entries(engine.config),
-                'onboarding_done': bool(engine.config.get('onboarding_done')), 'usage_providers': engine.config.get('usage_providers', [])}
+                'onboarding_done': bool(engine.config.get('onboarding_done')), 'usage_providers': engine.config.get('usage_providers', []),
+                'notifications': engine.config.get('notifications', {'crash': True, 'unhealthy': True, 'schedule': True})}
+
+    @app.get('/api/alerts')
+    def get_alerts(request: Request, after: int | None = None):
+        session_record = current_session(request)
+        control = request.headers.get('x-stackpad-control', '')
+        is_desktop = bool(control_token) and is_local(request) and secrets.compare_digest(control, control_token)
+        scheme, _, auth_token = request.headers.get('authorization', '').partition(' ')
+        widget_token_cand = auth_token if scheme.lower() == 'bearer' else request.query_params.get('token', '')
+        is_widget = bool(widget_token_cand) and widget_tokens.verify(widget_token_cand)
+        if not (session_record or is_desktop or is_widget):
+            raise HTTPException(401, '로그인해 주세요.')
+        with engine.lock:
+            items = list(engine.alerts)
+        if after is not None:
+            items = [a for a in items if a['id'] > after]
+        return {'alerts': items}
+
+    class NotificationSettings(BaseModel):
+        crash: bool = True
+        unhealthy: bool = True
+        schedule: bool = True
+
+    @app.put('/api/settings/notifications', dependencies=[Depends(authenticated)])
+    def update_notifications(values: NotificationSettings, request: Request):
+        with engine.lock:
+            engine.config['notifications'] = values.model_dump()
+            engine.save()
+        engine.events.publish('settings', settings_payload(request))
+        return {'notifications': engine.config['notifications']}
 
     @app.get('/api/services', dependencies=[Depends(authenticated)])
     def services():

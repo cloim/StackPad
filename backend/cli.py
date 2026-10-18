@@ -55,6 +55,8 @@ PAD_HELP = '''pad add, pad update 옵션
   --port N                  확인할 포트, none이면 지웁니다
   --health-url U            로컬 상태 확인 주소
   --container NAME          Docker 컨테이너
+  --restart never|on-failure  비정상 종료 시 자동 재시작 정책
+  --restart-max N           10분 내 최대 재시작 횟수 (기본 3)
 
 --json FILE|-  패드 전체 설정 JSON 파일 또는 표준 입력. 그룹 패드와 원격 서버 패드는 이 방식으로 지정합니다.
   {"name": "앱", "components": [{"kind": "local", "name": "API", "command": "uv run main.py", "cwd": "D:/app", "port": 8000},
@@ -120,6 +122,8 @@ def parser():
         command.add_argument('--port')
         command.add_argument('--health-url')
         command.add_argument('--container')
+        command.add_argument('--restart', dest='restart_policy', choices=['never', 'on-failure'])
+        command.add_argument('--restart-max', dest='restart_max', type=int)
     move = pad.add_parser('move', add_help=False)
     move.add_argument('pad')
     move.add_argument('--slot', type=int, required=True)
@@ -166,7 +170,7 @@ def component_settings(service):
         return {'remote': service.get('remote')}
     if kind == 'docker':
         return {'container': service.get('container', '')}
-    return {key: service.get(key) for key in ('command', 'cwd', 'port', 'health_url')}
+    return {key: service.get(key) for key in ('command', 'cwd', 'port', 'health_url', 'restart_policy', 'restart_max')}
 
 
 def all_pads(engine):
@@ -276,7 +280,7 @@ def pad_body(engine, args, context, base=None):
     for key in ('autostart', 'wait_ready', 'domain_url', 'local_url'):
         if getattr(args, key) is not None:
             body[key] = getattr(args, key)
-    local = {key: getattr(args, key) for key in ('command', 'cwd', 'port', 'health_url') if getattr(args, key) is not None}
+    local = {key: getattr(args, key) for key in ('command', 'cwd', 'port', 'health_url', 'restart_policy', 'restart_max') if getattr(args, key) is not None}
     if local or args.container is not None:
         components = body.get('components') or []
         if len(components) > 1:

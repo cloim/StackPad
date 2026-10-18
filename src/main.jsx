@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Ansi from 'ansi-to-react';
 import { createRoot } from 'react-dom/client';
-import { Code, Folder, Gauge, Globe, Languages, History, Monitor, Info, LoaderCircle, Plus, Power, RefreshCw, ScanSearch, Settings as Gear, Settings2, SlidersHorizontal, Terminal, Trash2 } from 'lucide-react';
+import { Bell, Code, Folder, Gauge, Globe, Languages, History, Monitor, Info, LoaderCircle, Plus, Power, RefreshCw, ScanSearch, Settings as Gear, Settings2, SlidersHorizontal, Terminal, Trash2 } from 'lucide-react';
 import { Modal } from './components/Modal/Modal.jsx';
 import { PadForm } from './components/PadForm.jsx';
 import { SelectControl } from './components/SelectControl.jsx';
@@ -407,6 +407,16 @@ function Settings({ auth, settings, padsets, services, groups, refresh, onError,
       onNotice(t('로그 보관 기간을 설정했습니다.'));
     } catch (e) { onError(e.message); } finally { setBusy(false); }
   }
+  async function changeNotifications(key, value) {
+    setBusy(true);
+    const current = settings?.notifications || { crash: true, unhealthy: true, schedule: true };
+    const next = { ...current, [key]: value };
+    try {
+      await api('/settings/notifications', { method: 'PUT', body: JSON.stringify(next) });
+      await refresh();
+      onNotice(t('알림 설정을 반영했습니다.'));
+    } catch (e) { onError(e.message); } finally { setBusy(false); }
+  }
   return <>
     <Tabs label={t('환경 설정 카테고리')} tabs={[{ id: 'general', name: t('일반') }, { id: 'recommend', name: t('등록 추천') }, { id: 'padsets', name: t('패드셋') }, { id: 'account', name: t('계정') }]} value={category} onChange={setCategory} prefix="settings" />
     <div className="settings-stack compact-settings" role="tabpanel" id="settings-panel" aria-labelledby={`settings-tab-${category}`}>
@@ -421,6 +431,12 @@ function Settings({ auth, settings, padsets, services, groups, refresh, onError,
       <option value={90}>{t('90일')}</option>
       <option value={0}>{t('무제한')}</option>
     </SelectControl></div></section>
+    <section className="settings-card vertical"><div className="section-heading"><Bell size={22} /><div><h2>{t('장애 및 예약 알림')}</h2><p>{t('서비스가 예기치 않게 종료되거나 상태 확인에 실패했을 때, 그리고 예약이 실행되었을 때 알림을 보냅니다.')}</p></div></div>
+      <div className="usage-switches">
+        <label className="usage-switch"><span>{t('비정상 종료')}</span><button type="button" className={`switch ${settings?.notifications?.crash !== false ? 'on' : ''}`} role="switch" aria-checked={settings?.notifications?.crash !== false} aria-label={t('비정상 종료 알림')} disabled={busy || !settings} onClick={() => changeNotifications('crash', settings?.notifications?.crash === false)}><span /></button></label>
+        <label className="usage-switch"><span>{t('응답 이상')}</span><button type="button" className={`switch ${settings?.notifications?.unhealthy !== false ? 'on' : ''}`} role="switch" aria-checked={settings?.notifications?.unhealthy !== false} aria-label={t('응답 이상 알림')} disabled={busy || !settings} onClick={() => changeNotifications('unhealthy', settings?.notifications?.unhealthy === false)}><span /></button></label>
+        <label className="usage-switch"><span>{t('예약 실행')}</span><button type="button" className={`switch ${settings?.notifications?.schedule !== false ? 'on' : ''}`} role="switch" aria-checked={settings?.notifications?.schedule !== false} aria-label={t('예약 실행 알림')} disabled={busy || !settings} onClick={() => changeNotifications('schedule', settings?.notifications?.schedule === false)}><span /></button></label>
+      </div></section>
     <section className="settings-card vertical"><div className="section-heading"><Gauge size={22} /><div><h2>{t('AI 사용량')}</h2><p>{t('이 PC에 로그인된 AI CLI의 사용 한도를 패드 위와 휴대폰 위젯에 표시합니다. 각 CLI의 비공개 API를 읽기만 하므로 응답 형식이 바뀌면 표시되지 않을 수 있어요.')}</p></div></div>
       <div className="usage-switches">{[['claude', 'Claude Code'], ['codex', 'Codex'], ['antigravity', 'Antigravity']].map(([id, name]) => <label key={id} className="usage-switch"><span>{name}</span><button type="button" className={`switch ${settings?.usage_providers?.includes(id) ? 'on' : ''}`} role="switch" aria-checked={!!settings?.usage_providers?.includes(id)} aria-label={t('{0} 사용량 표시', name)} disabled={busy || !settings} onClick={() => changeUsage(id, !settings.usage_providers.includes(id))}><span /></button></label>)}</div>
       <p className="optional">{t('Antigravity는 상태줄이 저장한 스냅샷 파일을 읽습니다:')} <code>~/.gemini/antigravity-cli/usage-snapshot.json</code></p></section>
