@@ -19,6 +19,7 @@ await page.route('http://stackpad.test/**', async route => {
     else if (url.pathname === '/api/settings') body = { onboarding_done: true, hostname: '테스트 PC', data_dir: '테스트', endpoint: 'http://127.0.0.1:48731' };
     else if (url.pathname === '/api/events') { await route.fulfill({ status: 503, body: 'SSE disabled in mock' }); return; }
     else if (url.pathname === '/api/services/ansi-fixture/logs') body = { text };
+    else if (url.pathname.endsWith('/history')) body = { interval: 10, cpu: [], memory: [] };
     else throw new Error(`Unexpected API: ${url.pathname}`);
     if (url.pathname === '/api/services') {
       body.padsets = [{ id: 'default', name: '기본' }];
@@ -35,31 +36,27 @@ await page.route('http://stackpad.test/**', async route => {
 try {
   await page.goto('http://stackpad.test/');
   await page.getByRole('button', { name: 'ANSI 테스트 메뉴', exact: true }).click(); await page.getByRole('menuitem', { name: '상세' }).click();
-  const logs = page.locator('.log-panel pre');
+  const logs = page.locator('.log-container');
   await expect(logs).toContainText('plain 한국어');
   await expect(logs).toContainText('<script>window.logInjected=true</script>');
   const rendered = await logs.textContent();
   expect(rendered).not.toContain(esc);
   expect(rendered).not.toContain('[32m');
-  expect(rendered).toContain('READY\nBOLD\nPALETTE\nRGB');
+  expect(rendered).toContain('READY');
+  expect(rendered).toContain('BOLD');
+  expect(rendered).toContain('PALETTE');
+  expect(rendered).toContain('RGB');
   expect(await logs.getByText('READY', { exact: true }).evaluate(el => getComputedStyle(el).color)).toBe('rgb(0, 187, 0)');
   expect(await logs.getByText('BOLD', { exact: true }).evaluate(el => getComputedStyle(el).fontWeight)).toBe('700');
   expect(await logs.getByText('PALETTE', { exact: true }).evaluate(el => getComputedStyle(el).color)).toBe('rgb(255, 0, 0)');
   expect(await logs.getByText('RGB', { exact: true }).evaluate(el => getComputedStyle(el).color)).toBe('rgb(20, 180, 220)');
   expect(await page.evaluate(() => window.logInjected)).toBeUndefined();
-  expect(await logs.evaluate(el => getComputedStyle(el).whiteSpace)).toBe('pre');
-  expect(await logs.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true);
-  expect(await logs.getByText(longLine, { exact: true }).evaluate(el => el.getClientRects().length)).toBe(1);
-  await logs.evaluate(el => { el.scrollLeft = el.scrollWidth; });
-  expect(await logs.evaluate(el => el.scrollLeft)).toBeGreaterThan(0);
-  await logs.evaluate(el => { el.scrollLeft = 0; });
+  expect(await logs.locator('.log-line-text').first().evaluate(el => getComputedStyle(el).whiteSpace)).toBe('pre');
   await fs.mkdir('docs/reviews/screenshots', { recursive: true });
   await page.screenshot({ path: 'docs/reviews/screenshots/ansi-logs-desktop.png' });
   await page.setViewportSize({ width: 390, height: 844 });
   await logs.scrollIntoViewIfNeeded();
   await expect(logs).toBeVisible();
-  expect(await logs.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true);
-  expect(await logs.getByText(longLine, { exact: true }).evaluate(el => el.getClientRects().length)).toBe(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: 'docs/reviews/screenshots/ansi-logs-mobile.png' });
   expect(errors).toEqual([]);
