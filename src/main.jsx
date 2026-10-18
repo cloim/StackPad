@@ -15,6 +15,7 @@ import { PairPhone } from './components/PairPhone.jsx';
 import './components/Modal/modal.css';
 import './styles.css';
 import { LOCALES, locale, setLocale, t } from './i18n.js';
+import { connectEvents } from './events.js';
 
 if (import.meta.env.PROD && window.isSecureContext && 'serviceWorker' in navigator && !window.__TAURI_INTERNALS__ && !isNative) {
   window.addEventListener('load', () => {
@@ -104,16 +105,67 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
   useEffect(() => {
     if (!logId) { setLogs(''); return; }
     let disposed = false;
+    let timer = null;
     follow.current = true; setLogs(''); setLogsLoading(true);
+    let logFile = null;
+    let logOffset = null;
+    let currentText = '';
+
     async function load() {
+      if (disposed || document.visibilityState === 'hidden') return;
       try {
-        const data = await api(`/services/${logId}/logs`);
-        if (!disposed) { setLogs(data.text); setLogsLoading(false); }
-      } catch (error) { if (!disposed) { setLogs(error.message); setLogsLoading(false); } }
+        const query = logFile && logOffset !== null ? `?file=${encodeURIComponent(logFile)}&offset=${logOffset}` : '';
+        const data = await api(`/services/${logId}/logs${query}`);
+        if (disposed) return;
+        if (data.unchanged) {
+          setLogsLoading(false);
+          return;
+        }
+        if (data.reset) {
+          currentText = data.text || '';
+        } else {
+          currentText += (data.text || '');
+        }
+        logFile = data.file;
+        logOffset = data.offset;
+        // Limit buffer size to 400KB and trim to line boundary
+        if (currentText.length > 400_000) {
+          currentText = currentText.slice(-400_000);
+          const firstNewline = currentText.indexOf('\n');
+          if (firstNewline !== -1) currentText = currentText.slice(firstNewline + 1);
+        }
+        setLogs(currentText);
+        setLogsLoading(false);
+      } catch (error) {
+        if (!disposed) { setLogs(error.message); setLogsLoading(false); }
+      }
     }
-    // Remote logs cost an SSH connection each time, so they refresh less often.
-    load(); const interval = setInterval(load, remoteLog ? 5000 : 2000);
-    return () => { disposed = true; clearInterval(interval); };
+
+    function schedule() {
+      clearInterval(timer);
+      if (document.visibilityState !== 'hidden') {
+        timer = setInterval(load, remoteLog ? 5000 : 2000);
+      }
+    }
+
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        load();
+        schedule();
+      } else {
+        clearInterval(timer);
+      }
+    }
+
+    load();
+    schedule();
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      disposed = true;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, [logId, remoteLog]);
   useEffect(() => {
     if (!padMenu) return;
@@ -423,6 +475,7 @@ function App() {
     const timer = setInterval(() => { if (document.visibilityState === 'visible') checkAuth(); }, 2000);
     return () => clearInterval(timer);
   }, [auth?.authenticated, checkAuth]);
+  const [fallback, setFallback] = useState(false);
   const refresh = useCallback(async () => {
     if (inFlight.current) return;
     inFlight.current = true;
@@ -434,9 +487,33 @@ function App() {
   }, [checkAuth]);
   useEffect(() => {
     if (!auth?.authenticated) return;
-    refresh(); const timer = setInterval(refresh, 2000);
-    return () => clearInterval(timer);
+    refresh();
+    const disconnect = connectEvents({
+      topics: ['services', 'settings', 'alert', 'progress'],
+      onEvent: (topic, data) => {
+        if (topic === 'services') {
+          setServices(data.services || []);
+          setPadsets(data.padsets || []);
+          setGroups(data.groups || []);
+          setLinks(data.links || {});
+          setConnected(true);
+          setLoading(false);
+        } else if (topic === 'settings') {
+          setSettings(data);
+        }
+      },
+      onConnectedChange: val => setConnected(val),
+      onFallbackChange: val => setFallback(val),
+    });
+    return () => disconnect();
   }, [auth?.authenticated, refresh]);
+  useEffect(() => {
+    if (!auth?.authenticated || !fallback) return;
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible') refresh();
+    }, 2000);
+    return () => clearInterval(timer);
+  }, [auth?.authenticated, fallback, refresh]);
   useEffect(() => {
     // The Android app is installed from GitHub Releases, so it checks there for a newer version once per launch.
     if (!auth?.authenticated || !isNative) return;

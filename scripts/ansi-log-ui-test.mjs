@@ -17,6 +17,7 @@ await page.route('http://stackpad.test/**', async route => {
     else if (url.pathname === '/api/usage') body = { providers: [] };
     else if (url.pathname === '/api/services') body = { services: [{ id: 'ansi-fixture', name: 'ANSI 테스트', command: 'npm run dev', cwd: 'C:/Users/me/projects/Shop/frontend', port: 5174, slot: 0, color: '#7db5eb', autostart: false, status: 'running', pid: 1, uptime: 1 }] };
     else if (url.pathname === '/api/settings') body = { onboarding_done: true, hostname: '테스트 PC', data_dir: '테스트', endpoint: 'http://127.0.0.1:48731' };
+    else if (url.pathname === '/api/events') { await route.fulfill({ status: 503, body: 'SSE disabled in mock' }); return; }
     else if (url.pathname === '/api/services/ansi-fixture/logs') body = { text };
     else throw new Error(`Unexpected API: ${url.pathname}`);
     if (url.pathname === '/api/services') {

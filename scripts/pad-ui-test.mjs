@@ -20,6 +20,7 @@ await page.route('http://stackpad.test/**', async route => {
     else if (url.pathname === '/api/usage') body = { providers: [] };
     else if (url.pathname === '/api/services') body = { services, groups, padsets: [{ id: 'default', name: '기본' }], links: {} };
     else if (url.pathname === '/api/settings') body = { onboarding_done: true, recommend_roots: ['C:/Users/me/projects'], autostart: false, data_dir: 'C:/test' };
+    else if (url.pathname === '/api/events') { await route.fulfill({ status: 503, body: 'SSE disabled in mock' }); return; }
     else if (url.pathname.endsWith('/logs')) body = { text: `${url.pathname.split('/')[3]} 로그` };
     else if (url.pathname.endsWith('/restart')) { restarted = url.pathname.split('/')[3]; body = { ok: true }; }
     else if (url.pathname.endsWith('/position')) { services.find(s => s.id === 'single').slot = route.request().postDataJSON().slot; body = { ok: true }; }

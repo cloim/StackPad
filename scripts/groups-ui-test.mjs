@@ -18,6 +18,7 @@ await page.route('http://stackpad.test/**', async route => {
     else if (url.pathname === '/api/usage') body = { providers: [] };
     else if (url.pathname === '/api/services') body = { services, groups };
     else if (url.pathname === '/api/settings') body = { onboarding_done: true, hostname: 'TEST', cpu: 12, memory: 34, autostart: false };
+    else if (url.pathname === '/api/events') { await route.fulfill({ status: 503, body: 'SSE disabled in mock' }); return; }
     else if (/\/services\/\d\/logs$/.test(url.pathname)) body = { text: `${services[Number(url.pathname.split('/')[3])].name} LOG\n\u001b[32mREADY\u001b[0m` };
     else if (/\/groups\/app\/(start|stop)$/.test(url.pathname)) {
       const start = url.pathname.endsWith('start');
