@@ -18,9 +18,25 @@ struct Popup {
 }
 
 fn placement(icon: Area, work: Area, width: f64, height: f64, gap: f64) -> PhysicalPosition<i32> {
-    let x = (icon.x + icon.width / 2.0 - width / 2.0).clamp(work.x, (work.x + work.width - width).max(work.x));
-    let y = if icon.y - height - gap >= work.y { icon.y - height - gap } else { icon.y + icon.height + gap };
-    PhysicalPosition::new(x.round() as i32, y.clamp(work.y, (work.y + work.height - height).max(work.y)).round() as i32)
+    let min_x = work.x + gap;
+    let max_x = (work.x + work.width - gap - width).max(min_x);
+    let x = (icon.x + icon.width / 2.0 - width / 2.0).clamp(min_x, max_x);
+
+    let min_y = work.y + gap;
+    let max_y = (work.y + work.height - gap - height).max(min_y);
+
+    // If there is enough room above the icon and taskbar edge, place the popup above.
+    // Otherwise place it below the icon (e.g. top-edge taskbar).
+    let above_candidate = (icon.y).min(work.y + work.height) - gap - height;
+    let below_candidate = (icon.y + icon.height).max(work.y) + gap;
+
+    let y = if above_candidate >= min_y {
+        above_candidate
+    } else {
+        below_candidate
+    };
+
+    PhysicalPosition::new(x.round() as i32, y.clamp(min_y, max_y).round() as i32)
 }
 
 fn present(window: &WebviewWindow, icon: Area, data: &Value) -> tauri::Result<()> {
@@ -34,7 +50,10 @@ fn present(window: &WebviewWindow, icon: Area, data: &Value) -> tauri::Result<()
     let width = (360.0 * scale).min(work.width);
     let height = ((64.0 + rows.max(58) as f64) * scale).min(work.height);
     window.set_size(PhysicalSize::new(width as u32, height as u32))?;
-    window.set_position(placement(icon, work, width, height, 6.0 * scale))?;
+    let size = window.outer_size().unwrap_or(PhysicalSize::new(width as u32, height as u32));
+    let actual_width = (size.width as f64).max(width);
+    let actual_height = (size.height as f64).max(height);
+    window.set_position(placement(icon, work, actual_width, actual_height, 6.0 * scale))?;
     window.show()
 }
 
@@ -120,15 +139,44 @@ mod tests {
 
     #[test]
     fn popup_stays_on_the_icons_monitor_for_every_taskbar_edge() {
-        for scale in [1.0, 1.5, 2.0] {
+        for scale in [1.0, 1.25, 1.5, 2.0] {
+            let gap = 6.0 * scale;
             let work = Area { x: -1920.0, y: -200.0, width: 1920.0, height: 1080.0 };
             for (x, y) in [(-1900.0, 860.0), (-20.0, 860.0), (-1900.0, -220.0), (-1940.0, 500.0), (0.0, 500.0)] {
                 let icon = Area { x, y, width: 20.0, height: 20.0 };
-                let position = placement(icon, work, 360.0 * scale, 432.0 * scale, 6.0 * scale);
-                assert!(position.x as f64 >= work.x && position.y as f64 >= work.y);
-                assert!(position.x as f64 + 360.0 * scale <= work.x + work.width);
-                assert!(position.y as f64 + 432.0 * scale <= work.y + work.height);
+                let width = 360.0 * scale;
+                let height = 432.0 * scale;
+                let position = placement(icon, work, width, height, gap);
+                let px = position.x as f64;
+                let py = position.y as f64;
+                assert!(px >= work.x + gap - 0.5);
+                assert!(py >= work.y + gap - 0.5);
+                assert!(px + width <= work.x + work.width - gap + 0.5);
+                assert!(py + height <= work.y + work.height - gap + 0.5);
+
+                // When the taskbar is at the bottom (y=860), the popup must stay entirely above the taskbar and icon.
+                if y == 860.0 {
+                    assert!(py + height <= (icon.y).min(work.y + work.height) - gap + 0.5);
+                }
+                // When the taskbar is at the top (y=-220), the popup must stay entirely below the taskbar and icon.
+                if y == -220.0 {
+                    assert!(py >= (icon.y + icon.height).max(work.y) + gap - 0.5);
+                }
             }
+        }
+    }
+
+    #[test]
+    fn popup_never_overlaps_bottom_taskbar_on_standard_fullhd() {
+        // Standard 1080p with 48px bottom taskbar (work area height = 1032)
+        let work = Area { x: 0.0, y: 0.0, width: 1920.0, height: 1032.0 };
+        let icon = Area { x: 1800.0, y: 1040.0, width: 24.0, height: 24.0 };
+        for height in [250.0, 456.0, 487.0, 600.0] {
+            let position = placement(icon, work, 360.0, height, 6.0);
+            let py = position.y as f64;
+            // Popup bottom must be at least 6px above the taskbar top (1032.0)
+            assert!(py + height <= 1032.0 - 6.0 + 0.5);
+            assert!(py >= 6.0 - 0.5);
         }
     }
 }
