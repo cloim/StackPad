@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::{fs, io::{Read, Write}, net::{TcpStream, SocketAddr}, path::PathBuf, process::{Command, Stdio}, sync::{Arc, Mutex, atomic::{AtomicU64, Ordering}}, thread, time::Duration};
+use std::{fs, io::{Read, Write}, net::{TcpStream, SocketAddr}, path::PathBuf, process::{Command, Stdio}, sync::{Arc, Mutex, atomic::{AtomicBool, AtomicU64, Ordering}}, thread, time::{Duration, Instant}};
 use std::os::windows::process::CommandExt;
 use serde_json::{json, Value};
 use tauri::{AppHandle, Manager, Monitor, PhysicalPosition, PhysicalSize, WebviewUrl, WebviewWindow, WebviewWindowBuilder, menu::{Menu, MenuItem, PredefinedMenuItem}, tray::{TrayIconBuilder, TrayIconEvent, MouseButton}};
@@ -77,7 +77,13 @@ fn portable() -> bool {
     std::env::current_exe().ok().and_then(|exe| exe.parent().map(|dir| dir.join("portable").exists())).unwrap_or(false)
 }
 
-struct Updates { item: MenuItem<tauri::Wry>, pending: Mutex<Option<Update>>, usage: Mutex<Value> }
+struct Updates {
+    item: MenuItem<tauri::Wry>,
+    pending: Mutex<Option<Update>>,
+    usage: Mutex<Value>,
+    last_check: Mutex<Option<Instant>>,
+    checking: AtomicBool,
+}
 
 fn refresh_popup(app: &AppHandle) {
     let state = app.state::<Updates>();
@@ -186,19 +192,60 @@ fn watch_alerts(app: AppHandle) {
     });
 }
 
+fn should_check_update(has_pending: bool, is_checking: bool, last_check: Option<Instant>, now: Instant, throttle: Duration) -> bool {
+    if has_pending || is_checking {
+        return false;
+    }
+    match last_check {
+        Some(prev) => now.duration_since(prev) >= throttle,
+        None => true,
+    }
+}
+
+fn request_update_check(app: &AppHandle) {
+    let state = app.state::<Updates>();
+    let has_pending = state.pending.lock().unwrap().is_some();
+    let is_checking = state.checking.load(Ordering::SeqCst);
+    let now = Instant::now();
+    let throttle = Duration::from_secs(300);
+
+    let eligible = {
+        let last = state.last_check.lock().unwrap();
+        should_check_update(has_pending, is_checking, *last, now, throttle)
+    };
+
+    if !eligible || state.checking.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    *state.last_check.lock().unwrap() = Some(now);
+
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let updater = match app.updater() {
+            Ok(u) => u,
+            Err(_) => {
+                app.state::<Updates>().checking.store(false, Ordering::SeqCst);
+                return;
+            }
+        };
+        if let Ok(Some(update)) = updater.check().await {
+            let state = app.state::<Updates>();
+            let label = if portable() { text("새 버전 내려받기", "Download new version") } else { text("업데이트 설치", "Install update") };
+            let _ = state.item.set_text(format!("{label} (v{})", update.version));
+            let _ = state.item.set_enabled(true);
+            *state.pending.lock().unwrap() = Some(update);
+            refresh_popup(&app);
+        }
+        app.state::<Updates>().checking.store(false, Ordering::SeqCst);
+    });
+}
+
 fn check_updates(app: AppHandle) {
     tauri::async_runtime::spawn(async move {
         loop {
-            if let Ok(updater) = app.updater() {
-                if let Ok(Some(update)) = updater.check().await {
-                    let state = app.state::<Updates>();
-                    let label = if portable() { text("새 버전 내려받기", "Download new version") } else { text("업데이트 설치", "Install update") };
-                    let _ = state.item.set_text(format!("{label} (v{})", update.version));
-                    let _ = state.item.set_enabled(true);
-                    *state.pending.lock().unwrap() = Some(update);
-                    refresh_popup(&app);
-                    return;
-                }
+            request_update_check(&app);
+            if app.state::<Updates>().pending.lock().unwrap().is_some() {
+                return;
             }
             tokio_sleep(Duration::from_secs(6 * 60 * 60)).await;
         }
@@ -306,6 +353,7 @@ fn schedule_save(window: &WebviewWindow, pending: &Arc<AtomicU64>) {
 }
 
 fn show(app: &tauri::AppHandle) {
+    request_update_check(app);
     if let Some(window) = app.get_webview_window("main") {
         // Keep the user's place, and dock again only when that screen is gone.
         let on_screen = window.outer_position().ok().and_then(|position| monitor_at(&window, position, window.outer_size().ok()?.width).ok().flatten()).is_some();
@@ -359,7 +407,7 @@ fn main() {
             let quit_all = MenuItem::with_id(app, "quit-all", text("완전 종료 (서비스도 중지)", "Quit StackPad and stop services"), true, None::<&str>)?;
             let separator = PredefinedMenuItem::separator(app)?;
             let menu = Menu::with_items(app, &[&open, &update, &separator, &close, &quit, &quit_all])?;
-            app.manage(Updates { item: update, pending: Mutex::new(None), usage: Mutex::new(Value::Null) });
+            app.manage(Updates { item: update, pending: Mutex::new(None), usage: Mutex::new(Value::Null), last_check: Mutex::new(None), checking: AtomicBool::new(false) });
             tray_usage::init(app.handle())?;
             TrayIconBuilder::with_id("main").icon(app.default_window_icon().unwrap().clone()).menu(&menu).show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
@@ -375,9 +423,18 @@ fn main() {
                     _ => {}
                 })
                 .on_tray_icon_event(|tray, event| match event {
-                    TrayIconEvent::Enter { rect, .. } | TrayIconEvent::Move { rect, .. } => tray_usage::hover(tray.app_handle(), rect),
-                    TrayIconEvent::DoubleClick { button: MouseButton::Left, .. } => { tray_usage::dismiss(tray.app_handle()); show(tray.app_handle()); }
-                    TrayIconEvent::Click { .. } => tray_usage::dismiss(tray.app_handle()),
+                    TrayIconEvent::Enter { rect, .. } | TrayIconEvent::Move { rect, .. } => {
+                        request_update_check(tray.app_handle());
+                        tray_usage::hover(tray.app_handle(), rect);
+                    }
+                    TrayIconEvent::DoubleClick { button: MouseButton::Left, .. } => {
+                        tray_usage::dismiss(tray.app_handle());
+                        show(tray.app_handle());
+                    }
+                    TrayIconEvent::Click { .. } => {
+                        request_update_check(tray.app_handle());
+                        tray_usage::dismiss(tray.app_handle());
+                    }
                     _ => {}
                 }).build(app)?;
             check_updates(app.handle().clone());
@@ -387,4 +444,30 @@ fn main() {
         })
         .run(tauri::generate_context!())
         .expect("StackPad failed to start");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn update_check_throttles_frequency_and_avoids_duplicate_work() {
+        let now = Instant::now();
+        let throttle = Duration::from_secs(300);
+
+        // First check ever should always run
+        assert!(should_check_update(false, false, None, now, throttle));
+
+        // Skip when an update is already pending or a check is in progress
+        assert!(!should_check_update(true, false, None, now, throttle));
+        assert!(!should_check_update(false, true, None, now, throttle));
+
+        // Throttle within 5 minutes
+        let recent = now - Duration::from_secs(60);
+        assert!(!should_check_update(false, false, Some(recent), now, throttle));
+
+        // Allow check once 5 minutes pass
+        let elapsed = now - Duration::from_secs(301);
+        assert!(should_check_update(false, false, Some(elapsed), now, throttle));
+    }
 }
