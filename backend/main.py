@@ -41,7 +41,7 @@ from i18n import request_lang, translate, translate_payload
 
 
 # Keep in step with package.json; tests/test_version.py checks it.
-VERSION = '1.1.0'
+VERSION = '1.1.1'
 
 
 def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_token=None):
@@ -497,16 +497,22 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
         else:
             raise HTTPException(401, '로그인해 주세요.')
 
+        lang = request_lang(request.headers)
+
+        def encode(data):
+            # The middleware cannot translate a stream, so each event is translated here like any JSON answer.
+            return json.dumps(translate_payload(data, lang), ensure_ascii=False, default=str)
+
         async def stream_with_pings():
             yield ": connected\n\n"
             event_id = 0
             if 'services' in active_topics:
                 event_id += 1
-                payload_str = json.dumps(engine.services_payload(), ensure_ascii=False)
+                payload_str = encode(engine.services_payload())
                 yield f"id: {event_id}\nevent: services\ndata: {payload_str}\n\n"
             if 'settings' in active_topics:
                 event_id += 1
-                payload_str = json.dumps(settings_payload(request), ensure_ascii=False)
+                payload_str = encode(settings_payload(request))
                 yield f"id: {event_id}\nevent: settings\ndata: {payload_str}\n\n"
 
             queue, unsub = engine.events.register(active_topics)
@@ -515,7 +521,8 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
                     try:
                         topic, data = await asyncio.wait_for(queue.get(), timeout=15.0)
                         event_id += 1
-                        payload_str = json.dumps(data, ensure_ascii=False, default=str)
+                        # Settings depend on who is asking (a phone cannot pick a PC folder), so each subscriber rebuilds its own.
+                        payload_str = encode(settings_payload(request) if topic == 'settings' else data)
                         yield f"id: {event_id}\nevent: {topic}\ndata: {payload_str}\n\n"
                     except asyncio.TimeoutError:
                         yield ": ping\n\n"

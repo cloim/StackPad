@@ -26,6 +26,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class AlertService extends Service {
@@ -143,6 +144,8 @@ public class AlertService extends Service {
                 conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
                 conn.setRequestProperty("Authorization", "Bearer " + token);
+                // The engine writes alerts in this language, matching what the app screen asks for.
+                conn.setRequestProperty("Accept-Language", Locale.getDefault().toLanguageTag());
                 conn.setRequestProperty("Accept", "text/event-stream");
                 conn.setConnectTimeout(10000);
                 conn.setReadTimeout(30000);
@@ -207,6 +210,8 @@ public class AlertService extends Service {
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
             conn.setRequestProperty("Authorization", "Bearer " + token);
+            // The engine writes alerts in this language, matching what the app screen asks for.
+            conn.setRequestProperty("Accept-Language", Locale.getDefault().toLanguageTag());
             conn.setConnectTimeout(5000);
             conn.setReadTimeout(5000);
             if (conn.getResponseCode() == 200) {

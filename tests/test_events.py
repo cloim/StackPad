@@ -242,6 +242,24 @@ class EventsApiTests(unittest.IsolatedAsyncioTestCase):
             except asyncio.CancelledError:
                 pass
 
+    async def test_stream_answers_in_the_requested_language(self):
+        headers = {'Cookie': f'stackpad_session={self.cred}', 'X-StackPad-Lang': 'en'}
+        queue, task = await self._open_stream('/api/events?topics=alert', headers=headers)
+        try:
+            await asyncio.wait_for(queue.get(), timeout=2.0)
+            await asyncio.wait_for(queue.get(), timeout=2.0)
+            self.app.state.engine.events.publish('alert', {'kind': 'crashed', 'pad_name': '데모', 'message': '프로세스가 종료되었습니다. 로그를 확인해 주세요.\nError: boom'})
+            alert = await asyncio.wait_for(queue.get(), timeout=2.0)
+            data = json.loads(alert['body'].decode().split('data: ', 1)[1])
+            self.assertEqual(data['message'], 'The process exited. Check the logs.\nError: boom')
+            self.assertEqual(data['pad_name'], '데모')
+        finally:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
 
 if __name__ == '__main__':
     unittest.main()
