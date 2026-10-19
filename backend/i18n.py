@@ -43,7 +43,8 @@ EN = {
     '실행 중인 서비스 로그의 새 저장 위치를 확인해 주세요.': 'Check the new location of the running service logs.',
     '프로세스가 종료되었습니다. 로그를 확인해 주세요.': 'The process exited. Check the logs.',
     '재시작 한도를 초과했습니다. 로그를 확인해 주세요.': 'Exceeded restart limit. Check the logs.',
-    '재시작 대기 중': 'Waiting to restart',
+    '{0}/{1} 재시작 대기 중': '{0}/{1} Waiting to restart',
+    '자동 재시작에 실패했습니다.': 'Automatic restart failed.',
     '재시작 중': 'Restarting',
     '응답 이상이 감지되었습니다.': 'Unhealthy response detected.',
     # Folder picker
@@ -198,6 +199,8 @@ EN = {
     '--scene 또는 --pad를 지정해 주세요.': 'Specify either --scene or --pad.',
     '예약 실행: \'{0}\' {1}': 'Run schedule: \'{0}\' {1}',
     '예약 실행 실패 ({0}): {1}': 'Failed to run schedule ({0}): {1}',
+    # An alert message with the log line below it; keep this last so specific multi-line templates match first.
+    '{0}\n{1}': '{0}\n{1}',
 }
 
 # Text written to Windows or into files follows the Windows display language instead of a browser.

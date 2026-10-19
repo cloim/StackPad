@@ -1,5 +1,6 @@
 import sys
 import tempfile
+import threading
 import time
 import unittest
 from pathlib import Path
@@ -165,6 +166,33 @@ class RestartPolicyTests(unittest.TestCase):
         self.engine.group_operations[sid] = 'start'
         to_restart_busy = [s for s, r in list(self.engine.restarts.items()) if s not in self.engine.group_operations]
         self.assertEqual(to_restart_busy, [])
+
+    def test_watch_gives_up_after_restart_max(self):
+        # Runs the real watch loop: automatic restarts must count toward restart_max instead of resetting it.
+        sid = self.engine.add(ServiceInput(
+            name='Crashing',
+            kind='local',
+            command='cmd /c "echo Error: boom & ping -n 4 127.0.0.1 >nul & exit 1"',
+            cwd=str(Path.cwd()),
+            color='#22c55e',
+            slot=0,
+            padset_id='default',
+            restart_policy='on-failure',
+            restart_max=2,
+        ))
+        self.engine.start(sid)
+        watcher = threading.Thread(target=self.engine.watch, daemon=True)
+        watcher.start()
+        self.addCleanup(watcher.join, 10)
+        self.addCleanup(self.engine.closed.set)
+        deadline = time.time() + 90
+        while time.time() < deadline and not any(a['kind'] == 'gave_up' for a in self.engine.alerts):
+            time.sleep(.5)
+        kinds = [a['kind'] for a in self.engine.alerts if a['pad_id'] == sid]
+        self.assertEqual(kinds, ['restarted', 'restarted', 'gave_up'])
+        gave_up = self.engine.alerts[-1]['message']
+        self.assertTrue(gave_up.startswith('재시작 한도를 초과했습니다.'))
+        self.assertIn('Error: boom', gave_up)
 
 
 if __name__ == '__main__':

@@ -136,6 +136,11 @@ def launcher_only(process):
     return any(a in ('/c', '-c', '-command', '-file', '-f', '-encodedcommand', '-ec') for a in args)
 
 
+def with_error_line(message, line):
+    # Clients show pad_name as the title; the log line goes on its own line so the message still translates.
+    return f'{message}\n{line}' if line else message
+
+
 def port_open(port):
     # Servers bound to localhost may listen on IPv6 only.
     for family, host in ((socket.AF_INET, '127.0.0.1'), (socket.AF_INET6, '::1')):
@@ -614,13 +619,15 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices, SceneManager
             self.stop(service_id)
             self.start(service_id)
 
-    def start(self, service_id, takeover=False):
+    def start(self, service_id, takeover=False, auto=False):
         if self.service(service_id).get('kind') == 'docker':
             return self.docker_action(service_id, 'start')
         if self.is_remote(service_id):
             return self.remote_action(service_id, 'start')
         with self.lock:
-            self.restarts.pop(service_id, None)
+            # Only a start the user asks for resets the restart history; automatic restarts must count toward restart_max.
+            if not auto:
+                self.restarts.pop(service_id, None)
             self.check_group_busy(service_id)
             service = self.service(service_id)
             if self.owned(service) or (service.get('kind') == 'docker' and self.docker_state(service)['active']):
@@ -912,9 +919,16 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                             r = self.restarts.get(sid)
                             if r:
                                 r['next_at'] = 0
-                            self.start(sid)
+                            self.start(sid, auto=True)
                 except Exception as error:
                     logging.error('Auto restart execution failed for %s: %s', sid, error)
+                    with self.lock:
+                        srv = next((s for s in self.config['services'] if s['id'] == sid), None)
+                        if srv:
+                            srv.update(runtime=None, error=str(error))
+                            self.samples[sid] = {'status': 'error', 'message': str(error)}
+                            self.save()
+                            self.record_alert(sid, srv['name'], 'gave_up', with_error_line('자동 재시작에 실패했습니다.', str(error)))
             with self.lock:
                 services = [dict(s) for s in self.config['services'] if s.get('kind', 'local') == 'local']
                 containers = [dict(s) for s in self.config['services'] if s.get('kind') == 'docker']
@@ -969,7 +983,7 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                                 record['attempts'].append(now_time)
                                 record['next_at'] = now_time + delay
                                 attempt_num = len(record['attempts'])
-                                msg = f"{attempt_num}/{max_attempts} {system_text('재시작 대기 중')}"
+                                msg = f"{attempt_num}/{max_attempts} 재시작 대기 중"
                                 current.update(runtime=None, error=msg)
                                 self.samples[service['id']] = {
                                     'status': 'restarting',
@@ -981,7 +995,7 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                                     service['id'],
                                     service['name'],
                                     'restarted',
-                                    f"[{service['name']}] {msg}"
+                                    msg
                                 )
                             else:
                                 if policy == 'on-failure' and len(record['attempts']) >= max_attempts:
@@ -1001,7 +1015,7 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                                     service['id'],
                                     service['name'],
                                     kind,
-                                    f"[{service['name']}] {error_msg}" + (f" ({error_line})" if error_line else '')
+                                    with_error_line(error_msg, error_line)
                                 )
                     continue
                 ready = True
@@ -1034,7 +1048,7 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                             service['id'],
                             service['name'],
                             'unhealthy',
-                            f"[{service['name']}] {system_text('응답 이상이 감지되었습니다.')}" + (f" ({err_line})" if err_line else '')
+                            with_error_line('응답 이상이 감지되었습니다.', err_line)
                         )
                     elif sample_status == 'running':
                         self._last_unhealthy.discard(service['id'])
