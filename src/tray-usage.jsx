@@ -4,6 +4,7 @@ import { UsageProviders } from './components/UsageBar.jsx';
 import { t } from './i18n.js';
 import './styles.css';
 import './tray-usage.css';
+import './cream.css';
 
 document.title = t('AI 사용량');
 

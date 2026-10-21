@@ -1,0 +1,119 @@
+/* 확정된 크림 MPC 시안. 동작과 사용량 영역의 치수는 기존 화면을 따른다. */
+:root{color-scheme:light;--orange:#8b715b;--muted:#747d6d;--border:#c7cbbd;--panel:#efeee5;--green:#668a73;color:#444740;background:#e9e9e3}
+body{background:#e9e9e3}
+button:focus-visible,a:focus-visible{outline-color:#658472}
+.app-shell{padding:16px;background:linear-gradient(115deg,#f2f1e9,#eae9df);box-shadow:inset 0 1px 0 #fffff5,inset 0 -1px 0 #b8b9ae}
+.app-shell>.toolbar{height:54px;padding:0 8px;background:transparent;border:0;gap:16px}
+.toolbar-brand{margin:0;color:#555c51;font-family:Deck,'Malgun Gothic',sans-serif;font-size:25px;font-weight:600;letter-spacing:-1px}
+.toolbar-actions{gap:10px}
+.tool-button{border:1px solid #bfc1b4;border-radius:4px;background:linear-gradient(#efeee4,#e9e7dc);color:#555c51;box-shadow:inset 0 1px 0 #fffdf0,0 1px 1px #59604b19,0 1px 0 #bfc1b4}
+.tool-button:hover{background:#f5f3e9;color:#3f5143}
+.tool-button:active{transform:translateY(1px);background:#e1e3d7;box-shadow:inset 0 1px 2px #59604b19}
+.app-shell>main{padding:12px 0 0}
+.app-shell .pad-deck{gap:14px}
+.usage-bar{background:#dfe5d9;border-bottom-color:#cbd2c1;border-radius:3px;box-shadow:inset 0 1px 2px #45533c20,0 1px 0 #fffef4,0 0 0 2px #d1d5c8}
+.usage-track{background:#cbd3c3;box-shadow:inset 0 1px 2px #697a5712}
+.usage-window{--usage-color:#779d82}
+.usage-window.caution{--usage-color:#ac865e}
+.usage-window.warning{--usage-color:#ac676c}
+.usage-provider:nth-child(2) .usage-window:not(.caution):not(.warning){--usage-color:#789cae}
+.usage-provider:nth-child(3) .usage-window:not(.caution):not(.warning){--usage-color:#b28e6f}
+.padset-bar-row{margin-bottom:0}
+.padset-bar-row>.category-tabs{background:transparent;border:0;border-radius:0;padding:4px;gap:10px}
+.padset-bar-row>.category-tabs [role=tab]{min-width:88px;padding:10px 16px;border:1px solid #bfc1b4;border-radius:4px;background:linear-gradient(#efeee4,#e9e7dc);color:#555c51;box-shadow:inset 0 1px 0 #fffdf0,0 1px 1px #59604b19,0 1px 0 #bfc1b4}
+.padset-bar-row>.category-tabs [role=tab]:before{content:'';width:8px;height:3px;border-radius:1px;background:#bbbeb1;flex-shrink:0}
+.padset-bar-row>.category-tabs [role=tab][aria-selected=true]{background:#dbdfd2;color:#455745;box-shadow:inset 0 1px 2px #666f5620,0 1px 0 #fffdf2}
+.padset-bar-row>.category-tabs [role=tab][aria-selected=true]:before{background:#7b9181}
+.category-tabs [role=tab]{color:#717b68}
+.category-tabs [role=tab][aria-selected=true]{background:#dce3d5;color:#455c48}
+.category-tabs [role=tab]:focus-visible{outline-color:#658472}
+.category-tabs [role=tab][aria-selected=true] .tab-badge{background:#becdb7;color:#445c46}
+.app-shell .pads{flex:1;min-height:0;height:auto;padding:15px;gap:15px;border:1px solid #bfc2b6;border-radius:7px;background:#d1d3c9;box-shadow:inset 0 1px 3px #46503d1c,0 1px 0 #fffff4}
+.app-shell .pad-wrap{border-radius:6px;background:#a9ac9f;box-shadow:0 1px 2px #3e493a25}
+.app-shell .pad,.app-shell .pad.running{height:calc(100% - 2px);border:1px solid #c5c4b5;border-radius:6px;background:linear-gradient(115deg,#eeeadd,#e9e5d7);color:#444740;box-shadow:inset 0 1px 0 #fcf9ee,inset 0 -1px 0 #d2cebd,0 1px 1px #45503b20;transition:transform .14s ease,filter .2s ease}
+.app-shell .pad:hover,.app-shell .pad.running:hover{background:linear-gradient(115deg,#f2eee2,#ede9dc);border-color:#b7bba9}
+.app-shell .pad:active{transform:translateY(1px);box-shadow:inset 0 1px 2px #67705822}
+.app-shell .pad:after{content:none;display:none;animation:none}
+.app-shell .pad.assigned:before{top:auto;bottom:-2px;left:18px;right:auto;width:26px;height:2px;border-radius:1px;opacity:0}
+.app-shell .pad.running:before,.app-shell .pad.starting:before{opacity:.65;background:color-mix(in srgb,var(--pad-color) 35%,#a8b59f);box-shadow:0 0 3px #a3b397}
+.app-shell .pad.empty{background:linear-gradient(115deg,#e8e6da,#e4e2d5);border:1px solid #c5c4b5;color:#a4ac99;box-shadow:inset 0 1px 0 #fcf9ee,0 1px 1px #45503b20}
+.app-shell .pad.empty:hover{background:#efecdf;color:#7e8c73}
+.app-shell .pad.empty.drop-target{border:2px solid #7c9a83;background:#dce4d4;color:#4b7058}
+.app-shell .pad.skeleton{background:linear-gradient(100deg,#e0e2d6 30%,#f1f0e6 50%,#e0e2d6 70%);background-size:200% 100%}
+.app-shell .pad-move{font-weight:500;color:#444740;font-size:16px}
+.app-shell .pad-move:hover{background:#cdd2c344;color:#354a37}
+.app-shell .pad-detail{color:#929687;border-radius:3px}
+.app-shell .pad-detail:hover{background:#d2d5c866;color:#55654b}
+.app-shell .pad-port{color:#7f8878}
+.app-shell .pad-state,.app-shell .pad.running .pad-state{color:#75816e}
+.app-shell .pad-state i{background:#a8ae9e}
+.app-shell .pad.running .pad-state i{background:#829b83;box-shadow:none}
+.app-shell .pad.starting .pad-state,.app-shell .pad.partial .pad-state,.app-shell .pad.unreachable .pad-state{color:#9b774d}
+.app-shell .pad.error .pad-state,.app-shell .pad.unhealthy .pad-state,.app-shell .pad.conflict .pad-state{color:#a1525c}
+.app-shell .pad.external .pad-state{color:#61869c}
+.app-shell .pad-wrap.chosen:after{border-color:#829b83;border-radius:8px}
+.pad-menu{background:#f3f1e7;border-color:#c0c5b4;box-shadow:0 10px 28px #49563d24}
+.pad-menu button{color:#444e40}
+.pad-menu button svg{color:#7b8773}
+.pad-menu button:hover:not(:disabled),.pad-menu button:focus-visible{background:#dfe5d6;color:#344c37}
+.pad-menu .menu-delete,.pad-menu .menu-delete svg{color:#a8555f}
+.pad-menu .menu-delete:hover:not(:disabled){background:#eedddd;color:#97404c}
+:root .modal-overlay{background:#424a394d}
+:root .modal-panel{background:#efeee5;color:#444740;border-color:#bfc4b3;box-shadow:0 22px 65px #34442b33}
+:root .modal-header,:root .modal-footer{border-color:#c7cbbd}
+:root .modal-title{color:#444e40}
+:root .modal-body{color:#4d5746}
+:root .modal-close{color:#7a8672}
+:root .modal-close:hover{color:#3f563c;background:#dce2d2}
+input,textarea,.select-control select{color:#444e40;background:#f9f7ee;border-color:#c1c7b5}
+input:focus,textarea:focus,.select-control select:focus-visible{border-color:#7c9a83;outline-color:#8caa8a66}
+label{color:#4e5947}
+label small,.optional{color:#77816e}
+.primary,.secondary,.danger{border-radius:4px}
+.primary{background:#859a7b;border-color:#768e6b;color:#fffdf4;box-shadow:inset 0 1px 0 #b6c7a7}
+.primary:hover{background:#738b69}
+.secondary{background:linear-gradient(#f0eee4,#e8e7dc);border-color:#bbc2ad;color:#4f5c45}
+.secondary:hover{background:#e0e5d6}
+.danger{background:#ad6f73;border-color:#aa636a;color:#fff9f3}
+.settings-card,.registration-service,.component-row,.group-list-row,.group-members,.usage-switch{background:#e7e9de;border-color:#c1c8b6;color:#4d5944}
+.settings-card h2,.setup-steps h2{color:#46523e}
+.settings-card p,.component-row p,.group-list-row p{color:#77816e}
+.settings-icon{background:#d8dfce;color:#718567}
+.switch{background:#c7ccbe;border-color:#b9c2ad}
+.switch.on{background:#8da57e;border-color:#829c72}
+.switch>span{background:#faf8ef}
+.kind-switch{background:#e3e7d9;border-color:#bfc7b2}
+.kind-switch button{color:#6d7b62}
+.kind-switch button[aria-checked=true]{background:#cbd8bf;color:#425c37;box-shadow:inset 0 1px 0 #e5ecd9}
+.inline-error{color:#a4555e;background:#f0e1df;border-color:#d7b5b6}
+.remote-ok{color:#507958}.remote-fail{color:#986b3d}
+.connecting,.login-page{background:#e9e9e3;color:#515d47}
+.login-card{background:#f2f0e6;border-color:#c7cbbd;color:#444740;box-shadow:0 15px 45px #47593a18}
+.login-card h1{color:#46523e}.login-card p{color:#77816e}
+.login-card .brand{color:#555c51}
+.scene-chip-wrap{background:#e0e6d6;border-color:#bdc8af}
+.scene-chip-menu-btn:hover{background:#b7c6aa40}
+.schedule-badge{background:#d4ddc9}.schedule-badge.scene{background:#d5e2cf;color:#557c4d}.schedule-badge.pad{background:#d7e1e4;color:#5e8396}
+.schedule-action.start{color:#527d4d}.schedule-action.stop{color:#a95c61}.schedule-timing .next-run{color:#597e4c}
+.ordered-pad-row{background:#dfe5d5}.scene-chip.running{background:#d1dcc6}
+.state-label{color:#63805d;border-color:#a8bba0}.state-label.error,.state-label.conflict{color:#a7565f;border-color:#d1a3a7}
+.lcd,.command-output{background:#dfe6d6;border-color:#bbc7ad;color:#4e6842}
+.lcd-head,.lcd-bottom{color:#6e8063}.lcd-value{color:#52724c}
+.detail-empty,.detail-message{color:#78896d}
+.path-code,.copy-value{background:#e2e7d8;border-color:#c2cbb6;color:#5c704f}
+.log-head{background:#e3e7db;border-color:#c1c9b5;color:#516445}
+.log-container,pre{background:#e0e5d8;color:#46583b}
+.log-line:hover{background:#cfdbc2}
+.pad-error-badge{color:#9d4852;background:#efdedd;border-color:#d7aaad}
+.pad-schedules-summary .summary-title{color:#59774c}.day-chip.active{background:#829b73;border-color:#829b73;color:#fffdf3}
+:root .tray-usage{background:#efeee5;border-color:#c2c7b6;color:#444740}
+:root .tray-usage .usage-track{background:#cbd3c3}
+:root .tray-usage .usage-track[data-window=weekly]:after{background:repeating-linear-gradient(to right,transparent 0 calc(100% / 7 - 1px),#e8ecdf calc(100% / 7 - 1px) calc(100% / 7))}
+@media(max-width:650px){
+ .app-shell{padding:10px}.app-shell>.toolbar{height:52px;padding:0 3px;gap:10px}
+ .toolbar-brand{font-size:22px}.toolbar-actions{gap:6px}.tool-button{width:34px;height:34px}
+ .app-shell .pad-deck{gap:8px}.app-shell .pads{padding:8px;gap:8px}
+ .app-shell .pad-move{font-size:12px}.padset-bar-row>.category-tabs{gap:7px;padding:2px}
+ .padset-bar-row>.category-tabs [role=tab]{min-width:66px;padding:8px 10px;font-size:11px}
+}
+@media(max-height:560px){.app-shell{padding:8px}.app-shell .pads{padding:6px;gap:7px}}

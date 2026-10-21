@@ -18,6 +18,7 @@ import { connectWidget, disconnectWidget, getAlertStatus, isNative, loadServer, 
 import { PairPhone } from './components/PairPhone.jsx';
 import './components/Modal/modal.css';
 import './styles.css';
+import './cream.css';
 import { LOCALES, locale, setLocale, t } from './i18n.js';
 import { connectEvents } from './events.js';
 
@@ -798,6 +799,7 @@ function App() {
   if (!auth.authenticated) return isNative ? <PairPhone api={api} logo={<Logo />} onPaired={checkAuth} /> : <SignIn auth={auth} api={api} logo={<Logo />} onLogin={checkAuth} />;
   return <div className="app-shell">
     <header className="toolbar" aria-label={t('공통 도구')}>
+      <h1 className="toolbar-brand">StackPad</h1>
       <div className="toolbar-actions">
         <button className="tool-button" disabled={!connected} onClick={() => setPanel('recommend')} title={t('등록 추천')} aria-label={t('등록 추천')}><ScanSearch size={17} /></button>
         <button className="tool-button" disabled={!connected} onClick={() => { const slot = Array.from({ length: 16 }, (_, i) => i).find(i => !services.some(s => s.padset_id === padsetId && s.slot === i)); if (slot === undefined) onError(t('빈 패드를 확보해 주세요.')); else setRegistrationSlot(slot); }} title={t('서비스 등록')} aria-label={t('서비스 등록')}><Plus size={17} /></button>

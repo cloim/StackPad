@@ -38,7 +38,8 @@ await page.route('http://stackpad.test/**', async route => {
 try {
   await page.goto('http://stackpad.test/');
   await expect(page.getByRole('button', { name: '통합 패드 메뉴', exact: true })).toBeVisible();
-  await expect(page.locator('.toolbar-brand,.engine-status')).toHaveCount(0);
+  await expect(page.locator('.toolbar-brand')).toHaveText('StackPad');
+  await expect(page.locator('.engine-status')).toHaveCount(0);
   await expect(page.locator('.pad-move svg')).toHaveCount(0);
   expect(await page.locator('.pad-move').first().evaluate(node => getComputedStyle(node).justifyContent)).toBe('flex-start');
   const rows = page.locator('.pad-wrap').first().locator('.pad-port>span');

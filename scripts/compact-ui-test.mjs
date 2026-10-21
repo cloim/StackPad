@@ -14,11 +14,13 @@ await page.route('http://stackpad.test/**', async route => {
   let body;
   if (url.pathname.startsWith('/api/')) {
     if (url.pathname === '/api/auth') body = { configured: true, authenticated: true };
+    else if (url.pathname === '/api/events') { await route.fulfill({ status: 503, body: 'SSE disabled in mock' }); return; }
     else if (url.pathname === '/api/usage') body = { providers: [] };
     else if (url.pathname === '/api/services') body = { services };
     else if (url.pathname === '/api/settings') body = { onboarding_done: true, hostname: '내 PC', data_dir: 'C:/Users/test/StackPad', autostart: startup, cpu: 12, memory: 38 };
     else if (url.pathname === '/api/settings/autostart') { startup = route.request().postDataJSON().enabled; body = { ok: true }; }
     else if (url.pathname.endsWith('/logs')) body = { text: '서비스 실행 로그\n' + '긴 로그 '.repeat(100) };
+    else if (url.pathname.endsWith('/history')) body = { interval: 10, cpu: [], memory: [] };
     else if (/\/services\/1\/(start|stop)$/.test(url.pathname)) { actions++; Object.assign(services[1], url.pathname.endsWith('/start') ? { pid: 2, status: 'running' } : { pid: null, status: 'stopped' }); body = { ok: true }; }
     else if (url.pathname === '/api/devices') body = { devices: [], current: null };
     else throw new Error(`Unexpected API: ${url.pathname}`);
@@ -79,7 +81,7 @@ try {
   await page.screenshot({ path: '.jobs/compact-mobile.png' });
   await page.getByRole('button', { name: 'Blog 백엔드 메뉴', exact: true }).click(); await page.getByRole('menuitem', { name: '상세' }).click();
   await expect(page.getByRole('dialog', { name: 'Blog 백엔드', exact: true })).toBeVisible();
-  await expect(page.locator('.log-panel pre')).toContainText('서비스 실행 로그');
+  await expect(page.locator('.log-container')).toContainText('서비스 실행 로그');
   await page.screenshot({ path: '.jobs/compact-detail-mobile.png' });
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '패드 6 서비스 등록', exact: true }).click();

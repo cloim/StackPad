@@ -24,9 +24,9 @@ try {
     await page.getByRole('button', { name: '모달 검증 메뉴', exact: true }).click();
     await page.getByRole('menuitem', { name: '상세', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: '모달 검증', exact: true });
-    await expect(dialog).toHaveCSS('background-color', 'rgb(40, 44, 46)');
-    await expect(dialog.locator('.modal-body')).toHaveCSS('color', 'rgb(217, 223, 223)');
-    await expect(dialog.locator('.modal-title')).toHaveCSS('color', 'rgb(228, 232, 231)');
+    await expect(dialog).toHaveCSS('background-color', 'rgb(239, 238, 229)');
+    await expect(dialog.locator('.modal-body')).toHaveCSS('color', 'rgb(77, 87, 70)');
+    await expect(dialog.locator('.modal-title')).toHaveCSS('color', 'rgb(68, 78, 64)');
     await expect(dialog.getByRole('tab', { name: 'postgres', exact: true })).toBeVisible();
     await expect(dialog.getByRole('tab', { name: 'redis', exact: true })).toBeVisible();
     expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
@@ -34,10 +34,10 @@ try {
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
     await page.getByRole('button', { name: '환경 설정', exact: true }).click();
-    await expect(page.getByRole('dialog')).toHaveCSS('background-color', 'rgb(40, 44, 46)');
+    await expect(page.getByRole('dialog')).toHaveCSS('background-color', 'rgb(239, 238, 229)');
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: '패드 1 서비스 등록', exact: true }).click();
-    await expect(page.getByRole('dialog')).toHaveCSS('background-color', 'rgb(40, 44, 46)');
+    await expect(page.getByRole('dialog')).toHaveCSS('background-color', 'rgb(239, 238, 229)');
     await page.keyboard.press('Escape');
   }
   console.log('MODAL THEME PASS: production CSS, group detail tabs, settings, registration, desktop/mobile, Escape');
