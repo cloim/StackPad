@@ -10,12 +10,12 @@
 - 소스 수정과 웹 빌드 작업의 기본 완료 범위에 `scripts/build.py --release-dir <임시 경로>`(WMI 작업자) 패키징과 `scripts/package-smoke.py <임시 경로>\StackPadEngine.exe` 검증을 포함한다.
 - 사용자에게 반영할 변경은 버전을 올려 태그 릴리스를 게시하고, 트레이 업데이트 후 엔진 버전, 등록된 패드, 인증 설정과 실행 중인 서비스 보존을 확인한 다음 완료를 보고한다.
 
-## Android 앱
+## Android 앱 및 릴리스 배포
 
-- `android/`, `src/`, `capacitor.config.json` 변경은 `scripts/build-android.py`를 WMI 작업자로 실행해 디버그 APK를 빌드하고 에뮬레이터나 기기에서 확인한다. `ANDROID_HOME`과 `JAVA_HOME`이 필요하다.
-- 서명된 APK는 GitHub Actions 릴리스에서만 만든다. 서명 키는 GitHub Secrets와 로컬 백업에만 둔다.
-
-## 릴리스
-
-- `v1.2.3` 형식의 태그를 올리면 `.github/workflows/release.yml`이 설치 파일, 포터블 zip, 업데이트 파일(`latest.json`), 서명 APK를 빌드해 GitHub Releases에 게시한다.
-- 게시 후 Releases 자산과 `latest.json`의 버전, 서명을 확인한 다음 완료를 보고한다.
+- Android 앱 배포는 GitHub Actions CI나 `.github` 폴더 없이 개발 PC 로컬 환경에서 일원화된 파이프라인으로 수행합니다.
+- `android/`, `src/`, `capacitor.config.json` 관련 검증과 릴리스는 `scripts/build-android.py`를 WMI 작업자로 실행합니다.
+  - 디버그 빌드: `python scripts/build-android.py --test`
+  - 서명 빌드 및 보관: `python scripts/build-android.py` (로컬 백업 키스토어 자동 적용 및 `release/StackPad-Android/StackPad.apk` 보관)
+  - 서명 빌드 및 GitHub Release 업로드: `python scripts/build-android.py --release`
+- 서명 키스토어는 로컬 안전 저장소(`%USERPROFILE%\.config\backups\stackpad-keys\`)를 자동으로 참조하며, GitHub CLI(`gh`)를 통해 태그 생성 및 릴리스 자산 업로드를 로컬에서 직접 완결합니다.
+- 게시 후 Releases 자산과 버전, 서명을 확인한 다음 완료를 보고합니다.
