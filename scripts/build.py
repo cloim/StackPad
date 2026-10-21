@@ -10,7 +10,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from PIL import Image, ImageDraw
+from brand_assets import make_icon
 
 root = Path(__file__).resolve().parents[1]
 os.chdir(root)
@@ -28,10 +28,7 @@ def run(command):
 
 icons = root / 'src-tauri/icons'
 icons.mkdir(parents=True, exist_ok=True)
-image = Image.new('RGBA', (256, 256), '#24282a')
-draw = ImageDraw.Draw(image)
-for x, y, color in [(39, 39, '#efa668'), (139, 39, '#cf8c54'), (39, 139, '#876347'), (139, 139, '#efa668')]:
-    draw.rounded_rectangle((x, y, x + 78, y + 78), radius=15, fill=color)
+image = make_icon(256)
 image.save(icons / 'icon.png')
 image.save(icons / 'icon.ico', sizes=[(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
 run([npm, 'run', 'build'])

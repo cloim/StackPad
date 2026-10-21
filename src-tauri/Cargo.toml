@@ -1,6 +1,6 @@
 [package]
 name = "stackpad"
-version = "1.1.7"
+version = "1.1.8"
 description = "Local service pad controller"
 edition = "2021"
 default-run = "stackpad"

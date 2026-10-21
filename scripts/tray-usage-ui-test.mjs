@@ -27,6 +27,8 @@ try {
     }
     await update(snapshot);
     await expect(page.getByRole('progressbar')).toHaveCount(8);
+    await expect(page.locator('[data-window="five_hour"] .usage-segments>b')).toHaveCount(20);
+    await expect(page.locator('[data-window="weekly"] .usage-segments>b')).toHaveCount(28);
     await expect(page.getByRole('progressbar').first()).toHaveAttribute('aria-valuenow', '12.5');
     await expect(page.locator('.usage-percent').first()).toHaveText('13%');
     await expect(page.locator('.usage-reset').first()).toContainText('1h 31m');

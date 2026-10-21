@@ -9,7 +9,7 @@ const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 const base = { kind: 'local', padset_id: 'default', command: 'echo fixture', cwd: 'C:/example', health_url: '', color: '#75d9a5', active: true, status: 'running', uptime: 120, memory: 128, cpu: 45, autostart: false };
 const services = ['API 서버','웹 프런트엔드','작업 워커','문서 서버','개발 프록시','테스트 서버'].map((name, slot) => ({ ...base, id: String(slot), name, slot, port: [8000,5173,8001,3000,8080,9000][slot], color: ['#75d9a5','#c8a0ee','#75d9a5','#e5a2aa','#f2ad62','#75d9a5'][slot], active: ![2,5].includes(slot), status: [2,5].includes(slot) ? 'stopped' : 'running' }));
-const providers = ['Claude Code','Codex','Antigravity'].map((name, index) => ({ id: String(index), name, status: 'ok', windows: [{ key: 'session', label: '5h', used_percent: [42,23,76][index], resets_at: new Date(Date.now()+7200000).toISOString() }, { key:'weekly',label:'w',used_percent:[68,51,34][index],resets_at:new Date(Date.now()+345600000).toISOString() }] }));
+const providers = ['Claude Code','Codex','Antigravity'].map((name, index) => ({ id: String(index), name, status: 'ok', windows: [{ key: 'five_hour', label: '5h', used_percent: [42,23,76][index], resets_at: new Date(Date.now()+7200000).toISOString() }, { key:'weekly',label:'w',used_percent:[68,51,34][index],resets_at:new Date(Date.now()+345600000).toISOString() }] }));
 let actions = 0;
 await page.route('http://stackpad.test/**', async route => {
   const url = new URL(route.request().url());
@@ -34,7 +34,15 @@ await page.route('http://stackpad.test/**', async route => {
 try {
   await page.goto('http://stackpad.test/');
   await expect(page.getByRole('heading',{name:'StackPad',exact:true})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'StackPad',exact:true})).toHaveCSS('font-weight','700');
   await expect(page.locator('.usage-track')).toHaveCount(6);
+  await expect(page.locator('[data-window="five_hour"] .usage-segments>b')).toHaveCount(15);
+  await expect(page.locator('[data-window="weekly"] .usage-segments>b')).toHaveCount(21);
+  await expect(page.locator('.usage-track').first()).toHaveAttribute('aria-valuenow', '42');
+  expect(await page.locator('.usage-track').first().evaluate(el=>el.querySelector('i').getBoundingClientRect().width/el.getBoundingClientRect().width)).toBeCloseTo(.42,2);
+  const shadows=await page.locator('.pad-wrap').evaluateAll(nodes=>nodes.map(el=>({running:!!el.querySelector('.pad.running'),shadow:getComputedStyle(el).boxShadow})));
+  expect(shadows.filter(item=>item.running).every(item=>item.shadow.includes('12px'))).toBe(true);
+  expect(shadows.filter(item=>!item.running).every(item=>!item.shadow.includes('12px'))).toBe(true);
   await expect(page.locator('.pads>.pad-wrap,.pads>.pad.empty')).toHaveCount(16);
   await expect(page.locator('.engine-status,.connection,.pad-index,.bank-count')).toHaveCount(0);
   expect(await page.getByRole('tab',{name:'기본',exact:false}).evaluate(el=>getComputedStyle(el,'::before').width)).toBe('8px');
@@ -51,6 +59,8 @@ try {
     const layout=await page.evaluate(()=>{const main=document.querySelector('.app-shell>main');const grid=document.querySelector('.pads');return{overflow:document.documentElement.scrollWidth>innerWidth||main.scrollHeight>main.clientHeight+1,columns:getComputedStyle(grid).gridTemplateColumns.split(' ').length,rows:getComputedStyle(grid).gridTemplateRows.split(' ').length,pads:[...document.querySelectorAll('.pad')].every(el=>{const a=el.getBoundingClientRect(),b=grid.getBoundingClientRect(),state=el.querySelector('.pad-state')?.getBoundingClientRect();return a.bottom<=b.bottom+1&&(!state||state.bottom<=a.bottom+1);})};});
     expect(layout,`${width}x${height}`).toEqual({overflow:false,columns:4,rows:4,pads:true});
     const usage=await page.locator('.usage-bar').evaluate(el=>({html:el.outerHTML,width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height}));
+    const inset=await page.locator('.usage-bar').evaluate(el=>el.querySelector('strong').getBoundingClientRect().left-el.getBoundingClientRect().left);
+    expect(inset).toBe(width<=650?10:12);
     await reference.setViewportSize({width,height});
     await reference.setContent('<style>'+baseline+'</style><div style="width:'+usage.width+'px">'+usage.html+'</div>');
     expect(await reference.locator('.usage-bar').evaluate(el=>el.getBoundingClientRect().height)).toBe(usage.height);

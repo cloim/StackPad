@@ -59,9 +59,10 @@ export function UsageProviders({ providers, now, error = false }) {
           <div className="usage-windows">{provider.windows.map(window => {
             const percent = Math.max(0, Math.min(100, Number(window.used_percent)));
             const reset = remaining(window.resets_at, now);
+            const segments = window.key === 'five_hour' ? 5 : window.key === 'weekly' ? 7 : 1;
             return <div className={`usage-window ${percent >= 90 ? 'warning' : percent >= 70 ? 'caution' : ''}`} key={window.key} title={`${window.label} ${percent}%${reset ? t(', 초기화까지 {0}', reset) : ''}`}>
               <span className="usage-label">{window.label}</span>
-              <span className="usage-track" data-window={window.key} role="progressbar" aria-label={t('{0} {1} 사용량', provider.name, window.label)} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}><i style={{ width: `${percent}%` }} /></span>
+              <span className="usage-track" data-window={window.key} role="progressbar" aria-label={t('{0} {1} 사용량', provider.name, window.label)} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}><i style={{ width: `${percent}%` }} /><span className="usage-segments" aria-hidden="true" style={{ gridTemplateColumns: `repeat(${segments}, minmax(0, 1fr))` }}>{Array.from({ length: segments }, (_, index) => <b key={index} />)}</span></span>
               <span className="usage-percent">{Math.round(percent)}%</span>
               <span className="usage-reset">{reset && <><Clock3 size={10} aria-hidden="true" />{reset}</>}</span>
             </div>;
