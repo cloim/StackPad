@@ -93,7 +93,7 @@ def upload_to_github(version, artifact_path):
     print(f'[5/5] GitHub Release Upload: {tag} ({artifact_path})', flush=True)
 
     # Check if release already exists
-    check = subprocess.run(['gh', 'release', 'view', tag], stdin=subprocess.DEVNULL, capture_output=True, text=True)
+    check = subprocess.run(['gh', 'release', 'view', tag], stdin=subprocess.DEVNULL, capture_output=True, text=True, encoding='utf-8')
     if check.returncode == 0:
         print(f'Existing release found for {tag}. Uploading asset...', flush=True)
         run(['gh', 'release', 'upload', tag, str(artifact_path), '--clobber'])
