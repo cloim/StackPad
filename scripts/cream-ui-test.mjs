@@ -36,6 +36,9 @@ try {
   await expect(page.getByRole('heading',{name:'StackPad',exact:true})).toBeVisible();
   await expect(page.getByRole('heading',{name:'StackPad',exact:true})).toHaveCSS('font-weight','700');
   await expect(page.locator('.usage-track')).toHaveCount(6);
+  await expect(page.locator('.pad.running .pad-state i').first()).toHaveCSS('background-color','rgb(53, 217, 130)');
+  expect(await page.locator('.pad.running .pad-state i').first().evaluate(el=>getComputedStyle(el).boxShadow)).toContain('9px');
+  await expect(page.locator('.pad.stopped .pad-state i').first()).toHaveCSS('background-color','rgb(168, 174, 158)');
   await expect(page.locator('[data-window="five_hour"] .usage-segments>b')).toHaveCount(15);
   await expect(page.locator('[data-window="weekly"] .usage-segments>b')).toHaveCount(21);
   await expect(page.locator('.usage-track').first()).toHaveAttribute('aria-valuenow', '42');
