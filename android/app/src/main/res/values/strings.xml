@@ -18,6 +18,9 @@
     <string name="widget_unavailable">Unavailable</string>
     <string name="widget_hours_ago">%1$dh ago</string>
     <string name="widget_minutes_ago">%1$dm ago</string>
+    <string name="widget_refresh_channel">Widget refresh</string>
+    <string name="widget_refresh_channel_desc">Shown briefly while a widget tap refreshes usage</string>
+    <string name="widget_refreshing">Refreshing usage…</string>
     <string name="bridge_invalid_server">The PC address must start with https://.</string>
     <string name="bridge_invalid_widget">The widget connection details are invalid.</string>
     <string name="bridge_invalid_usage">The usage data is invalid.</string>

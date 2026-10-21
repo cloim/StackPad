@@ -57,15 +57,21 @@ public class UsageWidgetProvider extends AppWidgetProvider {
         // Repeated taps while a refresh runs are ignored instead of queueing more requests.
         if (!REFRESH.equals(intent.getAction()) || !TAP_RUNNING.compareAndSet(false, true)) return;
         Context app = context.getApplicationContext();
+        // The foreground service keeps network access under Doze and battery saver; the receiver path is the fallback.
+        if (UsageRefreshService.start(app)) return;
         PendingResult result = goAsync();
         TAPS.execute(() -> {
             try {
                 UsageRefreshWorker.refreshFromTap(app);
             } finally {
-                TAP_RUNNING.set(false);
+                tapFinished();
                 result.finish();
             }
         });
+    }
+
+    static void tapFinished() {
+        TAP_RUNNING.set(false);
     }
 
     @Override

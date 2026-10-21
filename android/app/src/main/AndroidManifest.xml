@@ -37,6 +37,12 @@
                 android:resource="@xml/usage_widget_info" />
         </receiver>
 
+        <!-- A widget tap refreshes inside this short foreground service so Doze and battery saver keep its network. -->
+        <service
+            android:name=".widget.UsageRefreshService"
+            android:foregroundServiceType="shortService|dataSync"
+            android:exported="false" />
+
         <service
             android:name=".alerts.AlertService"
             android:foregroundServiceType="specialUse"
@@ -72,6 +78,8 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Android 10 to 13 run the widget tap refresh as a data sync service; Android 14+ uses shortService. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 </manifest>
