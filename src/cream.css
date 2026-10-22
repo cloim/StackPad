@@ -51,10 +51,14 @@ button:focus-visible,a:focus-visible{outline-color:#658472}
 .app-shell .pad-detail{color:#929687;border-radius:3px}
 .app-shell .pad-detail:hover{background:#d2d5c866;color:#55654b}
 .app-shell .pad-port{color:#7f8878}
-.app-shell .pad-environment{position:absolute;right:6px;bottom:10px;padding:1px 3px;border:1px solid #a5a5a0;border-radius:3px;background:#deded9;color:#555650;font-size:8px;font-weight:700;line-height:11px;letter-spacing:.4px;pointer-events:none}
-.app-shell .pad:has(.pad-environment) .pad-state{padding-right:0;max-width:calc(100% - 30px);overflow:hidden}
+.app-shell .pad-footer{position:absolute;left:6px;right:6px;bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0}
+.app-shell .pad-footer .pad-state,.app-shell .pad-environment{display:inline-flex;align-items:center;line-height:1.4}
+.app-shell .pad-environment{justify-content:center;flex-shrink:0;padding:2px 2px 1px;border:0;border-radius:3px;background:#a5a5a0;color:#eeeadd;font-size:8px;font-weight:400;pointer-events:none}
+.app-shell .pad-footer .pad-state{min-width:0;margin:0;padding:0;overflow:hidden}
 .app-shell .pad-state,.app-shell .pad.running .pad-state{color:#75816e}
-.app-shell .pad-state i{background:#a8ae9e}
+.app-shell .pad-state>span{display:block;line-height:1.4;transform:translateY(2px)}
+.app-shell .pad-environment>span{display:block;line-height:1.5}
+.app-shell .pad-state i{width:4px;height:4px;flex-shrink:0;background:#a8ae9e}
 .app-shell .pad.running .pad-state i{background:#35d982;box-shadow:0 0 4px #35d982cc,0 0 9px #35d98266}
 .app-shell .pad.starting .pad-state,.app-shell .pad.partial .pad-state,.app-shell .pad.unreachable .pad-state{color:#9b774d}
 .app-shell .pad.error .pad-state,.app-shell .pad.unhealthy .pad-state,.app-shell .pad.conflict .pad-state{color:#a1525c}

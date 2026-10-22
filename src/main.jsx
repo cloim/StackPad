@@ -419,8 +419,10 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
           <button className={`pad assigned ${service.status}`} style={{ '--cpu': cpuVal }} disabled={pending || !connected} onClick={() => toggle(service)} onPointerDown={() => press()} aria-label={`${service.name} ${service.active ? t('종료') : t('실행')}`} aria-pressed={!!service.active}>
             <span className="pad-top">{pending ? <LoaderCircle className="spin" size={14} /> : <Power size={14} />}</span>
             <span className="pad-port">{tags.length ? tags.map(s => <span key={s.id} title={s.kind === 'remote' ? s.remote.host : undefined}>{s.name}{s.kind === 'remote' ? ` @${s.remote.host}` : s.kind === 'docker' ? ` ${s.container_ports?.length ? s.container_ports.map(port => `:${port}`).join(', ') : t(':포트 없음')}` : s.port ? ` :${s.port}` : t(' :포트 없음')}</span>) : t('명령 실행')}</span>
-            <span className="pad-state"><i />{stateText}</span>
-            <span className="pad-environment" title={service.environment === 'production' ? t('운영용') : t('개발용')} aria-label={service.environment === 'production' ? t('운영용') : t('개발용')}>{service.environment === 'production' ? 'PRD' : 'DEV'}</span>
+            <span className="pad-footer">
+              <span className="pad-state"><i /><span>{stateText}</span></span>
+              <span className="pad-environment" title={service.environment === 'production' ? t('운영용') : t('개발용')} aria-label={service.environment === 'production' ? t('운영용') : t('개발용')}><span>{service.environment === 'production' ? 'PRD' : 'DEV'}</span></span>
+            </span>
             {errorLine && <span className="pad-error-badge" title={errorLine} onClick={e => { e.stopPropagation(); setSelected(service.id); setTargetError(errorLine); }}>{errorLine}</span>}
             {progressPct !== null && <div className="pad-progress-bar" style={{ width: `${progressPct}%` }} />}
           </button><button className="pad-move" disabled={!connected || pending} title={t('드래그하여 빈 패드로 이동')} aria-label={t('{0} 자리 이동', service.name)} onPointerDown={event => touchDrag(event, service)} onPointerMove={touchMove} onPointerUp={event => endTouch(event)} onPointerCancel={event => endTouch(event, true)}>{service.name}</button><button className="pad-detail" onClick={event => openPadMenu(event, service)} aria-label={t('{0} 메뉴', service.name)} aria-haspopup="menu" aria-expanded={padMenu?.id === service.id}><SlidersHorizontal size={13} /></button>
