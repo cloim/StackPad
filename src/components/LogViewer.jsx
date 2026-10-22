@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Ansi from 'ansi-to-react';
-import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronUp, Filter, Search, Terminal, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronUp, Filter, Terminal, X } from 'lucide-react';
 import { t } from '../i18n.js';
 
 const ANSI_REGEX = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
@@ -170,13 +170,11 @@ export function LogViewer({ rawLogs, serviceName, loading, targetErrorLine }) {
         <div className="panel-title">
           <Terminal size={16} />
           <h2>{t('실행 로그')}</h2>
-          {serviceName && <span>{serviceName}</span>}
         </div>
 
         {/* Search and Error Filter Header */}
         <div className="log-toolbar">
           <div className="log-search-input-wrap">
-            <Search size={13} className="search-icon" />
             <input
               type="text"
               aria-label={t('로그 검색')}

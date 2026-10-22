@@ -27,10 +27,10 @@ button:focus-visible,a:focus-visible{outline-color:#658472}
 .padset-bar-row>.category-tabs{background:transparent;border:0;border-radius:0;padding:4px;gap:10px}
 .padset-bar-row>.category-tabs [role=tab]{min-width:88px;padding:10px 16px;border:1px solid #bfc1b4;border-radius:4px;background:linear-gradient(#efeee4,#e9e7dc);color:#555c51;box-shadow:inset 0 1px 0 #fffdf0,0 1px 1px #59604b19,0 1px 0 #bfc1b4}
 .padset-bar-row>.category-tabs [role=tab]:before{content:'';width:8px;height:3px;border-radius:1px;background:#bbbeb1;flex-shrink:0}
-.padset-bar-row>.category-tabs [role=tab][aria-selected=true]{background:#dbdfd2;color:#455745;box-shadow:inset 0 1px 2px #666f5620,0 1px 0 #fffdf2}
-.padset-bar-row>.category-tabs [role=tab][aria-selected=true]:before{background:#7b9181}
+.padset-bar-row>.category-tabs [role=tab][aria-selected=true]{background:#cfd8c5;color:#33452f;font-weight:700;border-color:#a9b59f;box-shadow:inset 0 1px 3px #4f5c4433,0 1px 0 #fffdf2}
+.padset-bar-row>.category-tabs [role=tab][aria-selected=true]:before{background:#35d982;box-shadow:0 0 4px #35d982cc,0 0 9px #35d98266}
 .category-tabs [role=tab]{color:#717b68}
-.category-tabs [role=tab][aria-selected=true]{background:#dce3d5;color:#455c48}
+.category-tabs [role=tab][aria-selected=true]{background:#fbfaf3;color:#33452f;font-weight:700;box-shadow:0 1px 3px #4a553f38,inset 0 0 0 1px #b2bda7}
 .category-tabs [role=tab]:focus-visible{outline-color:#658472}
 .category-tabs [role=tab][aria-selected=true] .tab-badge{background:#becdb7;color:#445c46}
 .app-shell .pads{flex:1;min-height:0;height:auto;padding:15px;gap:15px;border:1px solid #bfc2b6;border-radius:7px;background:#d1d3c9;box-shadow:inset 0 1px 3px #46503d1c,0 1px 0 #fffff4}
@@ -126,6 +126,15 @@ label small,.optional{color:#77816e}
 :root .tray-usage .usage-track:after{content:none}
 :root .tray-usage .usage-segments>b{border-right-color:#fff}
 .native-app .toolbar-brand{font-family:'Arial Black','sans-serif-black',sans-serif;font-weight:900;font-synthesis:weight;-webkit-text-stroke:.25px currentColor}
+/* 서비스 상세: 어두운 기본 테마의 밝은 글자를 크림 배경에 맞게 진하게 한다. */
+:root .modal-body dt{color:#6b7564}
+:root .modal-body dd{color:#3a4535}
+.log-head .panel-title{color:#5d6a56}.log-head .panel-title h2{color:#3f4d3b}
+.log-search-input-wrap input{background:#f8f7f0;border-color:#bfc4b3;color:#3a4535}.log-search-input-wrap input::placeholder{color:#868f7e}.log-search-input-wrap input:focus{border-color:#668a73}
+.filter-btn{background:#f8f7f0;border-color:#bfc4b3;color:#4d5746}.filter-btn.active{background:#f2dcdc;border-color:#c46a6a;color:#9a3c45}
+/* 서비스 상세는 탭을 고정하고 탭 아래 영역만 스크롤한다. */
+.service-detail-modal .modal-body{display:flex;flex-direction:column;gap:12px;overflow:hidden}
+.service-detail-modal .modal-body>[role=tabpanel]{flex:1;min-height:0;overflow-y:auto}
 @media(max-width:650px){
  .app-shell{padding:10px}.app-shell>.toolbar{height:52px;padding:0 3px;gap:10px}
  .toolbar-brand{font-family:'Arial Black','sans-serif-black',sans-serif;font-size:22px;font-weight:900;font-synthesis:weight;-webkit-text-stroke:.25px currentColor}.toolbar-actions{gap:6px}.tool-button{width:34px;height:34px}

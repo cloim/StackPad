@@ -443,7 +443,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
         <button role="menuitem" onClick={() => { setSceneMenu(null); onOpenSettings?.('scenes'); }}><Gear size={14} />{t('흐름 설정')}</button>
       </div>
     </div>}
-    <Modal isOpen={!!current} onClose={() => { setSelected(null); setTargetError(null); }} title={current?.name || t('서비스 상세')} storageKey="service-detail" size="lg">{current && <>
+    <Modal isOpen={!!current} onClose={() => { setSelected(null); setTargetError(null); }} title={current?.name || t('서비스 상세')} storageKey="service-detail" size="lg" className="service-detail-modal">{current && <>
       <Tabs label={t('등록된 서비스')} tabs={(current.isGroup ? current.members : [current]).map(service => ({ id: service.id, name: service.name, badge: groupProgress?.[current.id]?.current_id === service.id ? t('진행 중') : undefined }))} value={logId} onChange={setComponentId} prefix="service-detail" />
       {logService && <div role="tabpanel" id="service-detail-panel" aria-labelledby={`service-detail-tab-${logId}`}>
         <dl>

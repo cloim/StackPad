@@ -401,8 +401,7 @@
 /* LogViewer toolbar and container */
 .log-toolbar { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .log-search-input-wrap { position: relative; display: flex; align-items: center; }
-.log-search-input-wrap .search-icon { position: absolute; left: 8px; opacity: 0.5; pointer-events: none; }
-.log-search-input-wrap input { height: 26px; padding: 2px 24px 2px 26px; font-size: 11px; width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 4px; color: inherit; }
+.log-search-input-wrap input { height: 26px; padding: 2px 24px 2px 8px; font-size: 11px; width: 140px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 4px; color: inherit; }
 .log-search-input-wrap input:focus { border-color: var(--orange, #f97316); width: 180px; }
 .log-search-input-wrap .clear-btn { position: absolute; right: 4px; padding: 2px !important; width: 18px; height: 18px; min-height: 18px !important; }
 .search-nav { display: flex; align-items: center; gap: 2px; font-size: 11px; opacity: 0.8; }
