@@ -41,7 +41,7 @@ from i18n import request_lang, translate, translate_payload
 
 
 # Keep in step with package.json; tests/test_version.py checks it.
-VERSION = '1.1.14'
+VERSION = '1.1.15'
 
 
 def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_token=None):
@@ -629,8 +629,8 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
 
     @app.put('/api/pads/{pad_id}', dependencies=[Depends(authenticated)])
     def update_pad(pad_id: str, values: PadInput, request: Request):
-        guard_remote(request, any(c.kind == 'remote' for c in values.components) or touches_remote(pad_id))
-        return {'id': engine.save_pad(values, pad_id)}
+        remote_settings = any(c.kind == 'remote' for c in values.components) or touches_remote(pad_id)
+        return {'id': engine.save_pad(values, pad_id, metadata_only=remote_settings and not is_local(request))}
 
     @app.delete('/api/pads/{pad_id}', dependencies=[Depends(authenticated)])
     def delete_pad(pad_id: str):

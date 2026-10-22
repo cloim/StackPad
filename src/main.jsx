@@ -420,6 +420,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
             <span className="pad-top">{pending ? <LoaderCircle className="spin" size={14} /> : <Power size={14} />}</span>
             <span className="pad-port">{tags.length ? tags.map(s => <span key={s.id} title={s.kind === 'remote' ? s.remote.host : undefined}>{s.name}{s.kind === 'remote' ? ` @${s.remote.host}` : s.kind === 'docker' ? ` ${s.container_ports?.length ? s.container_ports.map(port => `:${port}`).join(', ') : t(':포트 없음')}` : s.port ? ` :${s.port}` : t(' :포트 없음')}</span>) : t('명령 실행')}</span>
             <span className="pad-state"><i />{stateText}</span>
+            {service.environment === 'production' && <span className="pad-environment" title={t('운영용')} aria-label={t('운영용')}>PRD</span>}
             {errorLine && <span className="pad-error-badge" title={errorLine} onClick={e => { e.stopPropagation(); setSelected(service.id); setTargetError(errorLine); }}>{errorLine}</span>}
             {progressPct !== null && <div className="pad-progress-bar" style={{ width: `${progressPct}%` }} />}
           </button><button className="pad-move" disabled={!connected || pending} title={t('드래그하여 빈 패드로 이동')} aria-label={t('{0} 자리 이동', service.name)} onPointerDown={event => touchDrag(event, service)} onPointerMove={touchMove} onPointerUp={event => endTouch(event)} onPointerCancel={event => endTouch(event, true)}>{service.name}</button><button className="pad-detail" onClick={event => openPadMenu(event, service)} aria-label={t('{0} 메뉴', service.name)} aria-haspopup="menu" aria-expanded={padMenu?.id === service.id}><SlidersHorizontal size={13} /></button>
@@ -431,8 +432,9 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
         <button role="menuitem" autoFocus onClick={() => { setPadMenu(null); setSelected(menuPad.id); setComponentId(null); }}><Info size={14} />{t('상세')}</button>
         <button role="menuitem" disabled={busy.has(menuPad.id)} onClick={() => { setPadMenu(null); setPadEditor({ id: menuPad.id, slot: menuPad.slot }); }}><Settings2 size={14} />{t('설정')}</button>
         <button role="menuitem" className="menu-delete" disabled={!connected || busy.has(menuPad.id) || menuPad.busy || (menuPad.isGroup ? menuPad.members : [menuPad]).some(s => s.kind !== 'remote' && (s.active || s.pid || busy.has(s.id) || s.busy))} onClick={() => { setPadMenu(null); setDeleting(menuPad); }}><Trash2 size={14} />{t('삭제')}</button>
-        {links[menuPad.id]?.domain && <button role="menuitem" onClick={() => openLink(menuPad, 'domain')}><Globe size={14} />{t('도메인으로 열기')}</button>}
-        {local && links[menuPad.id]?.local && <button role="menuitem" onClick={() => openLink(menuPad, 'local')}><Monitor size={14} />{t('로컬로 열기')}</button>}
+        {menuPad.environment === 'production'
+          ? links[menuPad.id]?.domain && <button role="menuitem" onClick={() => openLink(menuPad, 'domain')}><Globe size={14} />{t('브라우저에서 열기')}</button>
+          : local && links[menuPad.id]?.local && <button role="menuitem" onClick={() => openLink(menuPad, 'local')}><Monitor size={14} />{t('브라우저에서 열기')}</button>}
         {settings?.tools?.vscode !== false && (menuPad.isGroup ? menuPad.members : [menuPad]).some(s => !s.kind || s.kind === 'local') && <button role="menuitem" disabled={!connected} onClick={() => openInCode(menuPad)}><Code size={14} />{t('VSCode로 열기')}</button>}
       </div>
     </div>}

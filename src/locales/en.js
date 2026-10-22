@@ -1,5 +1,9 @@
 // English for the Korean source messages. Keep keys identical to the t('...') text; run `node scripts/i18n-check.mjs`.
 export default {
+  '서비스 용도': 'Service environment',
+  '개발용': 'Development',
+  '운영용': 'Production',
+  '브라우저에서 열기': 'Open in browser',
   // Account and sign-in
   '허용 계정': 'Allowed accounts',
   '이 Google 계정들만 로그인할 수 있어요. 계정을 삭제하면 그 계정의 로그인도 바로 해제됩니다.': 'Only these Google accounts can sign in. Removing an account signs it out right away.',

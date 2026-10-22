@@ -51,6 +51,8 @@ button:focus-visible,a:focus-visible{outline-color:#658472}
 .app-shell .pad-detail{color:#929687;border-radius:3px}
 .app-shell .pad-detail:hover{background:#d2d5c866;color:#55654b}
 .app-shell .pad-port{color:#7f8878}
+.app-shell .pad-environment{position:absolute;right:6px;bottom:10px;padding:1px 3px;border:1px solid #a5a5a0;border-radius:3px;background:#deded9;color:#555650;font-size:8px;font-weight:700;line-height:11px;letter-spacing:.4px;pointer-events:none}
+.app-shell .pad:has(.pad-environment) .pad-state{padding-right:0;max-width:calc(100% - 30px);overflow:hidden}
 .app-shell .pad-state,.app-shell .pad.running .pad-state{color:#75816e}
 .app-shell .pad-state i{background:#a8ae9e}
 .app-shell .pad.running .pad-state i{background:#35d982;box-shadow:0 0 4px #35d982cc,0 0 9px #35d98266}

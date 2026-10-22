@@ -104,6 +104,70 @@ class PadRegistrationTests(unittest.TestCase):
             self.engine.move_pad(self.engine.group(pad_id)['member_ids'][0], 2)
         self.assertEqual(self.engine.config, before)
 
+    def test_running_metadata_edit_preserves_runtime_samples_and_history(self):
+        for count in (1, 2):
+            with self.subTest(count=count):
+                values = self.values(count, slot=count + 4)
+                pad_id = self.engine.save_pad(PadInput(**values))
+                ids = self.engine.group(pad_id)['member_ids'] if count > 1 else [pad_id]
+                for component, sid in zip(values['components'], ids):
+                    component['id'] = sid
+                    self.engine.service(sid)['runtime'] = {'pid': 1234, 'created': 100.0}
+                    self.engine.samples[sid] = {'status': 'running', 'cpu': 12}
+                    self.engine.restarts[sid] = {'attempts': [10], 'next_at': 0}
+                    component.update(name='Renamed component', health_url='http://localhost:8000/health', restart_policy='on-failure', restart_max=7)
+                values.update(name='Renamed pad', environment='production', color='#a855f7', autostart=True, wait_ready=False, domain_url='https://app.example.com/', local_url='http://localhost:8000/')
+                samples, restarts = copy.deepcopy(self.engine.samples), copy.deepcopy(self.engine.restarts)
+                with patch.object(self.engine, 'owned', return_value=object()):
+                    self.assertEqual(self.engine.save_pad(PadInput(**values), pad_id), pad_id)
+                target = self.engine.group(pad_id) if count > 1 else self.engine.service(pad_id)
+                self.assertEqual(target['environment'], 'production')
+                self.assertEqual(target['name'], 'Renamed pad')
+                for sid in ids:
+                    service = self.engine.service(sid)
+                    self.assertEqual(service['runtime'], {'pid': 1234, 'created': 100.0})
+                    self.assertEqual(service['restart_max'], 7)
+                    self.assertEqual(service['health_url'], 'http://localhost:8000/health')
+                self.assertEqual(self.engine.samples, samples)
+                self.assertEqual(self.engine.restarts, restarts)
+                loaded = Engine(self.directory.name)
+                self.assertEqual((loaded.group(pad_id) if count > 1 else loaded.service(pad_id))['environment'], 'production')
+
+    def test_running_execution_changes_and_structure_are_rejected_atomically(self):
+        values = self.values()
+        pad_id = self.engine.save_pad(PadInput(**values))
+        for component, sid in zip(values['components'], self.engine.group(pad_id)['member_ids']):
+            component['id'] = sid
+        before = copy.deepcopy(self.engine.config)
+        candidates = []
+        for key, value in [('command', 'echo changed'), ('port', 9000), ('cwd', str(Path(self.directory.name).parent)), ('kind', 'docker')]:
+            changed = copy.deepcopy(values)
+            changed['components'][0][key] = value
+            candidates.append(changed)
+        for components in [values['components'][::-1], values['components'][:1], values['components'] + [self.values(1)['components'][0]]]:
+            candidates.append({**values, 'components': components})
+        with patch.object(self.engine, 'owned', return_value=object()):
+            for changed in candidates:
+                with self.subTest(changed=changed), self.assertRaises(ValueError):
+                    self.engine.save_pad(PadInput(**changed), pad_id)
+                self.assertEqual(self.engine.config, before)
+            with patch.object(self.engine, 'save', side_effect=OSError('disk full')):
+                with self.assertRaises(OSError):
+                    self.engine.save_pad(PadInput(**{**values, 'environment': 'production'}), pad_id)
+            self.assertEqual(self.engine.config, before)
+
+    def test_metadata_only_protects_stopped_execution_and_environment_validation(self):
+        values = self.values(1)
+        pad_id = self.engine.save_pad(PadInput(**values))
+        values['components'][0]['id'] = pad_id
+        values['environment'] = 'production'
+        self.engine.save_pad(PadInput(**values), pad_id, metadata_only=True)
+        values['components'][0]['command'] = 'echo changed'
+        with self.assertRaises(ValueError):
+            self.engine.save_pad(PadInput(**values), pad_id, metadata_only=True)
+        with self.assertRaises(ValueError):
+            PadInput(**{**values, 'environment': 'invalid'})
+
     def test_save_failure_rolls_back_memory_and_disk(self):
         pad_id = self.engine.save_pad(PadInput(**self.values()))
         before = copy.deepcopy(self.engine.config)

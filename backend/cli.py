@@ -250,7 +250,7 @@ def all_pads(engine):
         result.append({
             'id': pad['id'], 'name': pad['name'], 'padset_id': pad['padset_id'], 'padset': names.get(pad['padset_id'], ''), 'slot': pad['slot'],
             'type': 'group' if is_group else 'single', 'status': group_status(members) if is_group else members[0].get('status'),
-            'color': pad.get('color'), 'autostart': bool(pad.get('autostart')),
+            'color': pad.get('color'), 'autostart': bool(pad.get('autostart')), 'environment': pad.get('environment', 'development'),
             'components': [{'id': s['id'], 'name': s['name'], 'kind': s.get('kind') or 'local', 'status': s.get('status'), 'pid': s.get('pid'),
                             'error': s.get('error') or s.get('message') or '', **component_settings(s)} for s in members],
             '_order': (order.get(pad['padset_id'], 0), pad['slot']), '_group': is_group, '_pad': pad,
@@ -287,7 +287,7 @@ def pad_input(engine, pad):
             component['health_url'] = component['health_url'] or ''
     return {'name': source['name'], 'slot': source['slot'], 'padset_id': source['padset_id'], 'color': source.get('color', '#22c55e'),
             'autostart': bool(source.get('autostart')), 'wait_ready': bool(source.get('wait_ready')), 'components': components,
-            'domain_url': source.get('domain_url', ''), 'local_url': source.get('local_url', '')}
+            'domain_url': source.get('domain_url', ''), 'local_url': source.get('local_url', ''), 'environment': source.get('environment', 'development')}
 
 
 def read_json(source, context):

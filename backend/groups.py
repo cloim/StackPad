@@ -49,6 +49,7 @@ class GroupInput(BaseModel):
     color: str = '#22c55e'
     wait_ready: bool = False
     autostart: bool = False
+    environment: Literal['development', 'production'] = 'development'
 
     @field_validator('name')
     @classmethod
@@ -96,6 +97,7 @@ class PadInput(BaseModel):
     color: str = '#22c55e'
     autostart: bool = False
     wait_ready: bool = False
+    environment: Literal['development', 'production'] = 'development'
     components: list[ComponentInput] = Field(min_length=1, max_length=16)
     domain_url: str = Field(default='', max_length=1000)
     local_url: str = Field(default='', max_length=1000)
@@ -176,7 +178,7 @@ class GroupManager:
             if hasattr(self, 'clean_schedules_for_target'):
                 self.clean_schedules_for_target(pad_id)
 
-    def save_pad(self, values, pad_id=None):
+    def save_pad(self, values, pad_id=None, metadata_only=False):
         # Import after engine module initialization; reuse the existing command validation.
         from engine import RemoteServiceInput, ServiceInput
         from docker_services import DockerServiceInput
@@ -188,10 +190,11 @@ class GroupManager:
             old_services = [self.service(sid) for sid in old_ids]
             if pad_id and not old_group and self.member_group(pad_id):
                 raise ValueError('구성이 속한 패드의 설정에서 변경해 주세요.')
+            running = False
             for service in old_services:
                 self.check_group_busy(service['id'])
-                if self.owned(service) or (service.get('kind') == 'docker' and self.docker_state(service)['active']):
-                    raise ValueError('패드를 중지한 다음 설정을 변경해 주세요.')
+                if self.active(service['id']) or service['id'] in self.externals or self.samples.get(service['id'], {}).get('status') == 'restarting':
+                    running = True
             if any(s['padset_id'] == values.padset_id and s['slot'] == values.slot and s['id'] not in old_ids for s in self.config['services']):
                 raise ValueError('이 패드에는 이미 서비스가 등록되어 있습니다.')
             supplied = [c.id for c in values.components if c.id]
@@ -214,6 +217,25 @@ class GroupManager:
                     validated.append(ServiceInput(name=c.name, command=c.command, cwd=c.cwd, port=c.port, health_url=c.health_url, slot=values.slot, color=values.color, autostart=values.autostart, restart_policy=c.restart_policy, restart_max=c.restart_max).model_dump())
             for data in validated:
                 data['padset_id'] = values.padset_id
+            if running or metadata_only:
+                # Keep process ownership, monitoring samples and restart history intact.
+                execution_keys = ('kind', 'command', 'cwd', 'port', 'remote', 'container')
+                if [c.id for c in values.components] != old_ids or any(
+                    old.get(key) != data.get(key)
+                    for old, data in zip(old_services, validated) for key in execution_keys
+                ):
+                    raise ValueError('패드를 중지한 다음 설정을 변경해 주세요.')
+                previous = copy.deepcopy(self.config)
+                try:
+                    for service, data in zip(old_services, validated):
+                        service.update({key: data[key] for key in ('name', 'color', 'autostart', 'slot', 'padset_id', 'health_url', 'restart_policy', 'restart_max') if key in data})
+                    target = old_group or old_services[0]
+                    target.update(name=values.name, color=values.color, autostart=values.autostart if old_group else validated[0]['autostart'], slot=values.slot, padset_id=values.padset_id, wait_ready=values.wait_ready, environment=values.environment, domain_url=values.domain_url, local_url=values.local_url)
+                    self.save()
+                except Exception:
+                    self.config = previous
+                    raise
+                return pad_id
             prepared = []
             for component, data in zip(values.components, validated):
                 existing = self.service(component.id) if component.id else None
@@ -223,14 +245,14 @@ class GroupManager:
             group = None
             if len(prepared) > 1:
                 result_id = old_group['id'] if old_group else uuid.uuid4().hex
-                group = GroupInput(name=values.name, member_ids=[s['id'] for s in prepared], slot=values.slot, color=values.color, autostart=values.autostart, wait_ready=values.wait_ready).model_dump()
+                group = GroupInput(name=values.name, member_ids=[s['id'] for s in prepared], slot=values.slot, color=values.color, autostart=values.autostart, wait_ready=values.wait_ready, environment=values.environment).model_dump()
                 group['id'] = result_id
                 group['padset_id'] = values.padset_id
                 # Group management saves only GroupInput, so the links live outside it.
                 group.update(domain_url=values.domain_url, local_url=values.local_url)
             else:
                 prepared[0]['name'] = values.name.strip()
-                prepared[0].update(domain_url=values.domain_url, local_url=values.local_url)
+                prepared[0].update(domain_url=values.domain_url, local_url=values.local_url, environment=values.environment)
                 result_id = prepared[0]['id']
             previous = copy.deepcopy(self.config)
             try:

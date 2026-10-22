@@ -282,7 +282,11 @@ class RemoteApiTests(RemoteTestCase):
         self.assertEqual(response.status_code, 200, response.text)
         pad_id = response.json()['id']
         local_body = {**body, 'components': [{'id': pad_id, 'name': 'API', 'command': 'echo', 'cwd': self.folder.name}]}
-        self.assertEqual(external.put(f'/api/pads/{pad_id}', json=local_body).status_code, 403)
+        self.assertEqual(external.put(f'/api/pads/{pad_id}', json=local_body).status_code, 409)
+        safe_body = {**body, 'environment': 'production', 'components': [{**body['components'][0], 'id': pad_id}]}
+        self.assertEqual(external.put(f'/api/pads/{pad_id}', json=safe_body).status_code, 200)
+        safe_body['components'][0]['remote'] = spec(start='changed-command')
+        self.assertEqual(external.put(f'/api/pads/{pad_id}', json=safe_body).status_code, 409)
         self.assertEqual(external.put(f'/api/services/{pad_id}', json={'kind': 'remote', 'name': 'API', 'slot': 0, 'color': '#3b82f6', 'remote': spec()}).status_code, 403)
         self.assertEqual(external.post('/api/remote/test', json={'host': 'app'}).status_code, 403)
         self.assertEqual(local.put(f'/api/services/{pad_id}', json={'kind': 'remote', 'name': 'API 2', 'slot': 0, 'color': '#3b82f6', 'remote': spec()}).status_code, 200)
