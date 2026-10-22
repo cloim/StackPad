@@ -218,8 +218,6 @@ export default {
   '{0} 메뉴': '{0} menu',
   '상세': 'Details',
   '설정': 'Settings',
-  '도메인으로 열기': 'Open domain',
-  '로컬로 열기': 'Open locally',
   'VSCode로 열기': 'Open in VS Code',
   '서비스 상세': 'Service details',
   '등록된 서비스': 'Services in this pad',
