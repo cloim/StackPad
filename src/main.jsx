@@ -14,7 +14,7 @@ import { LogViewer } from './components/LogViewer.jsx';
 import DotMatrix from './components/DotMatrix.jsx';
 import { press, success as feedbackSuccess, failure as feedbackFailure, getFeedbackSettings, saveFeedbackSettings } from './feedback.js';
 import { SignIn } from './components/SignIn.jsx';
-import { connectWidget, disconnectWidget, getAlertStatus, isNative, loadServer, nativeHeaders, serverOrigin, setAlertStatus } from './native.js';
+import { appVersion, connectWidget, disconnectWidget, getAlertStatus, isNative, loadServer, nativeHeaders, serverOrigin, setAlertStatus } from './native.js';
 import { PairPhone } from './components/PairPhone.jsx';
 import './components/Modal/modal.css';
 import './styles.css';
@@ -791,10 +791,12 @@ function App() {
   }, [auth?.authenticated, fallback, refresh]);
   useEffect(() => {
     // The Android app is installed from GitHub Releases, so it checks there for a newer version once per launch.
+    // A paired app shows the PC's screen, so compare against the installed APK version instead of APP_VERSION.
+    // An APK too old to report its version is treated as outdated.
     if (!auth?.authenticated || !isNative) return;
-    fetch('https://api.github.com/repos/cloim/StackPad/releases/latest').then(response => response.json()).then(release => {
+    Promise.all([appVersion(), fetch('https://api.github.com/repos/cloim/StackPad/releases/latest').then(response => response.json())]).then(([installed, release]) => {
       const latest = String(release.tag_name || '').replace(/^v/, '');
-      if (isNewer(latest, APP_VERSION)) setNotice({ title: t('새 버전이 있어요'), message: t('StackPad {0}을 내려받을 수 있어요. 설치하면 지금 앱 위에 업데이트됩니다.', latest), link: release.html_url });
+      if (latest && isNewer(latest, installed || '0')) setNotice({ title: t('새 버전이 있어요'), message: t('StackPad {0}을 내려받을 수 있어요. 설치하면 지금 앱 위에 업데이트됩니다.', latest), link: release.html_url });
     }).catch(() => {});
   }, [auth?.authenticated]);
   useEffect(() => {

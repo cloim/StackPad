@@ -57,6 +57,17 @@ export async function pair(api, link) {
   }
 }
 
+// 페어링된 앱은 PC 엔진의 화면을 열므로 화면의 APP_VERSION은 PC 버전이다. 설치된 APK 버전은 네이티브에서 받는다.
+// 버전을 알려 주지 않는 예전 APK는 빈 문자열을 돌려주며, 호출하는 쪽은 이를 업데이트가 필요한 구버전으로 본다.
+export async function appVersion() {
+  if (!isNative) return '';
+  try {
+    return String((await WidgetBridge.status()).version || '');
+  } catch {
+    return '';
+  }
+}
+
 export async function forgetServer() {
   if (!isNative) return;
   server = '';

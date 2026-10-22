@@ -69,6 +69,8 @@ public class WidgetBridgePlugin extends Plugin {
         JSObject result = new JSObject();
         result.put("id", new WidgetStore(getContext()).id());
         result.put("device", Build.MANUFACTURER + " " + Build.MODEL);
+        // The screen comes from the PC engine, so only the APK itself knows which app version is installed.
+        result.put("version", BuildConfig.VERSION_NAME);
         call.resolve(result);
     }
 
