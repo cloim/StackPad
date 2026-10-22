@@ -1,7 +1,8 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 
-// Android 앱은 화면 파일을 APK에서 열고 API만 PC의 외부 주소로 보낸다. CapacitorHttp가 fetch를 네이티브 요청으로 바꾸므로
-// 교차 출처 제약 없이 로그인 쿠키를 함께 보낼 수 있다. 외부 주소는 QR 페어링으로 받아 기기에 저장한다.
+// Android 앱은 페어링 전에는 APK의 화면으로 QR 페어링을 받고, 페어링 뒤에는 PC 외부 주소의 화면을 직접 연다(MainActivity).
+// APK 화면에서는 CapacitorHttp가 fetch를 네이티브 요청으로 바꾸므로 교차 출처 제약 없이 로그인 쿠키를 함께 보낼 수 있다.
+// 외부 주소는 QR 페어링으로 받아 기기에 저장하며, 주소가 바뀌면 네이티브가 화면을 새 주소로 다시 연다.
 export const isNative = Capacitor.isNativePlatform();
 const WidgetBridge = isNative ? registerPlugin('WidgetBridge') : null;
 const AlertBridge = isNative ? registerPlugin('AlertBridge') : null;

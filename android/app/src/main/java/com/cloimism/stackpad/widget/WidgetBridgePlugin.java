@@ -2,6 +2,7 @@ package com.cloimism.stackpad.widget;
 
 import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
+import android.net.Uri;
 import android.os.Build;
 import com.cloimism.stackpad.BuildConfig;
 import com.cloimism.stackpad.R;
@@ -33,14 +34,34 @@ public class WidgetBridgePlugin extends Plugin {
         }
         new WidgetStore(getContext()).saveServer(url);
         call.resolve();
+        if (!url.equals(getBridge().getServerUrl())) reopen();
     }
 
     /** Forgetting the PC also drops the widget connection that belonged to it. */
     @PluginMethod
     public void clearServer(PluginCall call) {
+        forget();
+        call.resolve();
+    }
+
+    private void forget() {
         new WidgetStore(getContext()).clear();
         UsageWidgetProvider.renderAll(getContext());
-        call.resolve();
+        if (getBridge().getServerUrl() != null) reopen();
+    }
+
+    /** The bridge reads the PC address only at start, so a changed address starts the screen again. */
+    private void reopen() {
+        getActivity().runOnUiThread(() -> getActivity().recreate());
+    }
+
+    /** The offline page opens from the APK without the bridge, so its buttons talk to the app through stackpad:// links. */
+    @Override
+    public Boolean shouldOverrideLoad(Uri url) {
+        if (!"stackpad".equals(url.getScheme())) return null;
+        if ("retry".equals(url.getHost())) getBridge().getWebView().post(() -> getBridge().getWebView().loadUrl(getBridge().getAppUrl()));
+        else if ("unpair".equals(url.getHost())) forget();
+        return true;
     }
 
     @PluginMethod

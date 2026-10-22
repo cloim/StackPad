@@ -89,7 +89,7 @@ stackpad-cli schedule add --scene DevStack --action start --time 09:00 --days mo
 
 ## Phone
 
-- **Android:** install `StackPad.apk`, turn on Tailscale on the phone, then on the PC open **Settings > Account > Connect a phone** and scan the QR code with the app. The code works once for five minutes. Connected phones are listed there and can be disconnected. Long-press the home screen to add the **Agent limits** widget.
+- **Android:** install `StackPad.apk`, turn on Tailscale on the phone, then on the PC open **Settings > Account > Connect a phone** and scan the QR code with the app. The code works once for five minutes. Once connected, the app opens the screen from your PC, so PC updates reach the phone without reinstalling the app. Connected phones are listed there and can be disconnected. Long-press the home screen to add the **Agent limits** widget.
   - The Android app includes a persistent Foreground Service that keeps an SSE connection with the engine to deliver immediate failure and crash alert notifications even when the app is in the background. For uninterrupted notifications, disable battery optimization and allow background autostart for StackPad in your device settings.
 - **iPhone and others:** open the Tailscale address in Safari or Chrome, sign in with Google and add it to the home screen.
 

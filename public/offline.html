@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>StackPad</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; background: #efeee5; color: #555c51; font-family: system-ui, 'Malgun Gothic', sans-serif; }
+    main { width: 100%; max-width: 360px; padding: 28px 22px; border: 1px solid #c7cbbd; border-radius: 18px; background: #f6f5ee; text-align: center; }
+    .brand { margin: 0 0 18px; font-family: 'Arial Black', 'sans-serif-black', sans-serif; font-size: 22px; font-weight: 900; letter-spacing: -1px; }
+    h1 { margin: 0 0 8px; font-size: 19px; }
+    p { margin: 0 0 22px; color: #747d6d; font-size: 14px; line-height: 1.55; }
+    a { display: block; padding: 13px 16px; border-radius: 12px; font-size: 15px; font-weight: 700; text-decoration: none; }
+    .primary { background: #668a73; color: #fff; }
+    .secondary { margin-top: 10px; border: 1px solid #c7cbbd; color: #555c51; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="brand">StackPad</div>
+    <h1 data-text="title">PC에 연결할 수 없어요</h1>
+    <p data-text="body">PC가 켜져 있고 StackPad가 실행 중인지, 휴대폰의 Tailscale이 켜져 있는지 확인해 주세요.</p>
+    <a class="primary" href="stackpad://retry" data-text="retry">다시 시도</a>
+    <a class="secondary" href="stackpad://unpair" data-text="unpair">다른 PC와 연결하기</a>
+  </main>
+  <script>
+    // Android 앱이 PC 엔진에 닿지 못할 때 APK에서 여는 안내 화면이다. 원격 모드의 Capacitor는 이 파일 하나만 APK에서 제공하므로 번역 문구와 스크립트를 함께 담는다.
+    const english = {
+      title: "Can't reach your PC",
+      body: 'Check that the PC is on, StackPad is running and Tailscale is on for this phone.',
+      retry: 'Try again',
+      unpair: 'Connect to another PC',
+    };
+
+    if (!navigator.language.toLowerCase().startsWith('ko')) {
+      document.documentElement.lang = 'en';
+      document.querySelectorAll('[data-text]').forEach(node => { node.textContent = english[node.dataset.text]; });
+    }
+  </script>
+</body>
+</html>
