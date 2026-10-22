@@ -122,8 +122,8 @@ try {
   await page.getByRole('menuitem', { name: '설정', exact: true }).click();
   await page.getByRole('dialog', { name: '패드 설정', exact: true }).getByRole('combobox', { name: '패드셋', exact: true }).selectOption('default');
   await page.getByRole('button', { name: '저장', exact: true }).click();
-  // Editing opens the updated detail after save.
-  await page.getByRole('dialog', { name: '도커 API', exact: true }).getByRole('button', { name: '닫기', exact: true }).click();
+  // Moving the only pad leaves an empty set and closes every modal.
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('button', { name: '패드 1 서비스 등록', exact: true })).toBeVisible();
   await page.getByRole('tab', { name: '기본', exact: true }).click();
   await expect(page.getByRole('button', { name: '도커 API 실행', exact: true })).toBeVisible();

@@ -44,8 +44,11 @@ export function PadForm({ pad, preset, services, slot, padsetId = 'default', pad
     if (readOnly) {
       setPending(true);
       try {
+        if (form.padset_id !== pad.padset_id) {
+          await api(`/pads/${pad.id}/position`, { method: 'PUT', body: JSON.stringify({ slot: form.slot, padset_id: form.padset_id }) });
+        }
         await api(`/pads/${pad.id}/color`, { method: 'PUT', body: JSON.stringify({ color: form.color }) });
-        await onSaved(pad.id); onClose();
+        await onSaved(pad.id, form.padset_id); onClose();
       } catch (error) { onError(error.message); }
       finally { setPending(false); }
       return;
@@ -63,7 +66,7 @@ export function PadForm({ pad, preset, services, slot, padsetId = 'default', pad
         return c.kind === 'docker' ? { ...base, container: c.container } : c.kind === 'remote' ? { ...base, remote: c.remote } : { ...base, command: c.command, cwd: c.cwd, port: c.port ? Number(c.port) : null, health_url: c.health_url, restart_policy: c.restart_policy || 'never', restart_max: Number(c.restart_max ?? 3) };
       });
       const result = await api(`/pads${pad ? `/${pad.id}` : ''}`, { method: pad ? 'PUT' : 'POST', body: JSON.stringify({ ...form, autostart: allRemote ? false : form.autostart, components }) });
-      await onSaved(result.id); onClose();
+      await onSaved(result.id, form.padset_id); onClose();
     } catch (error) { onError(error.message); }
     finally { setPending(false); }
   }
@@ -72,7 +75,7 @@ export function PadForm({ pad, preset, services, slot, padsetId = 'default', pad
       <Tabs label={t('패드 설정 카테고리')} tabs={[{ id: 'general', name: t('일반') }, { id: 'services', name: t('서비스') }]} value={tab} onChange={setTab} prefix="pad-editor" />
       <div role="tabpanel" id="pad-editor-panel" aria-labelledby={`pad-editor-tab-${tab}`}>
       <div className="pad-common" hidden={tab !== 'general'}>
-        <div className="pad-location-row"><label>{t('패드셋')}<SelectControl aria-label={t('패드셋')} value={common.padset_id || padsetId} disabled={readOnly || pending} onChange={e => {
+        <div className="pad-location-row"><label>{t('패드셋')}<SelectControl aria-label={t('패드셋')} value={form.padset_id} disabled={pending} onChange={e => {
           const occupied = new Set(services.filter(s => s.padset_id === e.target.value && !(pad?.isGroup ? pad.member_ids : [pad?.id]).includes(s.id)).map(s => s.slot));
           const free = Array.from({ length: 16 }, (_, i) => i).find(i => !occupied.has(i));
           if (free === undefined) { onError(t('선택한 패드셋에 빈 패드를 확보해 주세요.')); return; }
@@ -119,7 +122,7 @@ export function PadForm({ pad, preset, services, slot, padsetId = 'default', pad
       })}</div>
       {!readOnly && <button className="secondary add-service" type="button" disabled={pending || form.components.length >= 16} onClick={() => set('components', [...form.components.map((c, i) => i === 0 && form.components.length === 1 && !c.name ? { ...c, name: form.name } : c), { kind: 'local', name: '', command: '', cwd: form.components.find(c => c.kind !== 'remote')?.cwd || defaultCwd, port: '', health_url: '', restart_policy: 'never', restart_max: 3, remote: emptyRemote }])}><Plus size={16} />{t('서비스 추가')}</button>}
       </div></div>
-      <div className="form-actions"><button type="button" className="secondary" disabled={pending} onClick={onClose}>{readOnly ? t('닫기') : t('취소')}</button><button className="primary" disabled={pending || (readOnly && form.color === pad.color)}>{t('저장')}</button></div>
+      <div className="form-actions"><button type="button" className="secondary" disabled={pending} onClick={onClose}>{readOnly ? t('닫기') : t('취소')}</button><button className="primary" disabled={pending || (readOnly && form.color === pad.color && form.padset_id === pad.padset_id)}>{t('저장')}</button></div>
     </form>
   </Modal>;
 }
