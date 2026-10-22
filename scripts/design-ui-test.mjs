@@ -116,32 +116,14 @@ try {
   await page.keyboard.press('Escape');
   await expect(modal).not.toBeVisible();
 
-  // 4. Test Feedback settings in Settings modal
+  // 4. Verify device feedback controls were removed
   await page.getByRole('button', { name: '설정' }).click();
   const settingsModal = page.getByRole('dialog');
   await expect(settingsModal).toBeVisible();
 
-  const hapticsSwitch = settingsModal.getByRole('switch', { name: '촉각 피드백' });
-  const soundSwitch = settingsModal.getByRole('switch', { name: '소리 피드백' });
-
-  await expect(hapticsSwitch).toHaveAttribute('aria-checked', 'true');
-  await expect(soundSwitch).toHaveAttribute('aria-checked', 'false');
-
-  // Toggle sound on
-  await soundSwitch.click();
-  await expect(soundSwitch).toHaveAttribute('aria-checked', 'true');
-
-  const storedFeedback = await page.evaluate(() => localStorage.getItem('stackpad.feedback'));
-  expect(storedFeedback).toBeTruthy();
-  const parsed = JSON.parse(storedFeedback);
-  expect(parsed.sound).toBe(true);
-  expect(parsed.haptics).toBe(true);
-
-  // Toggle haptics off
-  await hapticsSwitch.click();
-  await expect(hapticsSwitch).toHaveAttribute('aria-checked', 'false');
-  const stored2 = await page.evaluate(() => localStorage.getItem('stackpad.feedback'));
-  expect(JSON.parse(stored2).haptics).toBe(false);
+  await expect(settingsModal.getByText('이 기기의 피드백', { exact: true })).toHaveCount(0);
+  await expect(settingsModal.getByRole('switch', { name: '촉각 피드백' })).toHaveCount(0);
+  await expect(settingsModal.getByRole('switch', { name: '소리 피드백' })).toHaveCount(0);
 
   await page.keyboard.press('Escape');
 

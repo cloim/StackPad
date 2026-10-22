@@ -9,7 +9,7 @@ StackPad는 Windows PC의 서버들을 버튼 패드로 바꿔 줍니다. 패드
 - 여러 패드를 순차적으로 켜고 끄는 장면과 시간 및 요일별 자동 실행 예약
 - 비정상 종료 시 지수 백오프 자동 재시작, 오류 줄 자동 감지, 즉각적인 장애 알림 (PC 토스트 알림과 Android 상시 포그라운드 알림)
 - 실시간 SSE 푸시 갱신, 로그 증분 전송, 오류 줄 강조 및 필터링을 지원하는 로그 검색
-- CPU 활동에 연동되는 숨쉬는 LED 링, 60칸 LCD 도트 매트릭스 스파크라인, 합성음 및 촉각 피드백
+- CPU 활동에 연동되는 숨쉬는 LED 링, 60칸 LCD 도트 매트릭스 스파크라인
 - 프로젝트 폴더 아래에서 이미 실행 중인 서버를 등록 추천
 - Google 계정으로 로그인, Tailscale로 휴대폰에서 PC에 접속
 - Claude Code, Codex, Antigravity 사용 한도를 보여 주는 홈 화면 위젯이 있는 Android 앱
@@ -58,10 +58,10 @@ StackPad는 `http://127.0.0.1:48731`에서 작은 관리 엔진을 실행하고,
 - **장면 > 예약**에서 원하는 시간과 요일에 패드나 장면이 자동으로 시작/종료되도록 일정을 등록합니다.
 - 패드를 누르면 실행, 다시 누르면 종료합니다. 패드 메뉴에서 상세와 로그, 설정, 브라우저로 열기, VS Code로 열기를 고를 수 있어요.
 - 실시간 로그 검색과 오류 줄 강조 기능을 제공하며, "오류만" 보기로 장애 원인을 빠르게 추적할 수 있습니다.
-- CPU 부하에 따라 호흡하듯 빛나는 LED 링, 60칸 LCD 도트 매트릭스 스파크라인, 누름과 상태 변화에 반응하는 촉각 및 합성음 피드백을 즐겨 보세요.
+- CPU 부하에 따라 호흡하듯 빛나는 LED 링, 60칸 LCD 도트 매트릭스 스파크라인을 확인할 수 있어요.
 - 패드를 끌어 위치를 바꿉니다. 터치 화면에서는 왼쪽 위 손잡이를 끄세요.
 - StackPad 밖에서 실행한 서버는 **외부 실행**으로 표시되고, 누르면 StackPad가 넘겨받습니다.
-- **환경 설정 > 일반**: 언어, Windows 로그인 시 자동 실행, 로그 보관 기간, AI 사용량, 기기 피드백(촉각과 소리), 저장 폴더
+- **환경 설정 > 일반**: 언어, Windows 로그인 시 자동 실행, 로그 보관 기간, AI 사용량, 저장 폴더
 - 트레이 메뉴: 열기, 창 닫기(엔진과 서비스 유지), 완전 종료(서비스 유지 또는 모두 중지), 업데이트 설치
 
 ## 명령줄
@@ -76,6 +76,7 @@ stackpad-cli pad add --name API --command "uv run main.py" --cwd D:\app --port 8
 stackpad-cli pad list --padset 업무
 stackpad-cli pad start API
 stackpad-cli pad logs API
+stackpad-cli pad update API --environment production  # 개발용과 운영용 환경 설정
 stackpad-cli pad show API             # input 항목을 고쳐 pad update API --json - 로 넘길 수 있습니다
 stackpad-cli scene add --name 개발스택 --pads API,Web
 stackpad-cli scene start 개발스택

@@ -9,7 +9,7 @@ StackPad turns the servers on your Windows PC into a pad of buttons. Tap a pad t
 - Scenes to chain multiple pads in sequence, and schedules to trigger pads or scenes automatically by time and day
 - Automatic crash restart with backoff, error line detection, and instant failure alerts (PC toast and Android persistent foreground notifications)
 - Real-time SSE push updates, incremental log streaming, and log search with error line filtering
-- Breathing LED ring, 60-slot LCD dot-matrix sparklines for CPU and memory, and synthesized haptic & audio feedback
+- Breathing LED ring, 60-slot LCD dot-matrix sparklines for CPU and memory
 - Suggestions for servers already running under your project folder
 - Sign in with your Google account; reach the PC from your phone through Tailscale
 - Android app with a home screen widget for Claude Code, Codex and Antigravity usage limits
@@ -58,10 +58,10 @@ Settings, logs and sign-in records are stored in `%USERPROFILE%\.config\stackpad
 - Schedule automatic pad or scene starts and stops by local time and day of the week under **Scenes > Schedules**.
 - Tap a pad to start it, tap again to stop. The pad menu has details and logs, settings, open in browser and open in VS Code.
 - Search service logs in real time, toggle the "Errors only" filter, and jump directly to crash error lines.
-- Enjoy dynamic breathing LED rings matching CPU activity, 60-slot dot-matrix LCD sparklines for CPU and memory history, and synthesized click/audio-haptic feedback.
+- Enjoy dynamic breathing LED rings matching CPU activity, 60-slot dot-matrix LCD sparklines for CPU and memory history.
 - Drag pads to rearrange them; on touch screens use the handle at the top left.
 - A server you started outside StackPad shows as **Running outside**; tap it to let StackPad take it over.
-- **Settings > General**: language, start with Windows, log retention, AI usage, device haptic/audio feedback, and the storage folder.
+- **Settings > General**: language, start with Windows, log retention, AI usage, and the storage folder.
 - Tray menu: open, close the window (engine and services keep running), quit StackPad (optionally stopping every service), and install updates.
 
 ## Command line
@@ -76,6 +76,7 @@ stackpad-cli pad add --name API --command "uv run main.py" --cwd D:\app --port 8
 stackpad-cli pad list --padset Work
 stackpad-cli pad start API
 stackpad-cli pad logs API
+stackpad-cli pad update API --environment production  # Set the DEV/PRD environment
 stackpad-cli pad show API             # its "input" can be edited and passed back with pad update API --json -
 stackpad-cli scene add --name DevStack --pads API,Web
 stackpad-cli scene start DevStack
