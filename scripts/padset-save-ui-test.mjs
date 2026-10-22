@@ -94,15 +94,26 @@ try {
   await page.getByRole('menuitem', { name: '설정', exact: true }).click();
   await page.getByRole('combobox', { name: '서비스 용도', exact: true }).selectOption('development');
   await page.getByRole('button', { name: '저장', exact: true }).click();
-  await page.getByRole('dialog').getByRole('button', { name: '닫기', exact: true }).click();
-  await expect(wrap.locator('.pad-environment')).toHaveCount(0);
+  await expect(page.getByRole('dialog', { name: '패드 설정', exact: true })).toHaveCount(0);
+  await page.getByRole('dialog', { name: '실행 중 마지막 패드', exact: true }).getByRole('button', { name: '닫기', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(wrap.locator('.pad-environment')).toHaveText('DEV');
+  await expect(wrap.locator('.pad-environment')).toHaveAttribute('aria-label', '개발용');
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    const badge = await wrap.locator('.pad-environment').boundingBox();
+    const box = await wrap.boundingBox();
+    expect(badge.x).toBeGreaterThan(box.x + box.width / 2);
+    expect(badge.y + badge.height).toBeLessThanOrEqual(box.y + box.height);
+    await page.screenshot({ path: `.jobs/live-settings-ui/dev-${width}.png` });
+  }
   await page.getByRole('button', { name: '실행 중 마지막 패드 메뉴', exact: true }).click();
   await expect(page.getByRole('menuitem', { name: '브라우저에서 열기', exact: true })).toHaveCount(1);
   await page.getByRole('menuitem', { name: '브라우저에서 열기', exact: true }).click();
   expect(await page.evaluate(() => window.lastOpenedUrl)).toBe('http://localhost:8080/');
   await request(`/services/${running.id}/stop`);
   expect(errors).toEqual([]);
-  console.log('PASS: last single/group/running pad moves, occupied slots skipped, runtime preserved, live metadata editable, PRD badge and environment-specific browser menu verified on desktop/mobile, no detail modal, persisted after reload');
+  console.log('PASS: last single/group/running pad moves, occupied slots skipped, runtime preserved, live metadata editable, DEV/PRD badges and environment-specific browser menu verified on desktop/mobile, no detail modal, persisted after reload');
 } finally {
   await browser.close();
 }
