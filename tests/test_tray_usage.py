@@ -39,3 +39,12 @@ class TrayUsageTests(unittest.TestCase):
                 remote = TestClient(self.app, base_url=host, client=client)
                 self.assertEqual(remote.get('/api/desktop/usage', headers={'X-StackPad-Control': 'tray-test-token', **extra}).status_code, 403)
             collect.assert_not_called()
+
+    def test_tray_reads_tailscale_address_with_control_token(self):
+        headers = {'X-StackPad-Control': 'tray-test-token'}
+        self.assertEqual(self.client.get('/api/desktop/info', headers=headers).json(), {'external_url': None})
+        self.app.state.google.save_external_url('https://pc.example.ts.net')
+        self.assertEqual(self.client.get('/api/desktop/info', headers=headers).json(), {'external_url': 'https://pc.example.ts.net'})
+        self.assertEqual(self.client.get('/api/desktop/info', headers={'X-StackPad-Control': 'wrong'}).status_code, 403)
+        remote = TestClient(self.app, base_url='https://pc.example.ts.net', client=('127.0.0.1', 50001))
+        self.assertEqual(remote.get('/api/desktop/info', headers=headers).status_code, 403)

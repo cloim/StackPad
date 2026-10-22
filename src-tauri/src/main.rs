@@ -79,6 +79,8 @@ fn portable() -> bool {
 
 struct Updates {
     item: MenuItem<tauri::Wry>,
+    tailnet: MenuItem<tauri::Wry>,
+    external: Mutex<Option<String>>,
     pending: Mutex<Option<Update>>,
     usage: Mutex<Value>,
     last_check: Mutex<Option<Instant>>,
@@ -91,24 +93,44 @@ fn refresh_popup(app: &AppHandle) {
     tray_usage::update(app, data, state.pending.lock().unwrap().is_some());
 }
 
+fn desktop_get(path: &str) -> Option<Value> {
+    let token = fs::read_to_string(config_dir()?.join("control-token")).ok()?;
+    let address: SocketAddr = ENGINE.parse().ok()?;
+    let mut stream = TcpStream::connect_timeout(&address, Duration::from_millis(500)).ok()?;
+    stream.set_read_timeout(Some(Duration::from_secs(15))).ok()?;
+    stream.set_write_timeout(Some(Duration::from_secs(2))).ok()?;
+    let request = format!("GET {path} HTTP/1.0\r\nHost: {ENGINE}\r\nX-StackPad-Control: {}\r\nConnection: close\r\n\r\n", token.trim());
+    stream.write_all(request.as_bytes()).ok()?;
+    let mut reply = String::new();
+    stream.read_to_string(&mut reply).ok()?;
+    let (headers, body) = reply.split_once("\r\n\r\n")?;
+    if !headers.starts_with("HTTP/1.1 200 ") { return None; }
+    serde_json::from_str(body).ok()
+}
+
+fn open_in_browser(url: &str) {
+    let _ = Command::new("explorer.exe").arg(url).creation_flags(0x08000000).spawn();
+}
+
+// The Tailscale address can be connected or changed in settings at any time, so the menu item follows the engine.
+fn refresh_tailnet(app: &AppHandle) {
+    let url = desktop_get("/api/desktop/info").and_then(|info| info["external_url"].as_str().map(str::to_string));
+    let state = app.state::<Updates>();
+    let label = match &url {
+        Some(url) => text(&format!("{url}/ 열기"), &format!("Open {url}/")),
+        None => text("Tailscale 주소 열기 (연결 전)", "Open Tailscale address (not connected)"),
+    };
+    let _ = state.tailnet.set_text(label);
+    let _ = state.tailnet.set_enabled(url.is_some());
+    *state.external.lock().unwrap() = url;
+}
+
 fn watch_usage(app: AppHandle) {
     thread::spawn(move || loop {
-        let data = (|| -> Option<Value> {
-            let token = fs::read_to_string(config_dir()?.join("control-token")).ok()?;
-            let address: SocketAddr = ENGINE.parse().ok()?;
-            let mut stream = TcpStream::connect_timeout(&address, Duration::from_millis(500)).ok()?;
-            stream.set_read_timeout(Some(Duration::from_secs(15))).ok()?;
-            stream.set_write_timeout(Some(Duration::from_secs(2))).ok()?;
-            let request = format!("GET /api/desktop/usage HTTP/1.0\r\nHost: {ENGINE}\r\nX-StackPad-Control: {}\r\nConnection: close\r\n\r\n", token.trim());
-            stream.write_all(request.as_bytes()).ok()?;
-            let mut reply = String::new();
-            stream.read_to_string(&mut reply).ok()?;
-            let (headers, body) = reply.split_once("\r\n\r\n")?;
-            if !headers.starts_with("HTTP/1.1 200 ") { return None; }
-            serde_json::from_str(body).ok()
-        })();
+        let data = desktop_get("/api/desktop/usage");
         *app.state::<Updates>().usage.lock().unwrap() = data.unwrap_or_else(|| json!({"error": true, "providers": []}));
         refresh_popup(&app);
+        refresh_tailnet(&app);
         thread::sleep(Duration::from_secs(60));
     });
 }
@@ -230,8 +252,7 @@ fn request_update_check(app: &AppHandle) {
         };
         if let Ok(Some(update)) = updater.check().await {
             let state = app.state::<Updates>();
-            let label = if portable() { text("새 버전 내려받기", "Download new version") } else { text("업데이트 설치", "Install update") };
-            let _ = state.item.set_text(format!("{label} (v{})", update.version));
+            let _ = state.item.set_text(text(&format!("업데이트 버전(v{})이 있습니다", update.version), &format!("Update available (v{})", update.version)));
             let _ = state.item.set_enabled(true);
             *state.pending.lock().unwrap() = Some(update);
             refresh_popup(&app);
@@ -259,7 +280,7 @@ async fn tokio_sleep(duration: Duration) {
 fn install_update(app: &AppHandle) {
     let Some(update) = app.state::<Updates>().pending.lock().unwrap().clone() else { return; };
     if portable() {
-        let _ = Command::new("explorer.exe").arg(RELEASES).creation_flags(0x08000000).spawn();
+        open_in_browser(RELEASES);
         return;
     }
     let app = app.clone();
@@ -400,19 +421,22 @@ fn main() {
                 }
                 _ => {}
             });
-            let open = MenuItem::with_id(app, "open", text("StackPad 열기", "Open StackPad"), true, None::<&str>)?;
-            let update = MenuItem::with_id(app, "update", text("최신 버전입니다", "Up to date"), false, None::<&str>)?;
-            let close = MenuItem::with_id(app, "close", text("앱 닫기 (엔진과 서비스 유지)", "Close app (keep engine and services)"), true, None::<&str>)?;
-            let quit = MenuItem::with_id(app, "quit", text("완전 종료 (서비스 유지)", "Quit StackPad (keep services)"), true, None::<&str>)?;
-            let quit_all = MenuItem::with_id(app, "quit-all", text("완전 종료 (서비스도 중지)", "Quit StackPad and stop services"), true, None::<&str>)?;
-            let separator = PredefinedMenuItem::separator(app)?;
-            let menu = Menu::with_items(app, &[&open, &update, &separator, &close, &quit, &quit_all])?;
-            app.manage(Updates { item: update, pending: Mutex::new(None), usage: Mutex::new(Value::Null), last_check: Mutex::new(None), checking: AtomicBool::new(false) });
+            let version = app.package_info().version.to_string();
+            let update = MenuItem::with_id(app, "update", text(&format!("최신 버전(v{version})입니다"), &format!("Up to date (v{version})")), false, None::<&str>)?;
+            let local = MenuItem::with_id(app, "local", text(&format!("http://{ENGINE}/ 열기"), &format!("Open http://{ENGINE}/")), true, None::<&str>)?;
+            let tailnet = MenuItem::with_id(app, "tailnet", text("Tailscale 주소 열기 (연결 전)", "Open Tailscale address (not connected)"), false, None::<&str>)?;
+            let close = MenuItem::with_id(app, "close", text("앱 닫기 (엔진/서비스 유지)", "Close app (keep engine and services)"), true, None::<&str>)?;
+            let quit = MenuItem::with_id(app, "quit", text("앱/엔진 닫기 (서비스 유지)", "Close app and engine (keep services)"), true, None::<&str>)?;
+            let quit_all = MenuItem::with_id(app, "quit-all", text("완전 종료", "Quit completely"), true, None::<&str>)?;
+            let (links, exits) = (PredefinedMenuItem::separator(app)?, PredefinedMenuItem::separator(app)?);
+            let menu = Menu::with_items(app, &[&update, &links, &local, &tailnet, &exits, &close, &quit, &quit_all])?;
+            app.manage(Updates { item: update, tailnet, external: Mutex::new(None), pending: Mutex::new(None), usage: Mutex::new(Value::Null), last_check: Mutex::new(None), checking: AtomicBool::new(false) });
             tray_usage::init(app.handle())?;
             TrayIconBuilder::with_id("main").icon(app.default_window_icon().unwrap().clone()).menu(&menu).show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
-                    "open" => show(app),
                     "update" => install_update(app),
+                    "local" => open_in_browser(&format!("http://{ENGINE}/")),
+                    "tailnet" => if let Some(url) = app.state::<Updates>().external.lock().unwrap().clone() { open_in_browser(&format!("{url}/")); },
                     "close" => app.exit(0),
                     "quit" | "quit-all" => {
                         let stop_services = event.id.as_ref() == "quit-all";
@@ -433,6 +457,8 @@ fn main() {
                     }
                     TrayIconEvent::Click { .. } => {
                         request_update_check(tray.app_handle());
+                        let app = tray.app_handle().clone();
+                        thread::spawn(move || refresh_tailnet(&app));
                         tray_usage::dismiss(tray.app_handle());
                     }
                     _ => {}

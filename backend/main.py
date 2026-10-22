@@ -390,11 +390,19 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
         enabled = engine.config.get('usage_providers', [])
         return {'providers': collect_usage(refresh=refresh == 1, enabled=enabled), 'enabled': enabled}
 
-    @app.get('/api/desktop/usage', dependencies=[Depends(local_only)])
-    def desktop_usage(request: Request):
+    def desktop_control(request: Request):
+        """Only StackPad.exe on this PC holds the control token."""
         if not control_token or not secrets.compare_digest(request.headers.get('x-stackpad-control', ''), control_token):
             raise HTTPException(403, 'StackPad가 실행 중인 PC에서 설정해 주세요.')
+
+    @app.get('/api/desktop/usage', dependencies=[Depends(local_only), Depends(desktop_control)])
+    def desktop_usage():
         return usage()
+
+    # The tray menu offers the Tailscale address once one is connected.
+    @app.get('/api/desktop/info', dependencies=[Depends(local_only), Depends(desktop_control)])
+    def desktop_info():
+        return {'external_url': google.external_url}
 
     class CliCommand(BaseModel):
         args: list[str] = Field(max_length=64)
@@ -402,10 +410,8 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
         stdin: str = Field(default='', max_length=1_000_000)
 
     # StackPad.exe forwards its command line here with the same token the tray uses.
-    @app.post('/api/cli', dependencies=[Depends(local_only)])
+    @app.post('/api/cli', dependencies=[Depends(local_only), Depends(desktop_control)])
     def command_line(values: CliCommand, request: Request):
-        if not control_token or not secrets.compare_digest(request.headers.get('x-stackpad-control', ''), control_token):
-            raise HTTPException(403, 'StackPad가 실행 중인 PC에서 설정해 주세요.')
         code, output, error = cli.run(engine, values.args, values.cwd, values.stdin, request_lang(request.headers), VERSION)
         return {'exit_code': code, 'output': output, 'error': error}
 
