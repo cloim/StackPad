@@ -54,6 +54,7 @@ button:focus-visible,a:focus-visible{outline-color:#658472}
 .app-shell .pad-footer{position:absolute;left:6px;right:6px;bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0}
 .app-shell .pad-footer .pad-state,.app-shell .pad-environment{display:inline-flex;align-items:center;line-height:1.4}
 .app-shell .pad-environment{justify-content:center;flex-shrink:0;padding:2px 2px 1px;border:0;border-radius:3px;background:#a5a5a0;color:#eeeadd;font-size:8px;font-weight:400;pointer-events:none}
+.app-shell .pad-environment.production{background:#c5dfc3;color:#355a3b}
 .app-shell .pad-footer .pad-state{min-width:0;margin:0;padding:0;overflow:hidden}
 .app-shell .pad-state,.app-shell .pad.running .pad-state{color:#75816e}
 .app-shell .pad-state>span{display:block;line-height:1.4;transform:translateY(2px)}

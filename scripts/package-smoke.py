@@ -94,6 +94,13 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                 break
             time.sleep(0.3)
         assert pads[0]['status'] == 'running', pads
+        before = json.loads(cli('pad', 'show', '명령줄 검증', program=console)[1])
+        code, out, err = cli('pad', 'update', '명령줄 검증', '--environment', 'production', program=console)
+        assert code == 0, (code, out, err)
+        after = json.loads(cli('pad', 'show', '명령줄 검증', program=console)[1])
+        assert after['environment'] == after['input']['environment'] == 'production', after
+        assert after['components'][0]['pid'] == before['components'][0]['pid'], (before, after)
+        assert after['status'] == 'running', after
         assert cli('pad', 'delete', '명령줄 검증')[0] == 1
         assert cli('pad', 'stop', '명령줄 검증')[0] == 0
         assert cli('pad', 'update', '명령줄 검증', '--json', '-', stdin=json.dumps({'color': '#3b82f6'}))[0] == 0

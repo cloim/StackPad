@@ -71,6 +71,8 @@ try {
   await page.getByRole('tab', { name: '이동 대상', exact: true }).click();
   const wrap = page.locator('.pad-wrap').filter({ has: page.getByRole('button', { name: '실행 중 마지막 패드 메뉴', exact: true }) });
   await expect(wrap.locator('.pad-environment')).toHaveText('PRD');
+  await expect(wrap.locator('.pad-environment')).toHaveCSS('background-color', 'rgb(197, 223, 195)');
+  await expect(wrap.locator('.pad-environment')).toHaveCSS('color', 'rgb(53, 90, 59)');
   await fs.mkdir('.jobs/live-settings-ui', { recursive: true });
   await page.screenshot({ path: '.jobs/live-settings-ui/desktop.png' });
   await page.addInitScript(() => { window.open = url => { window.lastOpenedUrl = url; }; });
@@ -112,6 +114,10 @@ try {
   await page.getByRole('menuitem', { name: '브라우저에서 열기', exact: true }).click();
   expect(await page.evaluate(() => window.lastOpenedUrl)).toBe('http://localhost:8080/');
   await request(`/services/${running.id}/stop`);
+  await page.goto(`${base}/settings`);
+  await expect(page.getByRole('heading', { name: '환경 설정', exact: true })).toBeVisible();
+  await expect(page.getByRole('switch', { name: /피드백/ })).toHaveCount(0);
+  await expect(page.getByText('이 기기의 피드백', { exact: true })).toHaveCount(0);
   expect(errors).toEqual([]);
   console.log('PASS: last single/group/running pad moves, occupied slots skipped, runtime preserved, live metadata editable, DEV/PRD badges and environment-specific browser menu verified on desktop/mobile, no detail modal, persisted after reload');
 } finally {

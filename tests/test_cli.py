@@ -50,6 +50,21 @@ class CommandLineApiTests(unittest.TestCase):
         self.assertIn('stackpad-cli help', wrong['error'])
         self.assertTrue(self.call('pad', 'fly', lang='en')['error'].startswith('Check the command:'))
 
+    def test_environment_option_preserves_other_settings(self):
+        pad = self.ok('pad', 'add', '--name', 'API', '--command', 'uv run main.py', '--environment', 'production')['pad']
+        self.assertEqual(pad['environment'], 'production')
+        renamed = self.ok('pad', 'update', pad['id'], '--name', 'Backend')['pad']
+        self.assertEqual(renamed['environment'], 'production')
+        changed = self.ok('pad', 'update', pad['id'], '--environment', 'development')['pad']
+        self.assertEqual(changed['environment'], 'development')
+        shown = self.ok('pad', 'show', pad['id'])
+        self.assertEqual(shown['input']['environment'], 'development')
+        self.assertEqual(shown['components'][0]['command'], 'uv run main.py')
+        self.assertEqual(self.call('pad', 'update', pad['id'], '--environment', 'staging')['exit_code'], 2)
+        self.assertEqual(self.ok('pad', 'show', pad['id'])['environment'], 'development')
+        for lang in ('ko', 'en'):
+            self.assertIn('--environment development|production', self.call('help', 'pad', lang=lang)['output'])
+
     def test_padsets(self):
         added = self.ok('padset', 'add', '업무')
         lab = self.ok('padset', 'add', 'Lab')

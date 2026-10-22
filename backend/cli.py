@@ -79,6 +79,7 @@ PAD_HELP = '''pad add, pad update 옵션
   --name N                  패드 이름 (add에서 필수)
   --padset P                패드셋, 기본값은 첫 패드셋
   --slot S                  0~15, 왼쪽 위부터 행 순서. 기본값은 첫 빈 슬롯
+  --environment development|production  개발용(add 기본값) 또는 운영용
   --color C                 패드 색상
   --autostart / --no-autostart       Windows 시작 시 실행
   --wait-ready / --no-wait-ready     그룹 시작 때 구성마다 준비 확인
@@ -153,6 +154,7 @@ def parser():
         command.add_argument('--padset')
         command.add_argument('--slot', type=int)
         command.add_argument('--color')
+        command.add_argument('--environment', choices=['development', 'production'])
         command.add_argument('--autostart', action=argparse.BooleanOptionalAction)
         command.add_argument('--wait-ready', action=argparse.BooleanOptionalAction)
         command.add_argument('--domain-url')
@@ -341,7 +343,7 @@ def pad_body(engine, args, context, base=None):
         body['slot'] = args.slot
     if args.color is not None:
         body['color'] = color(args.color)
-    for key in ('autostart', 'wait_ready', 'domain_url', 'local_url'):
+    for key in ('autostart', 'wait_ready', 'domain_url', 'local_url', 'environment'):
         if getattr(args, key) is not None:
             body[key] = getattr(args, key)
     local = {key: getattr(args, key) for key in ('command', 'cwd', 'port', 'health_url', 'restart_policy', 'restart_max') if getattr(args, key) is not None}

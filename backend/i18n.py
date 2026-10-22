@@ -319,6 +319,7 @@ Exit codes: 0 success, 1 failed, 2 wrong command, 3 engine not reachable''',
   --name N                  Pad name (required for add)
   --padset P                Pad set; the first pad set by default
   --slot S                  0 to 15, row by row from the top left. The first free slot by default
+  --environment development|production  Development (add default) or production
   --color C                 Pad color
   --autostart / --no-autostart       Start with Windows
   --wait-ready / --no-wait-ready     Wait for each component to be ready when a group starts
