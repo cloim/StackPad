@@ -26,6 +26,8 @@ document.documentElement.classList.toggle('native-app', isNative);
 
 if (import.meta.env.PROD && window.isSecureContext && 'serviceWorker' in navigator && !window.__TAURI_INTERNALS__ && !isNative) {
   window.addEventListener('load', () => {
+    // 새 서비스 워커가 기존 워커를 대신하면 열린 화면도 새 버전으로 다시 불러온다. 첫 설치 때는 다시 불러오지 않는다.
+    if (navigator.serviceWorker.controller) navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload(), { once: true });
     navigator.serviceWorker.register('/sw.js').catch(error => console.warn(t('PWA 등록을 다시 확인해 주세요.'), error));
   });
 }

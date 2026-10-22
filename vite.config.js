@@ -9,7 +9,7 @@ export default defineConfig({
   plugins: [react(), VitePWA({
     useCredentials: true,
     injectRegister: false,
-    registerType: 'prompt',
+    registerType: 'autoUpdate',
     includeAssets: ['apple-touch-icon.png'],
     manifest: {
       id: '/',
@@ -33,6 +33,9 @@ export default defineConfig({
       navigateFallback: '/index.html',
       navigateFallbackDenylist: [/^\/api(?:\/|$)/, /^\/tray-usage\.html$/],
       cleanupOutdatedCaches: true,
+      // 등록 코드를 직접 넣으므로 autoUpdate만으로는 대기 중인 새 워커가 켜지지 않는다.
+      skipWaiting: true,
+      clientsClaim: true,
       // Only public build assets are cached; authenticated API traffic stays on the network.
       runtimeCaching: [],
     },
