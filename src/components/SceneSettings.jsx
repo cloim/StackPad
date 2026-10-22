@@ -63,7 +63,7 @@ export function SceneSettings({ scenes = [], schedules = [], services = [], grou
       }
       await refresh();
       setSceneModal(null);
-      onNotice(t('장면을 저장했습니다.'));
+      onNotice(t('흐름을 저장했습니다.'));
     } catch (e) {
       onError(e.message);
     } finally {
@@ -72,12 +72,12 @@ export function SceneSettings({ scenes = [], schedules = [], services = [], grou
   }
 
   async function deleteScene(scene) {
-    if (!confirm(t("'{0}' 장면을 삭제할까요?", scene.name))) return;
+    if (!confirm(t("'{0}' 흐름을 삭제할까요?", scene.name))) return;
     setBusy(true);
     try {
       await api(`/scenes/${scene.id}`, { method: 'DELETE' });
       await refresh();
-      onNotice(t('장면을 삭제했습니다.'));
+      onNotice(t('흐름을 삭제했습니다.'));
     } catch (e) {
       onError(e.message);
     } finally {
@@ -138,18 +138,18 @@ export function SceneSettings({ scenes = [], schedules = [], services = [], grou
           <div className="section-heading">
             <Film size={22} />
             <div>
-              <h2>{t('장면 관리')}</h2>
-              <p>{t('여러 패드를 지정한 순서대로 실행하거나 역순으로 정지하는 장면을 구성합니다.')}</p>
+              <h2>{t('흐름 관리')}</h2>
+              <p>{t('여러 패드를 지정한 순서대로 실행하거나 역순으로 정지하는 흐름을 구성합니다.')}</p>
             </div>
           </div>
           <button className="secondary" disabled={busy} onClick={() => setSceneModal({ name: '', color: colors[0] || '#10b981', pad_ids: [] })}>
-            <Plus size={15} />{t('장면 추가')}
+            <Plus size={15} />{t('흐름 추가')}
           </button>
         </div>
 
         <div className="scene-list">
           {scenes.length === 0 ? (
-            <p className="optional empty-hint">{t('등록된 장면이 없습니다. 새 장면을 추가해 보세요.')}</p>
+            <p className="optional empty-hint">{t('등록된 흐름이 없습니다. 새 흐름을 추가해 보세요.')}</p>
           ) : (
             scenes.map(scene => {
               const scenePadNames = (scene.pad_ids || []).map(id => padMap.get(id)?.name || id).join(', ');
@@ -166,7 +166,7 @@ export function SceneSettings({ scenes = [], schedules = [], services = [], grou
                     <button className="secondary small-btn" disabled={busy} onClick={() => setSceneModal({ ...scene, pad_ids: [...(scene.pad_ids || [])] })}>
                       {t('편집')}
                     </button>
-                    <button className="delete-button" disabled={busy} aria-label={t('{0} 장면 삭제', scene.name)} onClick={() => deleteScene(scene)}>
+                    <button className="delete-button" disabled={busy} aria-label={t('{0} 흐름 삭제', scene.name)} onClick={() => deleteScene(scene)}>
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -184,7 +184,7 @@ export function SceneSettings({ scenes = [], schedules = [], services = [], grou
             <Calendar size={22} />
             <div>
               <h2>{t('예약 관리')}</h2>
-              <p>{t('지정한 시각과 요일에 장면이나 패드를 자동으로 시작하거나 정지합니다.')}</p>
+              <p>{t('지정한 시각과 요일에 흐름이나 패드를 자동으로 시작하거나 정지합니다.')}</p>
             </div>
           </div>
           <button className="secondary" disabled={busy || (scenes.length === 0 && allPads.length === 0)} onClick={() => setScheduleModal({
@@ -219,7 +219,7 @@ export function SceneSettings({ scenes = [], schedules = [], services = [], grou
                   <div className="schedule-info">
                     <div className="schedule-target">
                       <span className={`schedule-badge ${sch.target_type}`}>
-                        {sch.target_type === 'scene' ? t('장면') : t('패드')}
+                        {sch.target_type === 'scene' ? t('흐름') : t('패드')}
                       </span>
                       <strong>{targetName}</strong>
                       <span className={`schedule-action ${sch.action}`}>
@@ -330,15 +330,15 @@ function SceneEditModal({ scene, allPads, colors, colorNames, busy, onClose, onS
   }
 
   return (
-    <Modal isOpen onClose={onClose} title={scene.id ? t('장면 편집') : t('장면 추가')} size="md">
+    <Modal isOpen onClose={onClose} title={scene.id ? t('흐름 편집') : t('흐름 추가')} size="md">
       <form onSubmit={handleSubmit} className="scene-form">
         <label>
-          <span>{t('장면 이름')}</span>
+          <span>{t('흐름 이름')}</span>
           <input required maxLength={40} value={name} onChange={e => setName(e.target.value)} placeholder={t('예: 아침 출근')} autoFocus />
         </label>
 
         <fieldset className="color-field">
-          <legend>{t('장면 색상')}</legend>
+          <legend>{t('흐름 색상')}</legend>
           <div className="colors">
             {colors.map((c, i) => (
               <button
@@ -463,7 +463,7 @@ function ScheduleEditModal({ schedule, scenes, allPads, busy, onClose, onSave })
               setTargetId(nextType === 'scene' ? scenes[0]?.id || '' : allPads[0]?.id || '');
             }}
           >
-            {scenes.length > 0 && <option value="scene">{t('장면')}</option>}
+            {scenes.length > 0 && <option value="scene">{t('흐름')}</option>}
             <option value="pad">{t('패드')}</option>
           </SelectControl>
         </label>

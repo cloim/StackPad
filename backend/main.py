@@ -41,7 +41,7 @@ from i18n import request_lang, translate, translate_payload
 
 
 # Keep in step with package.json; tests/test_version.py checks it.
-VERSION = '1.1.9'
+VERSION = '1.1.10'
 
 
 def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_token=None):
@@ -629,6 +629,15 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
     @app.delete('/api/pads/{pad_id}', dependencies=[Depends(authenticated)])
     def delete_pad(pad_id: str):
         engine.delete_pad(pad_id)
+        return {'ok': True}
+
+    class PadColor(BaseModel):
+        model_config = {'extra': 'forbid'}
+        color: str
+
+    @app.put('/api/pads/{pad_id}/color', dependencies=[Depends(authenticated)])
+    def update_pad_color(pad_id: str, values: PadColor):
+        engine.set_pad_color(pad_id, values.color)
         return {'ok': True}
 
     class PadMove(BaseModel):

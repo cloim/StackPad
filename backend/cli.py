@@ -38,13 +38,13 @@ HELP = '''StackPad 명령줄
   pad restart <패드>
   pad logs <패드> [--component C]
 
-  scene list                 장면 목록
-  scene show <장면>          장면 상세
-  scene add [옵션]           장면 추가 (--name, --pads, --color)
-  scene update <장면> [옵션] 장면 수정
-  scene delete <장면>        장면 삭제
-  scene start <장면>         장면 순차 시작
-  scene stop <장면>          장면 역순 정지
+  scene list                 흐름 목록
+  scene show <흐름>          흐름 상세
+  scene add [옵션]           흐름 추가 (--name, --pads, --color)
+  scene update <흐름> [옵션] 흐름 수정
+  scene delete <흐름>        흐름 삭제
+  scene start <흐름>         흐름 순차 시작
+  scene stop <흐름>          흐름 역순 정지
 
   schedule list              예약 목록
   schedule add [옵션]        예약 추가 (--scene/--pad, --action, --time, --days)
@@ -52,19 +52,19 @@ HELP = '''StackPad 명령줄
   schedule enable <예약ID>   예약 활성화
   schedule disable <예약ID>  예약 비활성화
 
-패드와 패드셋, 장면은 ID 또는 이름(대소문자 무시)으로 지정합니다.
+패드와 패드셋, 흐름은 ID 또는 이름(대소문자 무시)으로 지정합니다.
 결과는 JSON으로 출력하며 pad logs와 help만 텍스트입니다.
 종료 코드: 0 성공, 1 실행 오류, 2 명령 형식 오류, 3 엔진 연결 실패'''
 
 SCENE_HELP = '''scene 명령어
 
   scene list
-  scene show <장면>
+  scene show <흐름>
   scene add --name N [--pads P1,P2] [--color C]
-  scene update <장면> [--name N] [--pads P1,P2] [--color C]
-  scene delete <장면>
-  scene start <장면>
-  scene stop <장면>'''
+  scene update <흐름> [--name N] [--pads P1,P2] [--color C]
+  scene delete <흐름>
+  scene start <흐름>
+  scene stop <흐름>'''
 
 SCHEDULE_HELP = '''schedule 명령어
 
@@ -472,7 +472,7 @@ def find_scene(engine, ref):
     scenes = engine.get_scenes()
     found = [s for s in scenes if s['id'] == ref] or [s for s in scenes if s['name'].casefold() == ref.strip().casefold()]
     if not found:
-        raise KeyError(f'장면을 찾을 수 없습니다: {ref}')
+        raise KeyError(f'흐름을 찾을 수 없습니다: {ref}')
     return found[0]
 
 
@@ -510,7 +510,7 @@ def run_scene(engine, args, context):
         return engine.get_scenes()
     if args.action == 'add':
         if not args.name:
-            raise ValueError('장면 이름을 지정해 주세요: --name')
+            raise ValueError('흐름 이름을 지정해 주세요: --name')
         pads = []
         if args.pads:
             for p in args.pads.split(','):

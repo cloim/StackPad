@@ -17,8 +17,9 @@ await page.route('http://stackpad.test/**', async route => {
     let body;
     if (url.pathname === '/api/auth') body = { configured: true, authenticated: true, local: true };
     else if (url.pathname === '/api/usage') body = { enabled: ['0','1','2'], providers };
-    else if (url.pathname === '/api/services') body = { services, groups: [], padsets: [{ id:'default',name:'기본' }], links: {} };
-    else if (url.pathname === '/api/settings') body = { onboarding_done:true, recommend_roots:['C:/example'],autostart:false,data_dir:'C:/example',notifications:{ crash:true,unhealthy:true,schedule:true } };
+    else if (url.pathname === '/api/services') body = { services, groups: [], padsets: [{ id:'default',name:'기본' }], scenes:[{id:'flow',name:'개발 환경',color:'#97f7da',pad_ids:['0','1']}], schedules:[], links: {} };
+    else if (url.pathname === '/api/settings') body = { onboarding_done:true, recommend_roots:['C:/example'],recommend_hidden:[{key:'fixture',name:'개발 서버',command:'npm run dev',cwd:'C:/example'}],autostart:false,data_dir:'C:/example',notifications:{ crash:true,unhealthy:true,schedule:true } };
+    else if (url.pathname === '/api/recommendations') body = {roots:['C:/example'],candidates:[{key:'fixture',name:'개발 서버',cwd:'C:/example',command:'npm run dev',ports:[5173],pid:12345}],hidden:[]};
     else if (url.pathname === '/api/events') { await route.fulfill({status:503,body:'fixture'}); return; }
     else if (url.pathname.endsWith('/history')) body = { interval:10,cpu:[],memory:[] };
     else if (url.pathname.endsWith('/logs')) body = { text:'서비스 실행 로그' };
@@ -59,6 +60,7 @@ try {
   const sizes=[];
   for(const [width,height] of [[1440,1000],[1280,930],[760,1024],[650,700],[390,844],[320,740],[900,500]]) {
     await page.setViewportSize({width,height});
+    await expect(page.locator('.toolbar-brand')).toHaveCSS('font-weight',width<=650?'900':'700');
     const layout=await page.evaluate(()=>{const main=document.querySelector('.app-shell>main');const grid=document.querySelector('.pads');return{overflow:document.documentElement.scrollWidth>innerWidth||main.scrollHeight>main.clientHeight+1,columns:getComputedStyle(grid).gridTemplateColumns.split(' ').length,rows:getComputedStyle(grid).gridTemplateRows.split(' ').length,pads:[...document.querySelectorAll('.pad')].every(el=>{const a=el.getBoundingClientRect(),b=grid.getBoundingClientRect(),state=el.querySelector('.pad-state')?.getBoundingClientRect();return a.bottom<=b.bottom+1&&(!state||state.bottom<=a.bottom+1);})};});
     expect(layout,`${width}x${height}`).toEqual({overflow:false,columns:4,rows:4,pads:true});
     const usage=await page.locator('.usage-bar').evaluate(el=>({html:el.outerHTML,width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height}));
@@ -78,9 +80,25 @@ try {
       await page.getByRole('button',{name:'환경 설정',exact:true}).click();
       await expect(page.getByRole('dialog')).toHaveCSS('background-color','rgb(239, 238, 229)');
       await page.screenshot({path:`.jobs/cream-settings-${width}.png`});
+      await page.getByRole('tab',{name:'흐름 및 예약',exact:true}).click();
+      await expect(page.getByRole('heading',{name:'흐름 관리',exact:true})).toBeVisible();
+      await expect(page.locator('.scene-item')).toHaveCSS('border-color','rgb(212, 217, 204)');
+      await page.screenshot({path:`.jobs/cream-flows-${width}.png`});
+      await page.getByRole('tab',{name:'등록 추천',exact:true}).click();
+      await expect(page.locator('.hidden-recommendations h3')).toHaveCSS('color','rgb(70, 82, 62)');
+      await expect(page.locator('.hidden-recommendations .component-row')).toHaveCSS('border-color','rgb(212, 217, 204)');
+      await page.getByRole('tab',{name:'패드셋',exact:true}).click();
+      await expect(page.locator('.padset-grip').first()).toHaveCSS('border-width','0px');
+      await expect(page.locator('.padset-grip').first()).toHaveCSS('box-shadow','none');
       await page.keyboard.press('Escape');
       await page.getByRole('button',{name:'패드 7 서비스 등록',exact:true}).click();
       await expect(page.getByRole('dialog')).toHaveCSS('background-color','rgb(239, 238, 229)');
+      await expect(page.locator('.color-field legend')).toHaveCSS('color','rgb(78, 89, 71)');
+      await page.keyboard.press('Escape');
+      await page.getByRole('button',{name:'등록 추천',exact:true}).click();
+      await expect(page.locator('.recommend-head p')).toHaveCSS('color','rgb(88, 102, 79)');
+      await expect(page.locator('.recommendations code').first()).toHaveCSS('color','rgb(78, 99, 75)');
+      await page.screenshot({path:`.jobs/cream-recommendations-${width}.png`});
       await page.keyboard.press('Escape');
     }
   }

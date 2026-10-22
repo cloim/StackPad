@@ -74,6 +74,7 @@ button:focus-visible,a:focus-visible{outline-color:#658472}
 input,textarea,.select-control select{color:#444e40;background:#f9f7ee;border-color:#c1c7b5}
 input:focus,textarea:focus,.select-control select:focus-visible{border-color:#7c9a83;outline-color:#8caa8a66}
 label{color:#4e5947}
+.color-field legend{color:#4e5947}
 label small,.optional{color:#77816e}
 .primary,.secondary,.danger{border-radius:4px}
 .primary{background:#859a7b;border-color:#768e6b;color:#fffdf4;box-shadow:inset 0 1px 0 #b6c7a7}
@@ -82,8 +83,14 @@ label small,.optional{color:#77816e}
 .secondary:hover{background:#e0e5d6}
 .danger{background:#ad6f73;border-color:#aa636a;color:#fff9f3}
 .settings-card,.registration-service,.component-row,.group-list-row,.group-members,.usage-switch{background:#e7e9de;border-color:#c1c8b6;color:#4d5944}
+.settings-card :is(.settings-card,.component-row,.group-list-row,.group-members,.usage-switch,.scene-item,.schedule-item,.path-code){border-color:#d4d9cc}
+.padset-settings .padset-grip,.padset-settings .padset-grip:hover,.padset-settings .padset-grip:active{border:0;background:transparent;box-shadow:none}
 .settings-card h2,.setup-steps h2{color:#46523e}
 .settings-card p,.component-row p,.group-list-row p{color:#77816e}
+.recommend-head p{color:#58664f}
+.recommendations code,.hidden-recommendations code{color:#4e634b}
+.hidden-recommendations{border-color:#c7cbbd}
+.hidden-recommendations h3{color:#46523e}
 .settings-icon{background:#d8dfce;color:#718567}
 .switch{background:#c7ccbe;border-color:#b9c2ad}
 .switch.on{background:#8da57e;border-color:#829c72}
@@ -113,12 +120,15 @@ label small,.optional{color:#77816e}
 .pad-error-badge{color:#9d4852;background:#efdedd;border-color:#d7aaad}
 .pad-schedules-summary .summary-title{color:#59774c}.day-chip.active{background:#829b73;border-color:#829b73;color:#fffdf3}
 :root .tray-usage{background:#efeee5;border-color:#c2c7b6;color:#444740}
+:root .tray-usage h1{font-weight:700;color:#555c51}
+:root .tray-usage .usage-bar{padding:0 12px}
 :root .tray-usage .usage-track{background:#cbd3c3}
 :root .tray-usage .usage-track:after{content:none}
-:root .tray-usage .usage-segments>b{border-right-color:#efeee5}
+:root .tray-usage .usage-segments>b{border-right-color:#fff}
+.native-app .toolbar-brand{font-family:'Arial Black','sans-serif-black',sans-serif;font-weight:900;font-synthesis:weight;-webkit-text-stroke:.25px currentColor}
 @media(max-width:650px){
  .app-shell{padding:10px}.app-shell>.toolbar{height:52px;padding:0 3px;gap:10px}
- .toolbar-brand{font-size:22px}.toolbar-actions{gap:6px}.tool-button{width:34px;height:34px}
+ .toolbar-brand{font-family:'Arial Black','sans-serif-black',sans-serif;font-size:22px;font-weight:900;font-synthesis:weight;-webkit-text-stroke:.25px currentColor}.toolbar-actions{gap:6px}.tool-button{width:34px;height:34px}
  .app-shell .pad-deck{gap:8px}.app-shell .pads{padding:8px;gap:8px}
  .app-shell .usage-bar{padding-left:10px;padding-right:10px}
  .app-shell .pad-move{font-size:12px}.padset-bar-row>.category-tabs{gap:7px;padding:2px}

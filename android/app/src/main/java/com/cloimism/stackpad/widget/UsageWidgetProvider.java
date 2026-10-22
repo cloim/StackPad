@@ -6,7 +6,9 @@ import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.ColorStateList;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.SizeF;
@@ -28,7 +30,8 @@ public class UsageWidgetProvider extends AppWidgetProvider {
     private static final int ROWS = 4;
     /** Below this height (dp) the 4x1 layout is used; two rows and more get the detailed layout. */
     private static final int DETAILED_HEIGHT = 120;
-    private static final int GREEN = 0xFF75D9A5, ORANGE = 0xFFEFA668, RED = 0xFFF2A0A7;
+    private static final int GREEN = 0xFF779D82, ORANGE = 0xFFAC865E, RED = 0xFFAC676C;
+    private static final int[] PROVIDER_COLORS = {GREEN, 0xFF789CAE, 0xFFB28E6F, GREEN};
     /** A spinner older than this belongs to a refresh whose process was killed, so it is hidden. */
     private static final long SPINNER_LIMIT = 90000;
     private static final ExecutorService TAPS = Executors.newSingleThreadExecutor();
@@ -149,17 +152,34 @@ public class UsageWidgetProvider extends AppWidgetProvider {
             String suffix = "_" + row + "_" + column;
             views.setViewVisibility(id(context, prefix + "window" + suffix), window == null ? (ok ? View.INVISIBLE : View.GONE) : View.VISIBLE);
             if (window == null) continue;
-            int percent = (int) Math.round(Math.max(0, Math.min(100, window.optDouble("used_percent", 0))));
-            int color = percent >= 90 ? RED : percent >= 70 ? ORANGE : GREEN;
+            double used = Math.max(0, Math.min(100, window.optDouble("used_percent", 0)));
+            int percent = (int) Math.round(used);
+            int color = used >= 90 ? RED : used >= 70 ? ORANGE : PROVIDER_COLORS[row];
             views.setTextViewText(id(context, prefix + "label" + suffix), window.optString("label"));
-            views.setProgressBar(id(context, prefix + "bar" + suffix), 100, percent, false);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                views.setColorStateList(id(context, prefix + "bar" + suffix), "setProgressTintList", ColorStateList.valueOf(color));
-            }
+            int segments = "five_hour".equals(window.optString("key")) ? 5 : "weekly".equals(window.optString("key")) ? 7 : 1;
+            views.setImageViewBitmap(id(context, prefix + "bar" + suffix), gauge(used, color, segments));
+            views.setContentDescription(id(context, prefix + "bar" + suffix), name + " " + window.optString("label") + " " + percent + "%");
             views.setTextViewText(id(context, prefix + "percent" + suffix), percent + "%");
             views.setTextColor(id(context, prefix + "percent" + suffix), color);
             views.setTextViewText(id(context, prefix + "reset" + suffix), remaining(window.isNull("resets_at") ? null : window.optString("resets_at")));
         }
+    }
+
+    /** RemoteViews only supports framework views, so draw the small segmented gauge into an ImageView. */
+    static Bitmap gauge(double percent, int color, int segments) {
+        Bitmap bitmap = Bitmap.createBitmap(280, 12, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        Paint paint = new Paint();
+        paint.setColor(0xFFCBD3C3);
+        canvas.drawRect(0, 0, 280, 12, paint);
+        paint.setColor(color);
+        canvas.drawRect(0, 0, (float) (280 * percent / 100), 12, paint);
+        paint.setColor(0xFFFFFFFF);
+        for (int i = 1; i < segments; i++) {
+            float x = 280f * i / segments;
+            canvas.drawRect(x - 1, 0, x + 1, 12, paint);
+        }
+        return bitmap;
     }
 
     /** Same short format as the web usage bar: 6d 9h, 2h 13m, 45m. */

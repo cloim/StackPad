@@ -247,6 +247,23 @@ class GroupManager:
                 self.forget_remote(sid)
             return result_id
 
+    def set_pad_color(self, pad_id, color):
+        if color not in PAD_COLORS:
+            raise ValueError('제공된 패드 색상을 선택해 주세요.')
+        with self.lock:
+            group = next((g for g in self.config.get('groups', []) if g['id'] == pad_id), None)
+            members = [self.service(sid) for sid in group['member_ids']] if group else [self.service(pad_id)]
+            previous = copy.deepcopy(self.config)
+            try:
+                for service in members:
+                    service['color'] = color
+                if group:
+                    group['color'] = color
+                self.save()
+            except Exception:
+                self.config = previous
+                raise
+
     def move_pad(self, pad_id, slot, padset_id=None):
         with self.lock:
             group = next((g for g in self.config.get('groups', []) if g['id'] == pad_id), None)

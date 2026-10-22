@@ -26,6 +26,12 @@ try {
       await page.evaluate(data => { window.__STACKPAD_USAGE__ = data; window.dispatchEvent(new Event('stackpad-usage')); }, data);
     }
     await update(snapshot);
+    await expect(page.getByRole('heading', { name: 'StackPad', exact: true })).toBeVisible();
+    expect(await page.title()).toBe('StackPad');
+    const inset = await page.locator('.usage-bar').evaluate(el => el.querySelector('strong').getBoundingClientRect().left - el.getBoundingClientRect().left);
+    expect(inset).toBe(12);
+    await expect(page.locator('[data-window="weekly"] .usage-segments>b').first()).toHaveCSS('border-right-color','rgb(255, 255, 255)');
+    expect(await page.locator('[data-window="weekly"]').first().evaluate(el => getComputedStyle(el,'::after').content)).toBe('none');
     await expect(page.getByRole('progressbar')).toHaveCount(8);
     await expect(page.locator('[data-window="five_hour"] .usage-segments>b')).toHaveCount(20);
     await expect(page.locator('[data-window="weekly"] .usage-segments>b')).toHaveCount(28);

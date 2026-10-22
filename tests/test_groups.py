@@ -51,6 +51,32 @@ class GroupTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ServiceInput(name='Color', command='echo test', cwd=self.folder.name, slot=5, color='#123456')
 
+    def test_running_pad_recolor_preserves_runtime_and_commands(self):
+        import copy
+        self.active.update(self.ids)
+        self.engine.service(self.ids[0])['runtime'] = {'pid': 12345, 'created': 1.0}
+        before = copy.deepcopy(self.engine.config)
+        self.engine.set_pad_color(self.group_id, '#a855f7')
+        self.engine.set_pad_color(self.ids[2], '#3b82f6')
+        for service in self.engine.config['services']:
+            old = next(s for s in before['services'] if s['id'] == service['id'])
+            self.assertEqual({k:v for k,v in service.items() if k != 'color'}, {k:v for k,v in old.items() if k != 'color'})
+        self.assertEqual(self.engine.group(self.group_id)['color'], '#a855f7')
+        self.assertEqual([self.engine.service(sid)['color'] for sid in self.ids], ['#a855f7','#a855f7','#3b82f6'])
+        self.assertEqual(self.active, set(self.ids))
+        self.assertEqual(self.actions, [])
+        self.assertEqual(Engine(self.folder.name).group(self.group_id)['color'], '#a855f7')
+        with self.assertRaises(ValueError):
+            self.engine.set_pad_color(self.group_id, '#123456')
+
+    def test_recolor_rolls_back_when_save_fails(self):
+        import copy
+        before = copy.deepcopy(self.engine.config)
+        with patch.object(self.engine, 'save', side_effect=OSError('disk full')):
+            with self.assertRaises(OSError):
+                self.engine.set_pad_color(self.group_id, '#a855f7')
+        self.assertEqual(self.engine.config, before)
+
     def test_earlier_palette_colors_are_migrated(self):
         self.engine.service(self.ids[2])['color'] = '#f2ad62'
         self.engine.group(self.group_id)['color'] = '#a77bd9'

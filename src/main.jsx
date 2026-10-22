@@ -22,6 +22,8 @@ import './cream.css';
 import { LOCALES, locale, setLocale, t } from './i18n.js';
 import { connectEvents } from './events.js';
 
+document.documentElement.classList.toggle('native-app', isNative);
+
 if (import.meta.env.PROD && window.isSecureContext && 'serviceWorker' in navigator && !window.__TAURI_INTERNALS__ && !isNative) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(error => console.warn(t('PWA 등록을 다시 확인해 주세요.'), error));
@@ -354,7 +356,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
       <UsageBar api={api} />
       <div className="padset-bar-row">
         <Tabs label={t('패드셋')} tabs={padsets.map(set => ({ ...set, badge: pads.filter(p => p.padset_id === set.id).length }))} value={padsetId} onChange={onPadsetChange} prefix="padsets" />
-        {scenes.length > 0 && <div className="scene-chips-bar" aria-label={t('장면 목록')}>
+        {scenes.length > 0 && <div className="scene-chips-bar" aria-label={t('흐름 목록')}>
           {scenes.map(sc => {
             const padIds = sc.pad_ids || [];
             const activeCount = padIds.filter(id => pads.some(p => p.id === id && p.active)).length;
@@ -378,7 +380,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
               <button
                 type="button"
                 className="scene-chip-menu-btn"
-                aria-label={t('{0} 장면 메뉴', sc.name)}
+                aria-label={t('{0} 흐름 메뉴', sc.name)}
                 onClick={e => openSceneMenu(e, sc)}
               >
                 <MoreVertical size={13} />
@@ -434,9 +436,9 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
     </div>}
     {sceneMenu && <div className="pad-menu-layer" onPointerDown={() => setSceneMenu(null)} onContextMenu={event => { event.preventDefault(); setSceneMenu(null); }}>
       <div className="pad-menu" role="menu" aria-label={t('{0} 메뉴', sceneMenu.scene.name)} style={sceneMenu.style} onPointerDown={event => event.stopPropagation()}>
-        <button role="menuitem" autoFocus onClick={() => triggerScene(sceneMenu.scene, 'start')}><Play size={14} />{t('장면 시작')}</button>
-        <button role="menuitem" onClick={() => triggerScene(sceneMenu.scene, 'stop')}><Square size={14} />{t('장면 정지')}</button>
-        <button role="menuitem" onClick={() => { setSceneMenu(null); onOpenSettings?.('scenes'); }}><Gear size={14} />{t('장면 설정')}</button>
+        <button role="menuitem" autoFocus onClick={() => triggerScene(sceneMenu.scene, 'start')}><Play size={14} />{t('흐름 시작')}</button>
+        <button role="menuitem" onClick={() => triggerScene(sceneMenu.scene, 'stop')}><Square size={14} />{t('흐름 정지')}</button>
+        <button role="menuitem" onClick={() => { setSceneMenu(null); onOpenSettings?.('scenes'); }}><Gear size={14} />{t('흐름 설정')}</button>
       </div>
     </div>}
     <Modal isOpen={!!current} onClose={() => { setSelected(null); setTargetError(null); }} title={current?.name || t('서비스 상세')} storageKey="service-detail" size="lg">{current && <>
@@ -622,7 +624,7 @@ function Settings({ auth, settings, padsets, services, groups, scenes = [], sche
     } catch (e) { onError(e.message); } finally { setBusy(false); }
   }
   return <>
-    <Tabs label={t('환경 설정 카테고리')} tabs={[{ id: 'general', name: t('일반') }, { id: 'scenes', name: t('장면 및 예약') }, { id: 'recommend', name: t('등록 추천') }, { id: 'padsets', name: t('패드셋') }, { id: 'account', name: t('계정') }]} value={category} onChange={setCategory} prefix="settings" />
+    <Tabs label={t('환경 설정 카테고리')} tabs={[{ id: 'general', name: t('일반') }, { id: 'scenes', name: t('흐름 및 예약') }, { id: 'recommend', name: t('등록 추천') }, { id: 'padsets', name: t('패드셋') }, { id: 'account', name: t('계정') }]} value={category} onChange={setCategory} prefix="settings" />
     <div className="settings-stack compact-settings" role="tabpanel" id="settings-panel" aria-labelledby={`settings-tab-${category}`}>
     {category === 'general' && <><section className="settings-card"><div className="settings-icon"><Power size={22} /></div><div><h2>{t('Windows 로그인 시 자동 실행')}</h2></div><button className={`switch ${settings?.autostart ? 'on' : ''}`} role="switch" aria-checked={!!settings?.autostart} aria-label={t('Windows 로그인 시 자동 실행')} disabled={busy || !settings} onClick={() => change(!settings.autostart)}><span /></button></section>
     <section className="settings-card"><div className="settings-icon"><Languages size={22} /></div><div><h2>{t('언어')}</h2></div><div className="retention-control"><SelectControl aria-label={t('언어')} value={locale} onChange={e => setLocale(e.target.value)}>

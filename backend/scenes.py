@@ -16,7 +16,7 @@ class SceneInput(BaseModel):
     def name_line(cls, value):
         value = value.strip()
         if not value or any(c in value for c in ('\x00', '\n', '\r')):
-            raise ValueError('장면 이름을 한 줄로 입력해 주세요.')
+            raise ValueError('흐름 이름을 한 줄로 입력해 주세요.')
         return value
 
 
@@ -35,7 +35,7 @@ class SceneManager:
             for scene in self.config.get('scenes', []):
                 if scene['id'] == scene_id:
                     return dict(scene)
-        raise KeyError('등록되지 않은 장면입니다.')
+        raise KeyError('등록되지 않은 흐름입니다.')
 
     def save_scene(self, scene_id: str | None, values: SceneInput):
         with self.lock:
@@ -47,7 +47,7 @@ class SceneManager:
                         target = s
                         break
                 if not target:
-                    raise KeyError('등록되지 않은 장면입니다.')
+                    raise KeyError('등록되지 않은 흐름입니다.')
                 target['name'] = values.name
                 target['color'] = values.color
                 target['pad_ids'] = list(values.pad_ids)
@@ -72,7 +72,7 @@ class SceneManager:
             before_len = len(scenes)
             self.config['scenes'] = [s for s in scenes if s['id'] != scene_id]
             if len(self.config['scenes']) == before_len:
-                raise KeyError('등록되지 않은 장면입니다.')
+                raise KeyError('등록되지 않은 흐름입니다.')
             self.save()
         self.notify_services()
         return {'ok': True}
@@ -161,7 +161,7 @@ class SceneManager:
                             pad_id=pid,
                             pad_name=pad_name,
                             kind='scene_failed',
-                            message=f"장면 '{scene_name}' 실행 중 '{pad_name}' 시작 실패: {err}"
+                            message=f"흐름 '{scene_name}' 실행 중 '{pad_name}' 시작 실패: {err}"
                         )
                 elif action == 'stop':
                     if not active:
@@ -177,7 +177,7 @@ class SceneManager:
                             pad_id=pid,
                             pad_name=pad_name,
                             kind='scene_failed',
-                            message=f"장면 '{scene_name}' 정지 중 '{pad_name}' 정지 실패: {err}"
+                            message=f"흐름 '{scene_name}' 정지 중 '{pad_name}' 정지 실패: {err}"
                         )
         finally:
             self.scene_progress.pop(scene_id, None)

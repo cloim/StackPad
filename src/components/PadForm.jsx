@@ -19,7 +19,7 @@ export function PadForm({ pad, preset, services, slot, padsetId = 'default', pad
   const readOnly = running || remoteLocked;
   const common = readOnly && pad ? pad : form;
   const displayed = readOnly && pad ? pad.isGroup ? pad.members : [pad] : form.components;
-  const set = (key, value) => { if (!readOnly && !pending) setForm(current => ({ ...current, [key]: value })); };
+  const set = (key, value) => { if ((!readOnly || key === 'color') && !pending) setForm(current => ({ ...current, [key]: value })); };
   const patch = (index, values) => set('components', form.components.map((c, i) => i === index ? { ...c, ...values } : c));
   const onDockerChange = (index, containerId, containerObj) => {
     if (readOnly || pending) return;
@@ -40,7 +40,16 @@ export function PadForm({ pad, preset, services, slot, padsetId = 'default', pad
   const someRemote = displayed.some(c => c.kind === 'remote');
   async function save(event) {
     event.preventDefault();
-    if (readOnly || pending) return;
+    if (pending) return;
+    if (readOnly) {
+      setPending(true);
+      try {
+        await api(`/pads/${pad.id}/color`, { method: 'PUT', body: JSON.stringify({ color: form.color }) });
+        await onSaved(pad.id); onClose();
+      } catch (error) { onError(error.message); }
+      finally { setPending(false); }
+      return;
+    }
     const invalid = event.currentTarget.querySelector(':invalid');
     if (invalid) {
       setTab(invalid.closest('.pad-common') ? 'general' : 'services');
@@ -74,7 +83,7 @@ export function PadForm({ pad, preset, services, slot, padsetId = 'default', pad
           <label><span>{t('도메인 URL')} <span className="optional">{t('선택')}</span></span><input aria-label={t('도메인 URL')} type="url" readOnly={readOnly || pending} maxLength={1000} value={common.domain_url || ''} onChange={e => set('domain_url', e.target.value)} placeholder="https://app.example.com/" /></label>
           <label><span>{t('로컬 URL')} <span className="optional">{t('비우면 포트로 자동 결정')}</span></span><input aria-label={t('로컬 URL')} type="url" readOnly={readOnly || pending} maxLength={1000} value={common.local_url || ''} onChange={e => set('local_url', e.target.value)} placeholder="http://localhost:5173/" /></label>
         </div>
-        <fieldset className="color-field" disabled={readOnly || pending}><legend>{t('패드 색상')}</legend><div className="colors">{colors.map((color, index) => <button type="button" key={color} className={common.color === color ? 'selected' : ''} style={{ '--color': color }} onClick={() => set('color', color)} aria-label={colorNames[index]} aria-pressed={common.color === color} />)}</div></fieldset>
+        <fieldset className="color-field" disabled={pending}><legend>{t('패드 색상')}</legend><div className="colors">{colors.map((color, index) => <button type="button" key={color} className={form.color === color ? 'selected' : ''} style={{ '--color': color }} onClick={() => set('color', color)} aria-label={colorNames[index]} aria-pressed={form.color === color} />)}</div></fieldset>
         {allRemote ? <p className="optional">{t('원격 서버 서비스는 서버에서 관리하므로 자동 실행 대상에서 제외됩니다.')}</p> : <label className="check-row"><input type="checkbox" disabled={readOnly || pending} checked={common.autostart} onChange={e => set('autostart', e.target.checked)} /><span>{t('관리 엔진 시작 시 패드 자동 실행')}{someRemote ? t(' (원격 서버 서비스 제외)') : ''}</span></label>}
         {displayed.length > 1 && <label className="check-row"><input type="checkbox" disabled={readOnly || pending} checked={common.wait_ready} onChange={e => set('wait_ready', e.target.checked)} /><span>{t('앞 서비스가 정상 응답한 뒤 다음 서비스 실행')}</span></label>}
         {pad?.id && (() => {
@@ -110,7 +119,7 @@ export function PadForm({ pad, preset, services, slot, padsetId = 'default', pad
       })}</div>
       {!readOnly && <button className="secondary add-service" type="button" disabled={pending || form.components.length >= 16} onClick={() => set('components', [...form.components.map((c, i) => i === 0 && form.components.length === 1 && !c.name ? { ...c, name: form.name } : c), { kind: 'local', name: '', command: '', cwd: form.components.find(c => c.kind !== 'remote')?.cwd || defaultCwd, port: '', health_url: '', restart_policy: 'never', restart_max: 3, remote: emptyRemote }])}><Plus size={16} />{t('서비스 추가')}</button>}
       </div></div>
-      <div className="form-actions"><button type="button" className="secondary" disabled={pending} onClick={onClose}>{readOnly ? t('닫기') : t('취소')}</button>{!readOnly && <button className="primary" disabled={pending}>{t('저장')}</button>}</div>
+      <div className="form-actions"><button type="button" className="secondary" disabled={pending} onClick={onClose}>{readOnly ? t('닫기') : t('취소')}</button><button className="primary" disabled={pending || (readOnly && form.color === pad.color)}>{t('저장')}</button></div>
     </form>
   </Modal>;
 }

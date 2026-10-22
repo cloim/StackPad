@@ -181,13 +181,13 @@ EN = {
     '패드셋에 빈 슬롯이 없습니다.': 'The pad set has no free slot.',
     '--name으로 패드 이름을 입력해 주세요.': 'Enter the pad name with --name.',
     '--command, --container 또는 --json으로 구성을 입력해 주세요.': 'Enter the component with --command, --container or --json.',
-    # Scenes and schedules
-    '장면 이름을 한 줄로 입력해 주세요.': 'Enter the scene name on one line.',
-    '등록되지 않은 장면입니다.': 'Scene not found.',
-    '장면을 찾을 수 없습니다: {0}': 'Scene not found: {0}',
-    '장면 이름을 지정해 주세요: --name': 'Specify the scene name: --name',
-    '장면 \'{0}\' 실행 중 \'{1}\' 시작 실패: {2}': 'Failed to start \'{1}\' while running scene \'{0}\': {2}',
-    '장면 \'{0}\' 정지 중 \'{1}\' 정지 실패: {2}': 'Failed to stop \'{1}\' while stopping scene \'{0}\': {2}',
+    # Flows and schedules
+    '흐름 이름을 한 줄로 입력해 주세요.': 'Enter the flow name on one line.',
+    '등록되지 않은 흐름입니다.': 'Flow not found.',
+    '흐름을 찾을 수 없습니다: {0}': 'Flow not found: {0}',
+    '흐름 이름을 지정해 주세요: --name': 'Specify the flow name: --name',
+    '흐름 \'{0}\' 실행 중 \'{1}\' 시작 실패: {2}': 'Failed to start \'{1}\' while running flow \'{0}\': {2}',
+    '흐름 \'{0}\' 정지 중 \'{1}\' 정지 실패: {2}': 'Failed to stop \'{1}\' while stopping flow \'{0}\': {2}',
     '등록되지 않은 예약입니다.': 'Schedule not found.',
     'HH:MM 형식으로 입력해 주세요.': 'Enter the time in HH:MM format.',
     '올바른 시각(00:00~23:59)을 입력해 주세요.': 'Enter a valid time (00:00 to 23:59).',
@@ -297,13 +297,13 @@ Usage: stackpad-cli <command> [options]
   pad restart <pad>
   pad logs <pad> [--component C]
 
-  scene list                 List scenes
-  scene show <scene>         Scene details
-  scene add [options]        Add a scene (--name, --pads, --color)
-  scene update <scene> [options] Update a scene
-  scene delete <scene>       Delete a scene
-  scene start <scene>        Start pads in the scene in order
-  scene stop <scene>         Stop pads in the scene in reverse order
+  scene list                 List flows
+  scene show <flow>         Flow details
+  scene add [options]        Add a flow (--name, --pads, --color)
+  scene update <flow> [options] Update a flow
+  scene delete <flow>       Delete a flow
+  scene start <flow>        Start pads in the flow in order
+  scene stop <flow>         Stop pads in the flow in reverse order
 
   schedule list              List schedules
   schedule add [options]     Add a schedule (--scene/--pad, --action, --time, --days)
@@ -311,7 +311,7 @@ Usage: stackpad-cli <command> [options]
   schedule enable <id>       Enable a schedule
   schedule disable <id>      Disable a schedule
 
-Pads, pad sets, and scenes are named by ID or by name (case does not matter).
+Pads, pad sets, and flows are named by ID or by name (case does not matter).
 Results are printed as JSON; only pad logs and help print text.
 Exit codes: 0 success, 1 failed, 2 wrong command, 3 engine not reachable''',
     'pad': '''pad add and pad update options
@@ -348,12 +348,12 @@ Colors:''',
     'scene': '''scene commands
 
   scene list
-  scene show <scene>
+  scene show <flow>
   scene add --name N [--pads P1,P2] [--color C]
-  scene update <scene> [--name N] [--pads P1,P2] [--color C]
-  scene delete <scene>
-  scene start <scene>
-  scene stop <scene>''',
+  scene update <flow> [--name N] [--pads P1,P2] [--color C]
+  scene delete <flow>
+  scene start <flow>
+  scene stop <flow>''',
     'schedule': '''schedule commands
 
   schedule list

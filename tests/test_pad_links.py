@@ -81,6 +81,25 @@ class PadLinkTests(unittest.TestCase):
         local.put(f'/api/pads/{pad_id}', json=body)
         self.assertEqual(local.post(f'/api/pads/{pad_id}/open', json={'target': 'domain'}).status_code, 409)
 
+    def test_color_endpoint_only_updates_color_and_requires_auth(self):
+        import copy
+        app = create_app(Path(self.folder.name) / 'color-api', self.folder.name)
+        client = TestClient(app, base_url='http://127.0.0.1', client=('127.0.0.1', 50000), headers={'Origin':'http://127.0.0.1'})
+        self.assertEqual(client.put('/api/pads/missing/color',json={'color':'#a855f7'}).status_code,401)
+        sign_in(app, client)
+        pad_id = client.post('/api/pads',json={'name':'Pad','slot':0,'components':[self.component()]}).json()['id']
+        engine = app.state.engine
+        engine.service(pad_id)['runtime'] = {'pid':12345,'created':1.0}
+        before = copy.deepcopy(engine.service(pad_id))
+        with patch.object(engine,'owned',return_value=None):
+            self.assertEqual(client.put(f'/api/pads/{pad_id}/color',json={'color':'#a855f7'}).status_code,200)
+        after = engine.service(pad_id)
+        self.assertEqual(after['color'],'#a855f7')
+        self.assertEqual({k:v for k,v in after.items() if k!='color'},{k:v for k,v in before.items() if k!='color'})
+        self.assertEqual(client.put(f'/api/pads/{pad_id}/color',json={'color':'#123456'}).status_code,409)
+        self.assertEqual(client.put(f'/api/pads/{pad_id}/color',json={'color':'#a855f7','command':'changed'}).status_code,422)
+        self.assertEqual(client.put('/api/pads/missing/color',json={'color':'#a855f7'}).status_code,404)
+
 
 if __name__ == '__main__':
     unittest.main()
