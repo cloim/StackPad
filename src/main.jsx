@@ -110,6 +110,8 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
   const current = pads.find(s => s.id === selected);
   useEffect(() => { setSelected(null); setPadMenu(null); setPadEditor(null); }, [padsetId]);
   const menuPad = padMenu && pads.find(s => s.id === padMenu.id);
+  const menuLinkTarget = menuPad?.environment === 'production' && links[menuPad.id]?.domain
+    ? 'domain' : local && links[menuPad?.id]?.local ? 'local' : null;
   const editingPad = padEditor?.id ? pads.find(s => s.id === padEditor.id) : null;
   const logService = current?.isGroup ? current.members.find(s => s.id === componentId) || current.members[0] : current;
   const logId = logService?.id;
@@ -427,9 +429,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
         <button role="menuitem" autoFocus onClick={() => { setPadMenu(null); setSelected(menuPad.id); setComponentId(null); }}><Info size={14} />{t('상세')}</button>
         <button role="menuitem" disabled={busy.has(menuPad.id)} onClick={() => { setPadMenu(null); setPadEditor({ id: menuPad.id, slot: menuPad.slot }); }}><Settings2 size={14} />{t('설정')}</button>
         <button role="menuitem" className="menu-delete" disabled={!connected || busy.has(menuPad.id) || menuPad.busy || (menuPad.isGroup ? menuPad.members : [menuPad]).some(s => s.kind !== 'remote' && (s.active || s.pid || busy.has(s.id) || s.busy))} onClick={() => { setPadMenu(null); setDeleting(menuPad); }}><Trash2 size={14} />{t('삭제')}</button>
-        {menuPad.environment === 'production'
-          ? links[menuPad.id]?.domain && <button role="menuitem" onClick={() => openLink(menuPad, 'domain')}><Globe size={14} />{t('브라우저에서 열기')}</button>
-          : local && links[menuPad.id]?.local && <button role="menuitem" onClick={() => openLink(menuPad, 'local')}><Monitor size={14} />{t('브라우저에서 열기')}</button>}
+        {menuLinkTarget && <button role="menuitem" onClick={() => openLink(menuPad, menuLinkTarget)}>{menuLinkTarget === 'domain' ? <Globe size={14} /> : <Monitor size={14} />}{t('브라우저에서 열기')}</button>}
         {settings?.tools?.vscode !== false && (menuPad.isGroup ? menuPad.members : [menuPad]).some(s => !s.kind || s.kind === 'local') && <button role="menuitem" disabled={!connected} onClick={() => openInCode(menuPad)}><Code size={14} />{t('VSCode로 열기')}</button>}
       </div>
     </div>}
