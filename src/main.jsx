@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Ansi from 'ansi-to-react';
 import { createRoot } from 'react-dom/client';
-import { Bell, Code, Film, Folder, Gauge, Globe, Languages, History, Monitor, Info, LoaderCircle, MoreVertical, Play, Plus, Power, RefreshCw, ScanSearch, Settings as Gear, Settings2, SlidersHorizontal, Square, Terminal, Trash2 } from 'lucide-react';
+import { Bell, Code, Film, Folder, Gauge, GitBranch, Globe, Languages, History, Monitor, Info, LoaderCircle, MoreVertical, Play, Plus, Power, RefreshCw, ScanSearch, Settings as Gear, Settings2, SlidersHorizontal, Square, Terminal, Trash2 } from 'lucide-react';
 import { Modal } from './components/Modal/Modal.jsx';
 import { PadForm } from './components/PadForm.jsx';
 import { SelectControl } from './components/SelectControl.jsx';
@@ -410,13 +410,19 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
         }
         const errorLine = (service.isGroup ? service.members : [service]).find(s => s.error_line)?.error_line;
         const cpuVal = Math.min(1, Math.max(0, (service.cpu || 0) / 100));
+        const gitStates = (service.isGroup ? service.members : [service]).map(s => s.git_state);
+        const gitDirty = gitStates.includes('dirty');
+        const gitLabel = gitDirty ? t('Git 변경 내역 있음') : gitStates.includes('clean') ? t('Git 변경 내역 없음') : t('Git 상태 확인 정보 없음');
         return <div key={slot} className={`pad-wrap ${selected === service.id ? 'chosen' : ''} ${dragged === service.id ? 'dragging' : ''}`} style={{ '--pad-color': service.color, '--cpu': cpuVal }}>
           <button className={`pad assigned ${service.status}`} style={{ '--cpu': cpuVal }} disabled={pending || !connected} onClick={() => toggle(service)} aria-label={`${service.name} ${service.active ? t('종료') : t('실행')}`} aria-pressed={!!service.active}>
             <span className="pad-top">{pending ? <LoaderCircle className="spin" size={14} /> : <Power size={14} />}</span>
             <span className="pad-port">{tags.length ? tags.map(s => <span key={s.id} title={s.kind === 'remote' ? s.remote.host : undefined}>{s.name}{s.kind === 'remote' ? ` @${s.remote.host}` : s.kind === 'docker' ? ` ${s.container_ports?.length ? s.container_ports.map(port => `:${port}`).join(', ') : t(':포트 없음')}` : s.port ? ` :${s.port}` : t(' :포트 없음')}</span>) : t('명령 실행')}</span>
             <span className="pad-footer">
               <span className="pad-state"><i /><span>{stateText}</span></span>
-              <span className={`pad-environment ${service.environment === 'production' ? 'production' : 'development'}`} title={service.environment === 'production' ? t('운영용') : t('개발용')} aria-label={service.environment === 'production' ? t('운영용') : t('개발용')}><span>{service.environment === 'production' ? 'PRD' : 'DEV'}</span></span>
+              <span className="pad-indicators">
+                <span className={`pad-git ${gitDirty ? 'dirty' : ''}`} title={gitLabel} role="img" aria-label={gitLabel}><GitBranch size={12} aria-hidden="true" /></span>
+                <span className={`pad-environment ${service.environment === 'production' ? 'production' : 'development'}`} title={service.environment === 'production' ? t('운영용') : t('개발용')} aria-label={service.environment === 'production' ? t('운영용') : t('개발용')}><span>{service.environment === 'production' ? 'P' : 'D'}</span></span>
+              </span>
             </span>
             {errorLine && <span className="pad-error-badge" title={errorLine} onClick={e => { e.stopPropagation(); setSelected(service.id); setTargetError(errorLine); }}>{errorLine}</span>}
             {progressPct !== null && <div className="pad-progress-bar" style={{ width: `${progressPct}%` }} />}

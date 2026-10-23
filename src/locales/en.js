@@ -1,5 +1,8 @@
 // English for the Korean source messages. Keep keys identical to the t('...') text; run `node scripts/i18n-check.mjs`.
 export default {
+  'Git 변경 내역 있음': 'Git changes present',
+  'Git 변경 내역 없음': 'No Git changes',
+  'Git 상태 확인 정보 없음': 'Git status unavailable',
   '서비스 용도': 'Service environment',
   '개발용': 'Development',
   '운영용': 'Production',

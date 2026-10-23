@@ -191,6 +191,8 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices, SceneManager
         self.desktop_exe = desktop_exe
         self.samples = {}
         self.externals = {}
+        self.git_states = {}
+        self.last_git_check = 0
         self.group_operations = {}
         self.restarts = {}
         self.alerts = deque(maxlen=100)
@@ -721,6 +723,24 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
             self.samples.pop(service_id, None)
             self.save()
 
+    def refresh_git_states(self):
+        if time.monotonic() - self.last_git_check < 10:
+            return
+        with self.lock:
+            folders = {s['cwd'] for s in self.config['services'] if s.get('kind', 'local') == 'local'}
+        states = {}
+        for folder in folders:
+            try:
+                status = subprocess.run(
+                    ['git', '--no-optional-locks', '-C', folder, 'status', '--porcelain', '--untracked-files=normal'],
+                    stdin=subprocess.DEVNULL, capture_output=True, timeout=3, creationflags=0x08000000)
+                states[folder] = ('dirty' if status.stdout else 'clean') if status.returncode == 0 else None
+            except (OSError, subprocess.TimeoutExpired):
+                states[folder] = None
+        with self.lock:
+            self.git_states = states
+        self.last_git_check = time.monotonic()
+
     def snapshot(self):
         with self.lock:
             result = []
@@ -744,7 +764,7 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                     status = 'error'
                 else:
                     status = 'stopped'
-                result.append({**{k: v for k, v in service.items() if k != 'runtime'}, **sample, 'status': status, 'pid': process.pid if process else None, 'external_pid': found['pid'] if found else None, 'active': bool(process), 'uptime': int(time.time() - process.create_time()) if process else 0})
+                result.append({**{k: v for k, v in service.items() if k != 'runtime'}, **sample, 'git_state': self.git_states.get(service['cwd']), 'status': status, 'pid': process.pid if process else None, 'external_pid': found['pid'] if found else None, 'active': bool(process), 'uptime': int(time.time() - process.create_time()) if process else 0})
             return result
 
     def logs_offset(self, service_id, file=None, offset=None):
@@ -1064,6 +1084,7 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                     current = next((s for s in self.config['services'] if s['id'] == service['id']), None)
                     if current and current.get('container') == service['container'] and current.get('kind') == 'docker' and service['id'] not in self.docker_busy:
                         self.samples[service['id']] = sample
+            self.refresh_git_states()
             self.notify_services()
             now_wall = time.time()
             if self.last_history_tick == 0 or now_wall - self.last_history_tick >= 10:

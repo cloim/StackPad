@@ -55,6 +55,9 @@ button:focus-visible,a:focus-visible{outline-color:#658472}
 .app-shell .pad-footer .pad-state,.app-shell .pad-environment{display:inline-flex;align-items:center;line-height:1.4}
 .app-shell .pad-environment{justify-content:center;flex-shrink:0;padding:2px 2px 1px;border:0;border-radius:3px;background:#a5a5a0;color:#eeeadd;font-size:8px;font-weight:400;pointer-events:none}
 .app-shell .pad-environment.production{background:#c5dfc3;color:#355a3b}
+.app-shell .pad-indicators{display:inline-flex;align-items:center;gap:4px;flex-shrink:0}
+.app-shell .pad-git{display:inline-flex;align-items:center;color:#7b8175}
+.app-shell .pad-git.dirty{color:#95603b}
 .app-shell .pad-footer .pad-state{min-width:0;margin:0;padding:0;overflow:hidden}
 .app-shell .pad-state,.app-shell .pad.running .pad-state{color:#75816e}
 .app-shell .pad-state>span{display:block;line-height:1.4;transform:translateY(2px)}
