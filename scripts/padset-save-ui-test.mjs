@@ -23,8 +23,11 @@ try {
     await page.getByRole('button', { name: `${name} 메뉴`, exact: true }).click();
     await page.getByRole('menuitem', { name: '설정', exact: true }).click();
     const editor = page.getByRole('dialog', { name: '패드 설정', exact: true });
-    if (count === 1) {
+    {
       await editor.getByRole('button', { name: '저장', exact: true }).click();
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await page.getByRole('button', { name: `${name} 메뉴`, exact: true }).click();
+      await page.getByRole('menuitem', { name: '상세', exact: true }).click();
       const detail = page.getByRole('dialog', { name, exact: true });
       await expect(detail).toBeVisible();
       await detail.getByRole('button', { name: '닫기', exact: true }).click();
@@ -97,7 +100,6 @@ try {
   await page.getByRole('combobox', { name: '서비스 용도', exact: true }).selectOption('development');
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByRole('dialog', { name: '패드 설정', exact: true })).toHaveCount(0);
-  await page.getByRole('dialog', { name: '실행 중 마지막 패드', exact: true }).getByRole('button', { name: '닫기', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(wrap.locator('.pad-environment')).toHaveText('DEV');
   await expect(wrap.locator('.pad-environment')).toHaveAttribute('aria-label', '개발용');
