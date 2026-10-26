@@ -101,6 +101,77 @@ function IndicatorColor({ label, value, disabled, allowNone = false, fallback = 
   </div>;
 }
 
+function DetailScroll({ children, role, id, ariaLabel, ariaLabelledBy }) {
+  const scrollRef = useRef(null);
+  const trackRef = useRef(null);
+  const dragRef = useRef(null);
+  const [thumb, setThumb] = useState(null);
+
+  const measure = useCallback(() => {
+    const element = scrollRef.current;
+    if (!element) return;
+    const overflow = element.scrollHeight - element.clientHeight;
+    if (overflow <= 1 || element.clientHeight <= 0) {
+      setThumb(null);
+      return;
+    }
+    const trackHeight = trackRef.current?.clientHeight || element.clientHeight;
+    const height = Math.min(trackHeight, Math.max(32, trackHeight * element.clientHeight / element.scrollHeight));
+    const top = element.scrollTop / overflow * Math.max(0, trackHeight - height);
+    setThumb(current => current && current.height === height && current.top === top ? current : { height, top });
+  }, []);
+
+  useLayoutEffect(() => {
+    const element = scrollRef.current;
+    const content = element?.firstElementChild;
+    if (!element) return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    if (content) observer.observe(content);
+    measure();
+    return () => observer.disconnect();
+  }, [measure]);
+
+  const jumpToTrack = event => {
+    if (event.target !== event.currentTarget) return;
+    const element = scrollRef.current;
+    const track = trackRef.current;
+    if (!element || !track || !thumb) return;
+    const maxScroll = element.scrollHeight - element.clientHeight;
+    const travel = track.clientHeight - thumb.height;
+    if (maxScroll <= 0 || travel <= 0) return;
+    const offset = event.clientY - track.getBoundingClientRect().top - thumb.height / 2;
+    element.scrollTop = Math.max(0, Math.min(1, offset / travel)) * maxScroll;
+  };
+
+  const startThumbDrag = event => {
+    const element = scrollRef.current;
+    if (!element || !thumb) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragRef.current = { pointerId: event.pointerId, startY: event.clientY, startScrollTop: element.scrollTop };
+  };
+
+  const moveThumbDrag = event => {
+    const element = scrollRef.current;
+    const track = trackRef.current;
+    const drag = dragRef.current;
+    if (!element || !track || !thumb || !drag || drag.pointerId !== event.pointerId) return;
+    const travel = track.clientHeight - thumb.height;
+    const maxScroll = element.scrollHeight - element.clientHeight;
+    if (travel > 0 && maxScroll > 0) element.scrollTop = drag.startScrollTop + (event.clientY - drag.startY) * maxScroll / travel;
+  };
+
+  return <div className="service-detail-scroll-shell">
+    <div ref={scrollRef} className="service-detail-scroll-content" role={role} id={id} aria-label={ariaLabel} aria-labelledby={ariaLabelledBy} tabIndex={0} onScroll={measure}>
+      <div className="service-detail-scroll-inner">{children}</div>
+    </div>
+    {thumb && <div ref={trackRef} className="service-detail-scroll-track" aria-hidden="true" onPointerDown={jumpToTrack}>
+      <span className="service-detail-scroll-thumb" style={{ height: `${thumb.height}px`, transform: `translateY(${thumb.top}px)` }} onPointerDown={startThumbDrag} onPointerMove={moveThumbDrag} onPointerUp={() => { dragRef.current = null; }} onPointerCancel={() => { dragRef.current = null; }} />
+    </div>}
+  </div>;
+}
+
 function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, loading, settings, refresh, onError, connected, local, scenes = [], sceneProgress = {}, groupProgress = {}, schedules = [], onOpenSettings }) {
   const [selected, setSelected] = useState(null);
   const [padEditor, setPadEditor] = useState(null);
@@ -484,7 +555,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
     </div>}
     <Modal isOpen={!!current} onClose={() => { setSelected(null); setTargetError(null); }} title={current?.name || t('서비스 상세')} storageKey="service-detail" size="lg" className="service-detail-modal">{current && <>
       {detailServices.length > 1 && <Tabs label={t('등록된 서비스')} tabs={detailServices.map(service => ({ id: service.id, name: service.name, badge: groupProgress?.[current.id]?.current_id === service.id ? t('진행 중') : undefined }))} value={logId} onChange={setComponentId} prefix="service-detail" />}
-      {logService && <div role={detailServices.length > 1 ? 'tabpanel' : 'region'} id="service-detail-panel" {...(detailServices.length > 1 ? { 'aria-labelledby': `service-detail-tab-${logId}` } : { 'aria-label': t('서비스 상세') })}>
+      {logService && <DetailScroll role={detailServices.length > 1 ? 'tabpanel' : 'region'} id="service-detail-panel" ariaLabel={detailServices.length > 1 ? undefined : t('서비스 상세')} ariaLabelledBy={detailServices.length > 1 ? `service-detail-tab-${logId}` : undefined}>
         <dl>
           <div><dt>{t('타입')}</dt><dd>{logService.kind === 'docker' ? t('도커') : logService.kind === 'remote' ? t('원격 서버') : t('로컬 프로세스')}</dd></div>
           <div><dt>{t('러닝타임')}</dt><dd>{logService.active ? timeLabel(logService.uptime || 0) : labels[logService.status]}</dd></div>
@@ -528,7 +599,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
         {logService.last?.output && <pre className="command-output" aria-label={t('마지막 명령 출력')}>{logService.last.output}</pre>}
         <div className="detail-buttons"><button className="secondary" disabled={!connected || busy.has(current.id) || busy.has(logId) || current.busy || logService.busy} onClick={() => restart(logService)} aria-label={t('{0} 재시작', logService.name)}><RefreshCw size={13} />{t('재시작')}</button></div>
         <LogViewer rawLogs={logs} serviceName={logService?.name} loading={logsLoading} targetErrorLine={targetError} />
-      </div>}
+      </DetailScroll>}
     </>}</Modal>
     {padEditor && <PadForm pad={editingPad} slot={padEditor.slot} defaultCwd={settings?.recommend_roots?.[0] || ''} tools={settings?.tools} {...{ padsets, padsetId, services, api, colors, colorNames, local, onError }} onClose={() => setPadEditor(null)} onSaved={async () => { await refresh(); setSelected(null); }} />}
     <Modal isOpen={!!takeover} onClose={() => setTakeover(null)} title={t('외부 실행 넘겨받기')} size="sm" draggable={false} footer={<><button className="secondary" onClick={() => setTakeover(null)}>{t('취소')}</button><button className="primary" onClick={() => { const pad = takeover; setTakeover(null); toggle(pad, true); }}>{t('종료 후 다시 실행')}</button></>}><p className="notice-text">{t('{0} 서버가 StackPad 밖에서 실행 중입니다. 외부에서 실행한 서버를 종료하고 StackPad에서 다시 실행할까요?', takeover?.name)}</p></Modal>

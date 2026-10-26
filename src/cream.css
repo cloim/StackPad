@@ -144,10 +144,15 @@ label small,.optional{color:#77816e}
 .filter-btn{background:#f8f7f0;border-color:#bfc4b3;color:#4d5746}.filter-btn.active{background:#f2dcdc;border-color:#c46a6a;color:#9a3c45}
 /* 서비스 상세는 탭을 고정하고 탭 아래 영역만 스크롤한다. */
 .service-detail-modal .modal-body{display:flex;flex-direction:column;gap:12px;overflow:hidden}
-.service-detail-modal .modal-body>[role=tabpanel],.service-detail-modal .modal-body>[role=region]{flex:1;min-height:0;overflow-y:auto;margin-right:-14px;padding-right:14px}
-/* 스크롤바는 크림 톤으로 얇게 두고, 서비스 상세 본문은 마우스를 올렸을 때만 보인다. */
-::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#c5c9ba}::-webkit-scrollbar-thumb:hover{background:#a9b09e}
-.service-detail-modal .modal-body>[role=tabpanel],.service-detail-modal .modal-body>[role=region]{scrollbar-width:thin;scrollbar-color:transparent transparent;transition:scrollbar-color .2s}.service-detail-modal .modal-body>[role=tabpanel]:hover,.service-detail-modal .modal-body>[role=region]:hover{scrollbar-color:#c5c9ba transparent}
+.modal-panel.service-detail-modal{height:min(720px,calc(100dvh - 48px))}
+.service-detail-scroll-shell{position:relative;flex:1;min-height:0;overflow:hidden;margin-right:-14px}
+.service-detail-scroll-content{position:absolute;inset:0;overflow:auto;padding-right:22px;overscroll-behavior:contain;scrollbar-width:none}
+.service-detail-scroll-content::-webkit-scrollbar{display:none;width:0;height:0}
+.service-detail-scroll-inner{min-height:100%}
+.service-detail-scroll-track{position:absolute;z-index:2;top:2px;right:1px;bottom:2px;width:12px;border:1px solid #bec5b2;border-radius:8px;background:#e0e2d8;cursor:pointer;touch-action:none}
+.service-detail-scroll-thumb{position:absolute;top:0;right:2px;left:2px;min-height:32px;border-radius:6px;background:#7d896f;cursor:grab;touch-action:none}
+.service-detail-scroll-thumb:hover{background:#657353}
+.service-detail-scroll-thumb:active{cursor:grabbing;background:#566348}
 /* 로그 검색란과 오류만 버튼의 높이를 맞춘다. 전역 입력란 높이(40px)보다 우선하도록 선택자를 좁힌다. */
 .log-panel .log-toolbar .log-search-input-wrap input,.log-panel .log-toolbar .filter-btn{height:32px;min-height:32px!important;box-sizing:border-box}
 @media(max-width:650px){
@@ -158,4 +163,5 @@ label small,.optional{color:#77816e}
  .app-shell .pad-move{font-size:12px}.padset-bar-row>.category-tabs{gap:7px;padding:2px}
  .padset-bar-row>.category-tabs [role=tab]{min-width:66px;padding:8px 10px;font-size:11px}
 }
+@media(max-width:767px){.modal-panel.service-detail-modal{height:calc(100dvh - 24px)!important}}
 @media(max-height:560px){.app-shell{padding:8px}.app-shell .pads{padding:6px;gap:7px}}
