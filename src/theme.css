@@ -135,6 +135,17 @@
   .section-heading { display: flex; align-items: center; gap: 9px; }
   .section-heading > svg { color: #b0babb; }
   .path-code { padding: 9px; border: 1px solid #c2cbb6; border-radius: 6px; background: #e2e7d8; color: #5c704f; font-size: 11px; overflow-wrap: anywhere; white-space: normal; }
+  /* 입력란과 버튼 하나가 같은 높이로 붙는 줄 */
+  .compact-input-row { display: flex; min-width: 0; align-items: center; gap: 8px; }
+  .compact-input-row > input { min-width: 0; flex: 1; }
+  .compact-input-row > button { height: 40px; min-height: 40px; flex-shrink: 0; white-space: nowrap; }
+  /* 목록 행 오른쪽의 작은 버튼 묶음. 같은 줄의 버튼은 한 높이를 쓴다. */
+  .component-actions { display: flex; flex-wrap: wrap; gap: 5px; }
+  .component-actions > button { min-height: 34px; padding: 7px 10px; font-size: 11px; }
+  @media (max-width: 650px) {
+    .component-actions { width: 100%; }
+    .component-actions > button { flex: 1; min-height: 38px; }
+  }
   /* 색상 견본과 폼 하단 버튼 줄 */
   .color-field legend { margin-bottom: 10px; font-size: 13px; color: #4e5947; }
   .colors { display: flex; flex-wrap: wrap; gap: 10px; }

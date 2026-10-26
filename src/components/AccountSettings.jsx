@@ -21,7 +21,7 @@ function Accounts({ settings, api, reload, onError }) {
   }
   return <section className="settings-card vertical">
     <div className="section-heading"><Users size={22} /><div><h2>{t('허용 계정')}</h2><p>{t('이 Google 계정들만 로그인할 수 있어요. 계정을 삭제하면 그 계정의 로그인도 바로 해제됩니다.')}</p></div></div>
-    <div className="component-list">{settings.accounts.map(account => <div className="component-row" key={account}>
+    <div className="mt-4 flex flex-col gap-3.5">{settings.accounts.map(account => <div className="component-row" key={account}>
       <div><strong>{account}</strong>{account === settings.owner && <p>{t('소유자')}</p>}</div>
       {account !== settings.owner && <div className="component-actions"><button className="secondary" disabled={busy} onClick={() => setRemoving(account)} aria-label={t('{0} 삭제', account)}>{t('삭제')}</button></div>}
     </div>)}</div>
@@ -56,9 +56,9 @@ function PhonePairing({ settings, api, onError }) {
     <div className="flex flex-wrap items-center justify-end gap-2"><div className="section-heading mr-auto min-w-[220px] flex-1"><QrCode size={22} /><div><h2>{t('휴대폰 연결')}</h2><p>{t('휴대폰에 Tailscale과 StackPad Android 앱을 설치하고, 앱에서 이 QR 코드를 찍으면 바로 연결돼요.')}</p></div></div>
       <button className="secondary min-h-8 px-[11px] py-1.5 text-[12px]" disabled={!settings.external_url} onClick={show}>{pairing ? t('새 QR 코드') : t('QR 코드 표시')}</button></div>
     {!settings.external_url && <p className="optional">{t('휴대폰 연결을 사용하려면 StackPad에 외부 주소가 설정되어 있어야 해요.')}</p>}
-    {pairing && (left > 0 ? <div className="pairing-qr"><div className="qr-image" role="img" aria-label={t('휴대폰 연결 QR 코드')} dangerouslySetInnerHTML={{ __html: pairing.svg }} /><p className="optional">{t('{0}분 {1}초 동안 한 번 사용할 수 있어요.', Math.floor(left / 60), left % 60)}</p></div>
+    {pairing && (left > 0 ? <div className="flex flex-col items-center gap-2.5"><div className="w-[220px] max-w-full rounded-lg bg-white p-2 [&_svg]:block [&_svg]:h-auto [&_svg]:w-full" role="img" aria-label={t('휴대폰 연결 QR 코드')} dangerouslySetInnerHTML={{ __html: pairing.svg }} /><p className="optional">{t('{0}분 {1}초 동안 한 번 사용할 수 있어요.', Math.floor(left / 60), left % 60)}</p></div>
       : <p className="optional">{t('QR 코드가 만료되었습니다. 새 QR 코드를 띄워 주세요.')}</p>)}
-    <p className="optional">{t('Android 앱 내려받기:')} <a className="text-link" href="https://github.com/cloim/StackPad/releases/latest" target="_blank" rel="noreferrer">GitHub Releases</a>. {t('iPhone은 Safari에서 외부 주소를 열고 홈 화면에 추가하세요.')}</p>
+    <p className="optional">{t('Android 앱 내려받기:')} <a className="text-[#8b715b] underline underline-offset-[3px]" href="https://github.com/cloim/StackPad/releases/latest" target="_blank" rel="noreferrer">GitHub Releases</a>. {t('iPhone은 Safari에서 외부 주소를 열고 홈 화면에 추가하세요.')}</p>
   </section>;
 }
 
@@ -80,7 +80,7 @@ function Devices({ api, onError }) {
   return <section className="settings-card vertical">
     <div className="flex flex-wrap items-center justify-end gap-2"><div className="section-heading mr-auto min-w-[220px] flex-1"><Smartphone size={22} /><div><h2>{t('연결된 기기')}</h2><p>{t('QR 코드로 연결한 휴대폰입니다. 해제하면 앱과 홈 화면 위젯의 연결이 바로 끊어져요.')}</p></div></div>
       {isNative && <button className="secondary min-h-8 px-[11px] py-1.5 text-[12px]" onClick={() => pinWidget().catch(e => onError(e.message))}>{t('위젯 추가')}</button>}</div>
-    {data === null ? <div className="widget-device skeleton" aria-label={t('연결된 기기 불러오는 중')} /> : !data.devices.length ? <p className="optional">{t('연결된 기기가 없습니다.')}</p> : <div className="component-list">{data.devices.map(device => <div className="component-row" key={device.id}>
+    {data === null ? <div className="skeleton h-[52px] rounded-lg" aria-label={t('연결된 기기 불러오는 중')} /> : !data.devices.length ? <p className="optional">{t('연결된 기기가 없습니다.')}</p> : <div className="mt-4 flex flex-col gap-3.5">{data.devices.map(device => <div className="component-row" key={device.id}>
       <div><strong>{device.name}{device.id === data.current ? t(' (이 기기)') : ''}</strong><p>{device.email} {t('| 연결')} {dateLabel(device.created_at)}</p></div>
       <div className="component-actions"><button className="secondary" disabled={busy} onClick={() => setRevoking(device)} aria-label={t('{0} 연결 해제', device.name)}>{t('해제')}</button></div>
     </div>)}</div>}
