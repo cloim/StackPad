@@ -445,12 +445,24 @@ class GroupManager:
                     if hasattr(self, 'events'):
                         self.events.publish('progress', {'group_id': group_id, **prog})
                     deadline = time.monotonic() + 30
+                    next_probe = 0
                     while True:
                         with self.lock:
                             active = self.active(sid)
                             ready = self.status_of(sid) == 'running'
                         if not active:
                             raise ValueError(f"{self.service(sid)['name']}: 실행이 종료되었습니다. 로그를 확인해 주세요.")
+                        if not ready:
+                            with self.lock:
+                                service = dict(self.service(sid))
+                            can_probe = service.get('kind', 'local') == 'local' and (service.get('health_url') or service.get('port'))
+                            if can_probe and time.monotonic() >= next_probe:
+                                if self.local_ready(service) is True:
+                                    with self.lock:
+                                        if self.owned(self.service(sid)):
+                                            self.samples[sid] = {**self.samples.get(sid, {}), 'status': 'running', 'message': ''}
+                                    ready = True
+                                next_probe = time.monotonic() + 1
                         if ready:
                             break
                         if time.monotonic() >= deadline or self.closed.wait(.2):

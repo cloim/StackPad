@@ -129,6 +129,19 @@ class GroupTests(unittest.TestCase):
         self.engine.group_action(self.group_id, 'start')
         self.assertEqual(self.active, set(self.ids[:2]))
 
+    def test_health_probe_advances_group_when_sample_is_stale(self):
+        self.engine.group(self.group_id)['wait_ready'] = True
+        for sid in self.ids[:2]:
+            self.engine.service(sid)['health_url'] = 'http://127.0.0.1/health'
+        def pending(sid, takeover=False):
+            self.actions.append(('start', sid))
+            self.active.add(sid)
+            self.engine.samples[sid] = {'status': 'starting'}
+        with patch.object(self.engine, 'start', side_effect=pending), patch.object(self.engine, 'local_ready', return_value=True):
+            self.engine.group_action(self.group_id, 'start')
+        self.assertEqual(self.active, set(self.ids[:2]))
+        self.assertEqual([self.engine.samples[sid]['status'] for sid in self.ids[:2]], ['running', 'running'])
+
     def test_stop_continues_after_failure(self):
         def failing(sid):
             self.actions.append(('stop', sid))

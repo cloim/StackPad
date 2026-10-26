@@ -612,6 +612,21 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices, SceneManager
                 return self.docker_state(self.service(service_id))['status']
             return self.samples.get(service_id, {}).get('status')
 
+    def local_ready(self, service, opener=None):
+        """Check a local service's configured readiness probe, or return None when it has none."""
+        if not service.get('health_url') and not service.get('port'):
+            return None
+        if not self.owned(service):
+            return False
+        try:
+            if service.get('health_url'):
+                opener = opener or build_opener(ProxyHandler({}))
+                with opener.open(Request(service['health_url']), timeout=1) as response:
+                    return 200 <= response.status < 400
+            return port_open(service['port'])
+        except Exception:
+            return False
+
     def restart(self, service_id):
         if self.is_remote(service_id):
             self.stop(service_id)
@@ -1040,14 +1055,9 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                     continue
                 ready = True
                 message = ''
-                try:
-                    if service['health_url']:
-                        with opener.open(Request(service['health_url']), timeout=1) as response:
-                            ready = 200 <= response.status < 400
-                    elif service['port']:
-                        ready = port_open(service['port'])
-                except Exception:
-                    ready = False
+                probe = self.local_ready(service, opener)
+                if probe is not None:
+                    ready = probe
                 if not ready:
                     message = '응답을 확인하고 있습니다.'
                 try:
