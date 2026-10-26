@@ -19,6 +19,7 @@ import { SignIn } from './components/SignIn.jsx';
 import { appVersion, connectWidget, disconnectWidget, getAlertStatus, isNative, loadServer, nativeHeaders, serverOrigin, setAlertStatus } from './native.js';
 import { PairPhone } from './components/PairPhone.jsx';
 import './components/Modal/modal.css';
+import './theme.css';
 import './styles.css';
 import './cream.css';
 import { LOCALES, locale, setLocale, t } from './i18n.js';

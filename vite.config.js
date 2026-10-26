@@ -1,12 +1,13 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import packageJson from './package.json' with { type: 'json' };
 
 export default defineConfig({
   build: { rollupOptions: { input: { main: 'index.html', tray: 'tray-usage.html' } } },
   define: { APP_VERSION: JSON.stringify(packageJson.version) },
-  plugins: [react(), VitePWA({
+  plugins: [react(), tailwindcss(), VitePWA({
     useCredentials: true,
     injectRegister: false,
     registerType: 'autoUpdate',
