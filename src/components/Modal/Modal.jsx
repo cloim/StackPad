@@ -81,7 +81,8 @@ export function Modal({
     }
     const onKeyDown = (event) => {
       if (event.key === 'Escape' && closeOnEscape && isTopModal(modalId)) {
-        event.stopPropagation();
+        // Every open modal listens on document; stop the rest so one ESC closes only the top modal.
+        event.stopImmediatePropagation();
         onClose();
         return;
       }
