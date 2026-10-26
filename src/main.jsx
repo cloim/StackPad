@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Ansi from 'ansi-to-react';
 import { createRoot } from 'react-dom/client';
-import { Bell, Code, Film, Folder, Gauge, GitBranch, Globe, Languages, History, Monitor, Info, LoaderCircle, MoreVertical, Play, Plus, Power, RefreshCw, ScanSearch, Settings as Gear, Settings2, SlidersHorizontal, Square, Terminal, Trash2 } from 'lucide-react';
+import { Bell, Code, Film, Folder, FolderGit2, Gauge, GitBranch, GitCommit, GitFork, Globe, Languages, History, Monitor, Info, LoaderCircle, MoreVertical, Play, Plus, Power, RefreshCw, ScanSearch, Settings as Gear, Settings2, SlidersHorizontal, Square, Terminal, Trash2 } from 'lucide-react';
 import { Modal } from './components/Modal/Modal.jsx';
 import { PadForm } from './components/PadForm.jsx';
 import { SelectControl } from './components/SelectControl.jsx';
@@ -76,6 +76,9 @@ function Logo({ small = false }) {
   return <div className={`logo ${small ? 'small' : ''}`} aria-hidden="true">{[0, 1, 2, 3].map(i => <span key={i} />)}</div>;
 }
 
+const indicatorDefaults = { pd_enabled: true, pd_text: '#ffffff', pd_background: '#2563eb', pd_padding: 4, git_enabled: true, git_icon: 'folder-git', git_clean_icon: '#69d39a', git_clean_background: '#193b2b', git_dirty_icon: '#ffb45e', git_dirty_background: '#49321c', git_unknown_icon: '#9aa4a8', git_unknown_background: '#303638', git_padding: 4 };
+const gitIcons = { 'folder-git': FolderGit2, 'git-branch': GitBranch, 'git-commit': GitCommit, 'git-fork': GitFork };
+
 function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, loading, settings, refresh, onError, connected, local, scenes = [], sceneProgress = {}, groupProgress = {}, schedules = [], onOpenSettings }) {
   const [selected, setSelected] = useState(null);
   const [padEditor, setPadEditor] = useState(null);
@@ -108,6 +111,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
   })];
   const remoteOnly = pad => (pad.isGroup ? pad.members : [pad]).every(s => s.kind === 'remote');
   const current = pads.find(s => s.id === selected);
+  const detailServices = current ? (current.isGroup ? current.members : [current]) : [];
   useEffect(() => { setSelected(null); setPadMenu(null); setPadEditor(null); }, [padsetId]);
   const menuPad = padMenu && pads.find(s => s.id === padMenu.id);
   const menuLinkTarget = menuPad?.environment === 'production' && links[menuPad.id]?.domain
@@ -126,12 +130,15 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
     }
     let disposed = false;
     let timer = null;
+    let pending = false;
 
     async function loadHistory() {
+      if (disposed || pending) return;
+      pending = true;
       try {
         const data = await api(`/services/${logId}/history`);
         if (!disposed) setHistory(data);
-      } catch (_) {}
+      } catch (_) {} finally { pending = false; }
     }
 
     function schedule() {
@@ -164,13 +171,15 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
     if (!logId) { setLogs(''); return; }
     let disposed = false;
     let timer = null;
+    let pending = false;
     follow.current = true; setLogs(''); setLogsLoading(true);
     let logFile = null;
     let logOffset = null;
     let currentText = '';
 
     async function load() {
-      if (disposed || document.visibilityState === 'hidden') return;
+      if (disposed || pending || document.visibilityState === 'hidden') return;
+      pending = true;
       try {
         const query = logFile && logOffset !== null ? `?file=${encodeURIComponent(logFile)}&offset=${logOffset}` : '';
         const data = await api(`/services/${logId}/logs${query}`);
@@ -196,7 +205,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
         setLogsLoading(false);
       } catch (error) {
         if (!disposed) { setLogs(error.message); setLogsLoading(false); }
-      }
+      } finally { pending = false; }
     }
 
     function schedule() {
@@ -412,6 +421,11 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
         const cpuVal = Math.min(1, Math.max(0, (service.cpu || 0) / 100));
         const gitStates = (service.isGroup ? service.members : [service]).map(s => s.git_state);
         const gitDirty = gitStates.includes('dirty');
+        const gitState = gitDirty ? 'dirty' : gitStates.includes('clean') ? 'clean' : 'unknown';
+        const indicators = { ...indicatorDefaults, ...(settings?.pad_indicators || {}) };
+        const GitIcon = gitIcons[indicators.git_icon] || FolderGit2;
+        const gitColor = indicators[`git_${gitState}_icon`];
+        const gitBackground = indicators[`git_${gitState}_background`];
         const gitLabel = gitDirty ? t('Git 변경 내역 있음') : gitStates.includes('clean') ? t('Git 변경 내역 없음') : t('Git 상태 확인 정보 없음');
         return <div key={slot} className={`pad-wrap ${selected === service.id ? 'chosen' : ''} ${dragged === service.id ? 'dragging' : ''}`} style={{ '--pad-color': service.color, '--cpu': cpuVal }}>
           <button className={`pad assigned ${service.status}`} style={{ '--cpu': cpuVal }} disabled={pending || !connected} onClick={() => toggle(service)} aria-label={`${service.name} ${service.active ? t('종료') : t('실행')}`} aria-pressed={!!service.active}>
@@ -420,8 +434,8 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
             <span className="pad-footer">
               <span className="pad-state"><i /><span>{stateText}</span></span>
               <span className="pad-indicators">
-                <span className={`pad-git ${gitDirty ? 'dirty' : ''}`} title={gitLabel} role="img" aria-label={gitLabel}><GitBranch size={12} aria-hidden="true" /></span>
-                <span className={`pad-environment ${service.environment === 'production' ? 'production' : 'development'}`} title={service.environment === 'production' ? t('운영용') : t('개발용')} aria-label={service.environment === 'production' ? t('운영용') : t('개발용')}><span>{service.environment === 'production' ? 'P' : 'D'}</span></span>
+                {indicators.git_enabled && <span className="pad-git" style={{ color: gitColor, backgroundColor: gitBackground, padding: `${indicators.git_padding}px` }} title={gitLabel} role="img" aria-label={gitLabel}><GitIcon size={12} aria-hidden="true" /></span>}
+                {indicators.pd_enabled && <span className={`pad-environment ${service.environment === 'production' ? 'production' : 'development'}`} style={{ color: indicators.pd_text, backgroundColor: indicators.pd_background, padding: `${indicators.pd_padding}px` }} title={service.environment === 'production' ? t('운영용') : t('개발용')} aria-label={service.environment === 'production' ? t('운영용') : t('개발용')}><span>{service.environment === 'production' ? 'P' : 'D'}</span></span>}
               </span>
             </span>
             {errorLine && <span className="pad-error-badge" title={errorLine} onClick={e => { e.stopPropagation(); setSelected(service.id); setTargetError(errorLine); }}>{errorLine}</span>}
@@ -447,8 +461,8 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
       </div>
     </div>}
     <Modal isOpen={!!current} onClose={() => { setSelected(null); setTargetError(null); }} title={current?.name || t('서비스 상세')} storageKey="service-detail" size="lg" className="service-detail-modal">{current && <>
-      <Tabs label={t('등록된 서비스')} tabs={(current.isGroup ? current.members : [current]).map(service => ({ id: service.id, name: service.name, badge: groupProgress?.[current.id]?.current_id === service.id ? t('진행 중') : undefined }))} value={logId} onChange={setComponentId} prefix="service-detail" />
-      {logService && <div role="tabpanel" id="service-detail-panel" aria-labelledby={`service-detail-tab-${logId}`}>
+      {detailServices.length > 1 && <Tabs label={t('등록된 서비스')} tabs={detailServices.map(service => ({ id: service.id, name: service.name, badge: groupProgress?.[current.id]?.current_id === service.id ? t('진행 중') : undefined }))} value={logId} onChange={setComponentId} prefix="service-detail" />}
+      {logService && <div role={detailServices.length > 1 ? 'tabpanel' : 'region'} id="service-detail-panel" {...(detailServices.length > 1 ? { 'aria-labelledby': `service-detail-tab-${logId}` } : { 'aria-label': t('서비스 상세') })}>
         <dl>
           <div><dt>{t('타입')}</dt><dd>{logService.kind === 'docker' ? t('도커') : logService.kind === 'remote' ? t('원격 서버') : t('로컬 프로세스')}</dd></div>
           <div><dt>{t('러닝타임')}</dt><dd>{logService.active ? timeLabel(logService.uptime || 0) : labels[logService.status]}</dd></div>
@@ -552,6 +566,7 @@ function Settings({ auth, settings, padsets, services, groups, scenes = [], sche
   const [category, setCategory] = useState(initialCategory);
   const [busy, setBusy] = useState(false);
   const [roots, setRoots] = useState(null);
+  const [indicatorDraft, setIndicatorDraft] = useState(null);
   const [phoneAlert, setPhoneAlert] = useState(false);
   useEffect(() => { if (isNative) getAlertStatus().then(setPhoneAlert); }, []);
   async function togglePhoneAlert(enabled) {
@@ -617,6 +632,18 @@ function Settings({ auth, settings, padsets, services, groups, scenes = [], sche
       onNotice(t('알림 설정을 반영했습니다.'));
     } catch (e) { onError(e.message); } finally { setBusy(false); }
   }
+  async function saveIndicators(patch) {
+    setBusy(true);
+    const next = { ...indicatorDefaults, ...(settings?.pad_indicators || {}), ...patch };
+    try {
+      await api('/settings/pad-indicators', { method: 'PUT', body: JSON.stringify(next) });
+      setIndicatorDraft(null);
+      await refresh();
+      onNotice(t('패드 표시 설정을 저장했습니다.'));
+    } catch (e) { onError(e.message); } finally { setBusy(false); }
+  }
+  function editIndicators(patch) { setIndicatorDraft(current => ({ ...indicatorDefaults, ...(settings?.pad_indicators || {}), ...(current || {}), ...patch })); }
+  const indicators = { ...indicatorDefaults, ...(settings?.pad_indicators || {}), ...(indicatorDraft || {}) };
   return <>
     <Tabs label={t('환경 설정 카테고리')} tabs={[{ id: 'general', name: t('일반') }, { id: 'scenes', name: t('흐름 및 예약') }, { id: 'recommend', name: t('등록 추천') }, { id: 'padsets', name: t('패드셋') }, { id: 'account', name: t('계정') }]} value={category} onChange={setCategory} prefix="settings" />
     <div className="settings-stack compact-settings" role="tabpanel" id="settings-panel" aria-labelledby={`settings-tab-${category}`}>
@@ -624,6 +651,14 @@ function Settings({ auth, settings, padsets, services, groups, scenes = [], sche
     <section className="settings-card"><div className="settings-icon"><Languages size={22} /></div><div><h2>{t('언어')}</h2></div><div className="retention-control"><SelectControl aria-label={t('언어')} value={locale} onChange={e => setLocale(e.target.value)}>
       {LOCALES.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
     </SelectControl></div></section>
+    <section className="settings-card vertical indicator-settings"><div className="section-heading"><SlidersHorizontal size={20} /><div><h2>{t('패드 배지 표시')}</h2><p>{t('패드에 표시할 환경 및 Git 배지의 모양을 설정합니다.')}</p></div></div>
+      <div className="indicator-setting-row"><strong>{t('P/D 환경 배지')}</strong><button type="button" className={`switch ${indicators.pd_enabled ? 'on' : ''}`} role="switch" aria-checked={indicators.pd_enabled} aria-label={t('P/D 환경 배지')} disabled={busy || !settings} onClick={() => editIndicators({ pd_enabled: !indicators.pd_enabled })}><span /></button></div>
+      <div className="indicator-fields"><label>{t('텍스트 색')}<input type="color" value={indicators.pd_text} disabled={busy || !settings} onChange={e => editIndicators({ pd_text: e.target.value })} /></label><label>{t('배경 색')}<input type="color" value={indicators.pd_background} disabled={busy || !settings} onChange={e => editIndicators({ pd_background: e.target.value })} /></label><label>{t('내부 패딩')}<input type="number" min="0" max="12" value={indicators.pd_padding} disabled={busy || !settings} onChange={e => editIndicators({ pd_padding: Number(e.target.value) })} /></label></div>
+      <div className="indicator-setting-row"><strong>{t('Git 상태 배지')}</strong><button type="button" className={`switch ${indicators.git_enabled ? 'on' : ''}`} role="switch" aria-checked={indicators.git_enabled} aria-label={t('Git 상태 배지')} disabled={busy || !settings} onClick={() => editIndicators({ git_enabled: !indicators.git_enabled })}><span /></button></div>
+      <div className="indicator-fields"><label>{t('아이콘 모양')}<SelectControl aria-label={t('아이콘 모양')} value={indicators.git_icon} disabled={busy || !settings} onChange={e => editIndicators({ git_icon: e.target.value })}><option value="folder-git">folder-git</option><option value="git-branch">git-branch</option><option value="git-commit">git-commit</option><option value="git-fork">git-fork</option></SelectControl></label><label>{t('내부 패딩')}<input type="number" min="0" max="12" value={indicators.git_padding} disabled={busy || !settings} onChange={e => editIndicators({ git_padding: Number(e.target.value) })} /></label></div>
+      <div className="indicator-fields state-colors">{[['clean', 'Git 변경 없음'], ['dirty', 'Git 변경 있음'], ['unknown', 'Git 상태 확인 정보 없음']].map(([state, label]) => <div className="indicator-color-state" key={state}><strong>{t(label)}</strong><label>{t('아이콘 색')}<input type="color" value={indicators[`git_${state}_icon`]} disabled={busy || !settings} onChange={e => editIndicators({ [`git_${state}_icon`]: e.target.value })} /></label><label>{t('배경 색')}<input type="color" value={indicators[`git_${state}_background`]} disabled={busy || !settings} onChange={e => editIndicators({ [`git_${state}_background`]: e.target.value })} /></label></div>)}</div>
+      <div className="settings-actions"><button className="primary" disabled={busy || !settings || !indicatorDraft} onClick={() => saveIndicators(indicatorDraft)}>{busy ? t('저장 중…') : t('저장')}</button></div>
+    </section>
     <section className="settings-card"><div className="settings-icon"><History size={22} /></div><div><h2>{t('로그 보관 기간')}</h2><p className="optional">{t('지정된 기간이 지난 서비스 및 엔진 로그를 자동 삭제합니다.')}</p></div><div className="retention-control"><SelectControl aria-label={t('로그 보관 기간')} value={settings?.log_retention_days ?? 14} disabled={busy || !settings} onChange={e => changeRetention(e.target.value)}>
       <option value={7}>{t('7일')}</option>
       <option value={14}>{t('14일')}</option>
@@ -676,10 +711,14 @@ function App() {
   const [panel, setPanel] = useState(window.location.pathname === '/settings' ? 'settings' : null);
   const [settingsCategory, setSettingsCategory] = useState('general');
   const inFlight = useRef(false);
+  const authInFlight = useRef(false);
   const checkAuth = useCallback(async () => {
     // A phone that has not scanned a PC's QR code yet has no engine to ask.
     if (isNative && !serverOrigin()) { setAuth({ configured: true, owner: true, authenticated: false, email: null, local: false }); return; }
+    if (authInFlight.current) return;
+    authInFlight.current = true;
     try { setAuth(await api('/auth')); setAuthError(''); } catch (e) { setAuthError(e.message); }
+    finally { authInFlight.current = false; }
   }, []);
   useEffect(() => {
     const onVisible = () => { if (document.visibilityState === 'visible') checkAuth(); };

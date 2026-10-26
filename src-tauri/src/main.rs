@@ -6,12 +6,12 @@ use serde_json::{json, Value};
 use tauri::{AppHandle, Manager, Monitor, PhysicalPosition, PhysicalSize, WebviewUrl, WebviewWindow, WebviewWindowBuilder, menu::{Menu, MenuItem, PredefinedMenuItem}, tray::{TrayIconBuilder, TrayIconEvent, MouseButton}};
 use tauri_plugin_updater::{Update, UpdaterExt};
 
-// A square window like the 272 x 272 mm MPC One, docked to the bottom-right of the main screen.
-const WINDOW_SIDE: f64 = 460.0;
+// Match the current PC window size. The same dimensions are the minimum resize size.
+const WINDOW_WIDTH: f64 = 643.0;
+const WINDOW_HEIGHT: f64 = 857.0;
 const SCREEN_MARGIN: f64 = 8.0;
-// Both dimensions are resizable; keep the four-column pad grid usable.
-const MIN_WIDTH: f64 = 360.0;
-const MIN_HEIGHT: f64 = 420.0;
+const MIN_WIDTH: f64 = WINDOW_WIDTH;
+const MIN_HEIGHT: f64 = WINDOW_HEIGHT;
 mod tray_usage;
 mod cli;
 mod shared;
@@ -298,10 +298,11 @@ fn hidden_border(window: &WebviewWindow) -> tauri::Result<u32> {
     Ok(((outer.width - inner.width) / 2).saturating_sub(1))
 }
 
-// Keep both dimensions within the monitor work area, with a square default.
+// Keep both dimensions within the monitor work area and configured default size.
 fn fit(window: &WebviewWindow, monitor: &Monitor, width: Option<u32>, height: Option<u32>) -> tauri::Result<()> {
     let scale = monitor.scale_factor();
-    let side = (WINDOW_SIDE * scale).round() as u32;
+    let default_width = (WINDOW_WIDTH * scale).round() as u32;
+    let default_height = (WINDOW_HEIGHT * scale).round() as u32;
     let (outer, inner) = (window.outer_size()?, window.inner_size()?);
     let (frame_w, frame_h) = (outer.width - inner.width, outer.height - inner.height);
     let hidden = (frame_w / 2).saturating_sub(1);
@@ -311,8 +312,8 @@ fn fit(window: &WebviewWindow, monitor: &Monitor, width: Option<u32>, height: Op
     let min_h = ((MIN_HEIGHT * scale).round() as u32).min(max_h);
     window.set_min_size(Some(PhysicalSize::new(min_w, min_h)))?;
     window.set_max_size(Some(PhysicalSize::new(max_w, max_h)))?;
-    let width = width.unwrap_or(side.saturating_sub(frame_w - 2 * hidden));
-    let height = height.unwrap_or((side + hidden).saturating_sub(frame_h));
+    let width = width.unwrap_or(default_width);
+    let height = height.unwrap_or(default_height);
     window.set_size(PhysicalSize::new(width.clamp(min_w, max_w), height.clamp(min_h, max_h)))
 }
 
@@ -339,28 +340,36 @@ fn dock(window: &WebviewWindow, keep_height: bool) -> tauri::Result<()> {
 }
 
 fn state_path() -> Option<PathBuf> {
-    std::env::var_os("USERPROFILE")
-        .or_else(|| std::env::var_os("HOME"))
-        .map(|dir| PathBuf::from(dir).join(".config").join("stackpad").join("window.json"))
+    config_dir().map(|dir| dir.join("window.json"))
 }
 
 // Put the window back where the user left it; false when no saved place is on a connected screen.
 fn restore(window: &WebviewWindow) -> tauri::Result<bool> {
     let Some(state) = state_path().and_then(|path| fs::read_to_string(path).ok()).and_then(|text| serde_json::from_str::<Value>(&text).ok()) else { return Ok(false); };
     let (Some(x), Some(y), Some(height)) = (state["x"].as_i64(), state["y"].as_i64(), state["height"].as_u64()) else { return Ok(false); };
+    let width = state["width"].as_u64().and_then(|width| u32::try_from(width).ok());
     let position = PhysicalPosition::new(x as i32, y as i32);
-    let Some(monitor) = monitor_at(window, position, window.outer_size()?.width)? else { return Ok(false); };
+    let Some(monitor) = monitor_at(window, position, width.unwrap_or(window.outer_size()?.width))? else { return Ok(false); };
     window.set_position(position)?;
-    fit(window, &monitor, state["width"].as_u64().map(|width| width as u32), Some(height as u32))?;
-    window.set_position(position)?;
+    fit(window, &monitor, width, u32::try_from(height).ok())?;
+    let (work, outer, hidden) = (monitor.work_area(), window.outer_size()?, hidden_border(window)? as i32);
+    let min_x = work.position.x - hidden;
+    let min_y = work.position.y;
+    let max_x = (work.position.x + work.size.width as i32 - outer.width as i32 + hidden).max(min_x);
+    let max_y = (work.position.y + work.size.height as i32 - outer.height as i32 + hidden).max(min_y);
+    window.set_position(PhysicalPosition::new(position.x.clamp(min_x, max_x), position.y.clamp(min_y, max_y)))?;
     Ok(true)
 }
 
 fn save(window: &WebviewWindow) {
     if window.is_minimized().unwrap_or(true) || !window.is_visible().unwrap_or(false) { return; }
     let (Ok(position), Ok(size), Some(path)) = (window.outer_position(), window.inner_size(), state_path()) else { return; };
-    let _ = fs::create_dir_all(path.parent().unwrap());
-    let _ = fs::write(path, json!({ "x": position.x, "y": position.y, "width": size.width, "height": size.height }).to_string());
+    let Some(parent) = path.parent() else { return; };
+    if fs::create_dir_all(parent).is_err() { return; }
+    let temporary = path.with_extension(format!("{}.tmp", std::process::id()));
+    if fs::write(&temporary, json!({ "x": position.x, "y": position.y, "width": size.width, "height": size.height }).to_string()).is_err() { return; }
+    if path.exists() && fs::remove_file(&path).is_err() { let _ = fs::remove_file(temporary); return; }
+    let _ = fs::rename(temporary, path);
 }
 
 // Moves and resizes arrive in bursts while dragging, so write once they settle.
@@ -403,7 +412,7 @@ fn main() {
             let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::External(format!("http://{ENGINE}").parse()?))
                 // Let WebView2 deliver HTML drag/drop to pad and padset controls on Windows.
                 .disable_drag_drop_handler()
-                .title("StackPad").inner_size(WINDOW_SIDE, WINDOW_SIDE).resizable(true).maximizable(false).visible(false).skip_taskbar(true).build()?;
+                .title("StackPad").inner_size(WINDOW_WIDTH, WINDOW_HEIGHT).resizable(true).maximizable(false).visible(false).skip_taskbar(true).build()?;
             if !restore(&window)? { dock(&window, false)?; }
             if !hidden { window.show()?; }
             let (handle, pending) = (window.clone(), Arc::new(AtomicU64::new(0)));
@@ -437,10 +446,10 @@ fn main() {
                     "update" => install_update(app),
                     "local" => open_in_browser(&format!("http://{ENGINE}/")),
                     "tailnet" => if let Some(url) = app.state::<Updates>().external.lock().unwrap().clone() { open_in_browser(&format!("{url}/")); },
-                    "close" => app.exit(0),
+                    "close" => { if let Some(window) = app.get_webview_window("main") { save(&window); } app.exit(0); },
                     "quit" | "quit-all" => {
                         let stop_services = event.id.as_ref() == "quit-all";
-                        if let Some(window) = app.get_webview_window("main") { let _ = window.hide(); }
+                        if let Some(window) = app.get_webview_window("main") { save(&window); let _ = window.hide(); }
                         let app = app.clone();
                         thread::spawn(move || { shutdown_engine(stop_services); app.exit(0); });
                     }
