@@ -433,22 +433,33 @@
 .environment-badge-preview{display:inline-flex;align-items:center;justify-content:center;min-width:24px;border-radius:5px;font-size:10px;font-weight:700;line-height:1.2}
 .git-preview-list{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:6px;max-width:400px}
 .git-badge-preview{display:inline-flex;align-items:center;gap:5px;border-radius:6px;font-size:10px;line-height:1.2;white-space:nowrap}
-.indicator-control-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .indicator-color-control,.indicator-number-control,.indicator-select-control{display:flex;flex-direction:column;justify-content:center;gap:7px;min-width:0;color:inherit;font-size:11px}
-.indicator-color-value,.indicator-number-value{display:flex;align-items:center;gap:9px;min-width:0;height:38px;padding:4px 9px;border:1px solid var(--border);border-radius:7px;background:var(--panel);box-sizing:border-box}
-.indicator-color-value input[type=color]{width:27px;height:27px;flex:none;padding:2px;border:1px solid var(--border);border-radius:5px;background:var(--panel);cursor:pointer}
-.indicator-color-value code{color:inherit;font-size:10px;letter-spacing:.25px}
-.indicator-number-value input{width:54px;min-width:0;height:28px;min-height:28px;padding:0 6px;text-align:center;font-variant-numeric:tabular-nums}
-.indicator-number-value>span{color:var(--muted);font-size:10px}
+.indicator-color-value,.indicator-number-value{display:flex;align-items:center;gap:7px;min-width:0;min-height:28px;padding:0;border:0;border-radius:0;background:transparent;box-sizing:border-box}
+.indicator-color-value input[type=color]{width:25px;height:25px;flex:none;padding:0;border:0;border-radius:4px;background:transparent;cursor:pointer}
+.indicator-color-value input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+.indicator-color-value input[type=color]::-webkit-color-swatch{border:0;border-radius:4px}
+.indicator-color-value code{color:var(--muted);font-size:10px;letter-spacing:.15px}
+.indicator-none-button{padding:2px 0;border:0;background:transparent;color:var(--muted);font-size:10px;line-height:1.2}
+.indicator-none-button.active{color:var(--orange);font-weight:700;text-decoration:underline;text-underline-offset:3px}
+.indicator-number-value input,.indicator-padding-row input{width:48px;min-width:0;height:28px;min-height:28px;padding:0 3px;border:0;border-radius:0;background:transparent;color:inherit;text-align:center;font-variant-numeric:tabular-nums}
+.indicator-number-value>span,.indicator-padding-row label>span{color:var(--muted);font-size:10px}
+.indicator-environment-list{display:flex;flex-direction:column}
+.indicator-environment-row{display:grid;grid-template-columns:28px 72px minmax(0,1fr) minmax(0,1fr);align-items:center;gap:14px;padding:12px 0;border-top:1px solid var(--border)}
+.environment-row-badge{display:inline-flex;width:22px;height:22px;align-items:center;justify-content:center;border-radius:5px;background:var(--panel);font-size:10px;font-weight:700}
+.environment-row-badge.production{color:#fff;background:#2563eb}.environment-row-badge.development{color:#fff;background:#475569}
+.indicator-environment-row>strong{font-size:11px;font-weight:600}
+.indicator-environment-row .indicator-color-control{gap:5px}
+.indicator-padding-row{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding-top:10px;border-top:1px solid var(--border);color:inherit;font-size:11px}
+.indicator-padding-row .indicator-number-control{flex-direction:row;align-items:center;gap:6px}
 .indicator-select-control .select-control{width:100%}
 .indicator-select-control select{height:38px;min-height:38px}
-.git-indicator-controls{grid-template-columns:minmax(180px,1fr) minmax(120px,.45fr);max-width:520px}
+.git-indicator-controls{display:grid;grid-template-columns:minmax(180px,1fr) minmax(120px,.45fr);max-width:520px}
 .indicator-state-list{display:flex;flex-direction:column}
 .indicator-state-row{display:grid;grid-template-columns:minmax(180px,1fr) repeat(2,minmax(140px,.8fr));align-items:center;gap:14px;padding:11px 0;border-top:1px solid var(--border)}
 .indicator-state-name{display:flex;align-items:center;gap:9px;min-width:0;color:inherit;font-size:11px}
 .indicator-state-dot{width:9px;height:9px;flex:none;border-radius:50%;box-shadow:0 0 0 3px rgba(255,255,255,.04)}
 .indicator-state-row .indicator-color-control{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
-.indicator-state-row .indicator-color-value{width:132px;flex:none}
+.indicator-state-row .indicator-color-value{width:auto;flex:none}
 .indicator-save-row{display:flex;justify-content:flex-end;padding:0 2px 8px}
-@media(max-width:760px){.indicator-card-heading{grid-template-columns:minmax(0,1fr) auto;gap:12px}.indicator-title{grid-column:1}.indicator-card-heading>.switch{grid-column:2;grid-row:1}.indicator-preview-pair,.git-preview-list{grid-column:1/-1;grid-row:2;justify-content:flex-start}.indicator-state-row{grid-template-columns:minmax(120px,1fr) repeat(2,minmax(125px,.8fr));gap:8px}.indicator-state-row .indicator-color-value{width:112px}}
-@media(max-width:540px){.indicator-page-heading h2{font-size:15px}.indicator-control-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.indicator-control-grid>.indicator-number-control:last-child{grid-column:1/-1}.git-indicator-controls{grid-template-columns:minmax(0,1fr) minmax(105px,.7fr)}.indicator-state-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.indicator-state-name{grid-column:1/-1}.indicator-state-row .indicator-color-control{align-items:flex-start;flex-direction:column;gap:6px}.indicator-state-row .indicator-color-value{width:100%}.git-preview-list{justify-content:flex-start}.git-badge-preview{font-size:9px}}
+@media(max-width:760px){.indicator-card-heading{grid-template-columns:minmax(0,1fr) auto;gap:12px}.indicator-title{grid-column:1}.indicator-card-heading>.switch{grid-column:2;grid-row:1}.indicator-preview-pair,.git-preview-list{grid-column:1/-1;grid-row:2;justify-content:flex-start}.indicator-environment-row{grid-template-columns:26px 56px minmax(0,1fr) minmax(0,1fr);gap:9px}.indicator-state-row{grid-template-columns:minmax(120px,1fr) repeat(2,minmax(125px,.8fr));gap:8px}}
+@media(max-width:540px){.indicator-page-heading h2{font-size:15px}.indicator-environment-row{grid-template-columns:24px 42px minmax(0,1fr) minmax(0,1fr);gap:7px}.indicator-environment-row .indicator-color-control{font-size:10px}.indicator-color-value{gap:5px}.indicator-color-value code{font-size:9px}.indicator-none-button{font-size:9px}.indicator-number-value input,.indicator-padding-row input{width:40px}.git-indicator-controls{grid-template-columns:minmax(0,1fr) minmax(105px,.7fr)}.indicator-state-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.indicator-state-name{grid-column:1/-1}.indicator-state-row .indicator-color-control{align-items:flex-start;flex-direction:column;gap:6px}.git-preview-list{justify-content:flex-start}.git-badge-preview{font-size:9px}}

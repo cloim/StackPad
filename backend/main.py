@@ -41,7 +41,7 @@ from i18n import request_lang, translate, translate_payload
 
 
 # Keep in step with package.json; tests/test_version.py checks it.
-VERSION = '1.1.25'
+VERSION = '1.1.26'
 
 
 def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_token=None):
@@ -446,7 +446,7 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
         return {'tools': {'vscode': bool(vscode_path()), 'docker': bool(shutil.which('docker'))}, 'autostart': engine.startup_path.exists(), 'data_dir': str(engine.data_dir),
                 'can_select_data_dir': is_local(request),
                 'log_retention_days': engine.config.get('log_retention_days', 14),
-                'pad_indicators': engine.config.get('pad_indicators', {'pd_enabled': True, 'pd_text': '#ffffff', 'pd_background': '#2563eb', 'pd_padding': 4, 'git_enabled': True, 'git_icon': 'folder-git', 'git_clean_icon': '#69d39a', 'git_clean_background': '#193b2b', 'git_dirty_icon': '#ffb45e', 'git_dirty_background': '#49321c', 'git_unknown_icon': '#9aa4a8', 'git_unknown_background': '#303638', 'git_padding': 4}),
+                'pad_indicators': engine.config.get('pad_indicators', {'pd_enabled': True, 'pd_production_text': '#ffffff', 'pd_production_background': '#2563eb', 'pd_development_text': '#ffffff', 'pd_development_background': '#475569', 'pd_padding': 4, 'git_enabled': True, 'git_icon': 'folder-git', 'git_clean_icon': '#69d39a', 'git_clean_background': '#193b2b', 'git_dirty_icon': '#ffb45e', 'git_dirty_background': '#49321c', 'git_unknown_icon': '#9aa4a8', 'git_unknown_background': '#303638', 'git_padding': 4}),
                 'recommend_roots': engine.config.get('recommend', {}).get('roots') or recommend.DEFAULT_ROOTS, 'recommend_hidden': recommend.hidden_entries(engine.config),
                 'onboarding_done': bool(engine.config.get('onboarding_done')), 'usage_providers': engine.config.get('usage_providers', []),
                 'notifications': engine.config.get('notifications', {'crash': True, 'unhealthy': True, 'schedule': True})}
@@ -773,17 +773,19 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
 
     class PadIndicators(BaseModel):
         pd_enabled: bool
-        pd_text: str = Field(pattern=r'^#[0-9a-fA-F]{6}$')
-        pd_background: str = Field(pattern=r'^#[0-9a-fA-F]{6}$')
+        pd_production_text: str = Field(pattern=r'^#[0-9a-fA-F]{6}$')
+        pd_production_background: str = Field(pattern=r'^(#[0-9a-fA-F]{6}|transparent)$')
+        pd_development_text: str = Field(pattern=r'^#[0-9a-fA-F]{6}$')
+        pd_development_background: str = Field(pattern=r'^(#[0-9a-fA-F]{6}|transparent)$')
         pd_padding: int = Field(ge=0, le=12)
         git_enabled: bool
         git_icon: Literal['folder-git', 'git-branch', 'git-commit', 'git-fork']
         git_clean_icon: str = Field(pattern=r'^#[0-9a-fA-F]{6}$')
-        git_clean_background: str = Field(pattern=r'^#[0-9a-fA-F]{6}$')
+        git_clean_background: str = Field(pattern=r'^(#[0-9a-fA-F]{6}|transparent)$')
         git_dirty_icon: str = Field(pattern=r'^#[0-9a-fA-F]{6}$')
-        git_dirty_background: str = Field(pattern=r'^#[0-9a-fA-F]{6}$')
+        git_dirty_background: str = Field(pattern=r'^(#[0-9a-fA-F]{6}|transparent)$')
         git_unknown_icon: str = Field(pattern=r'^#[0-9a-fA-F]{6}$')
-        git_unknown_background: str = Field(pattern=r'^#[0-9a-fA-F]{6}$')
+        git_unknown_background: str = Field(pattern=r'^(#[0-9a-fA-F]{6}|transparent)$')
         git_padding: int = Field(ge=0, le=12)
 
     @app.put('/api/settings/pad-indicators', dependencies=[Depends(authenticated)])

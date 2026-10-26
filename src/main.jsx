@@ -76,17 +76,29 @@ function Logo({ small = false }) {
   return <div className={`logo ${small ? 'small' : ''}`} aria-hidden="true">{[0, 1, 2, 3].map(i => <span key={i} />)}</div>;
 }
 
-const indicatorDefaults = { pd_enabled: true, pd_text: '#ffffff', pd_background: '#2563eb', pd_padding: 4, git_enabled: true, git_icon: 'folder-git', git_clean_icon: '#69d39a', git_clean_background: '#193b2b', git_dirty_icon: '#ffb45e', git_dirty_background: '#49321c', git_unknown_icon: '#9aa4a8', git_unknown_background: '#303638', git_padding: 4 };
+const indicatorDefaults = { pd_enabled: true, pd_production_text: '#ffffff', pd_production_background: '#2563eb', pd_development_text: '#ffffff', pd_development_background: '#475569', pd_padding: 4, git_enabled: true, git_icon: 'folder-git', git_clean_icon: '#69d39a', git_clean_background: '#193b2b', git_dirty_icon: '#ffb45e', git_dirty_background: '#49321c', git_unknown_icon: '#9aa4a8', git_unknown_background: '#303638', git_padding: 4 };
 const gitIcons = { 'folder-git': FolderGit2, 'git-branch': GitBranch, 'git-commit': GitCommit, 'git-fork': GitFork };
 
-function IndicatorColor({ label, value, disabled, onChange }) {
-  return <label className="indicator-color-control">
+function indicatorSettings(saved = {}) {
+  return {
+    ...indicatorDefaults,
+    ...saved,
+    pd_production_text: saved.pd_production_text ?? saved.pd_text ?? indicatorDefaults.pd_production_text,
+    pd_production_background: saved.pd_production_background ?? saved.pd_background ?? indicatorDefaults.pd_production_background,
+    pd_development_text: saved.pd_development_text ?? saved.pd_text ?? indicatorDefaults.pd_development_text,
+    pd_development_background: saved.pd_development_background ?? saved.pd_background ?? indicatorDefaults.pd_development_background,
+  };
+}
+
+function IndicatorColor({ label, value, disabled, allowNone = false, fallback = '#ffffff', onChange }) {
+  return <div className="indicator-color-control">
     <span>{label}</span>
     <span className="indicator-color-value">
-      <input type="color" aria-label={label} value={value} disabled={disabled} onChange={event => onChange(event.target.value)} />
-      <code>{value.toUpperCase()}</code>
+      <input type="color" aria-label={label} value={value === 'transparent' ? fallback : value} disabled={disabled} onChange={event => onChange(event.target.value)} />
+      {value !== 'transparent' && <code>{value.toUpperCase()}</code>}
+      {allowNone && <button type="button" className={`indicator-none-button ${value === 'transparent' ? 'active' : ''}`} aria-pressed={value === 'transparent'} disabled={disabled} onClick={() => onChange(value === 'transparent' ? fallback : 'transparent')}>{t('없음')}</button>}
     </span>
-  </label>;
+  </div>;
 }
 
 function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, loading, settings, refresh, onError, connected, local, scenes = [], sceneProgress = {}, groupProgress = {}, schedules = [], onOpenSettings }) {
@@ -432,7 +444,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
         const gitStates = (service.isGroup ? service.members : [service]).map(s => s.git_state);
         const gitDirty = gitStates.includes('dirty');
         const gitState = gitDirty ? 'dirty' : gitStates.includes('clean') ? 'clean' : 'unknown';
-        const indicators = { ...indicatorDefaults, ...(settings?.pad_indicators || {}) };
+        const indicators = indicatorSettings(settings?.pad_indicators);
         const GitIcon = gitIcons[indicators.git_icon] || FolderGit2;
         const gitColor = indicators[`git_${gitState}_icon`];
         const gitBackground = indicators[`git_${gitState}_background`];
@@ -445,7 +457,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
               <span className="pad-state"><i /><span>{stateText}</span></span>
               <span className="pad-indicators">
                 {indicators.git_enabled && <span className="pad-git" style={{ color: gitColor, backgroundColor: gitBackground, padding: `${indicators.git_padding}px` }} title={gitLabel} role="img" aria-label={gitLabel}><GitIcon size={12} aria-hidden="true" /></span>}
-                {indicators.pd_enabled && <span className={`pad-environment ${service.environment === 'production' ? 'production' : 'development'}`} style={{ color: indicators.pd_text, backgroundColor: indicators.pd_background, padding: `${indicators.pd_padding}px` }} title={service.environment === 'production' ? t('운영용') : t('개발용')} aria-label={service.environment === 'production' ? t('운영용') : t('개발용')}><span>{service.environment === 'production' ? 'P' : 'D'}</span></span>}
+                {indicators.pd_enabled && <span className={`pad-environment ${service.environment === 'production' ? 'production' : 'development'}`} style={{ color: service.environment === 'production' ? indicators.pd_production_text : indicators.pd_development_text, backgroundColor: service.environment === 'production' ? indicators.pd_production_background : indicators.pd_development_background, padding: `${indicators.pd_padding}px` }} title={service.environment === 'production' ? t('운영용') : t('개발용')} aria-label={service.environment === 'production' ? t('운영용') : t('개발용')}><span>{service.environment === 'production' ? 'P' : 'D'}</span></span>}
               </span>
             </span>
             {errorLine && <span className="pad-error-badge" title={errorLine} onClick={e => { e.stopPropagation(); setSelected(service.id); setTargetError(errorLine); }}>{errorLine}</span>}
@@ -644,7 +656,7 @@ function Settings({ auth, settings, padsets, services, groups, scenes = [], sche
   }
   async function saveIndicators(patch) {
     setBusy(true);
-    const next = { ...indicatorDefaults, ...(settings?.pad_indicators || {}), ...patch };
+    const next = { ...indicatorSettings(settings?.pad_indicators), ...patch };
     try {
       await api('/settings/pad-indicators', { method: 'PUT', body: JSON.stringify(next) });
       setIndicatorDraft(null);
@@ -652,8 +664,8 @@ function Settings({ auth, settings, padsets, services, groups, scenes = [], sche
       onNotice(t('패드 표시 설정을 저장했습니다.'));
     } catch (e) { onError(e.message); } finally { setBusy(false); }
   }
-  function editIndicators(patch) { setIndicatorDraft(current => ({ ...indicatorDefaults, ...(settings?.pad_indicators || {}), ...(current || {}), ...patch })); }
-  const indicators = { ...indicatorDefaults, ...(settings?.pad_indicators || {}), ...(indicatorDraft || {}) };
+  function editIndicators(patch) { setIndicatorDraft(current => ({ ...indicatorSettings(settings?.pad_indicators), ...(current || {}), ...patch })); }
+  const indicators = { ...indicatorSettings(settings?.pad_indicators), ...(indicatorDraft || {}) };
   const GitBadgeIcon = gitIcons[indicators.git_icon] || FolderGit2;
   const indicatorStates = [['clean', t('변경 없음')], ['dirty', t('변경 있음')], ['unknown', t('상태 미확인')]];
   return <>
@@ -688,15 +700,19 @@ function Settings({ auth, settings, padsets, services, groups, scenes = [], sche
           <div className="indicator-title"><h3>{t('P/D 환경 배지')}</h3><p>{t('운영과 개발 환경을 표시하는 배지입니다.')}</p></div>
           <div className="indicator-preview-pair" role="img" aria-label={t('배지 미리보기')}>
             <span className="indicator-preview-label">{t('미리보기')}</span>
-            {['P', 'D'].map(value => <span key={value} className="environment-badge-preview" style={{ color: indicators.pd_text, backgroundColor: indicators.pd_background, padding: `${indicators.pd_padding}px 8px` }}>{value}</span>)}
+            {[[`P`, 'production'], [`D`, 'development']].map(([badge, environment]) => <span key={badge} className="environment-badge-preview" style={{ color: indicators[`pd_${environment}_text`], backgroundColor: indicators[`pd_${environment}_background`], padding: `${indicators.pd_padding}px 8px` }}>{badge}</span>)}
           </div>
           <button type="button" className={`switch ${indicators.pd_enabled ? 'on' : ''}`} role="switch" aria-checked={indicators.pd_enabled} aria-label={t('P/D 환경 배지')} disabled={busy || !settings} onClick={() => editIndicators({ pd_enabled: !indicators.pd_enabled })}><span /></button>
         </div>
-        <div className="indicator-control-grid">
-          <IndicatorColor label={t('텍스트 색')} value={indicators.pd_text} disabled={busy || !settings} onChange={value => editIndicators({ pd_text: value })} />
-          <IndicatorColor label={t('배경 색')} value={indicators.pd_background} disabled={busy || !settings} onChange={value => editIndicators({ pd_background: value })} />
-          <label className="indicator-number-control"><span>{t('내부 패딩')}</span><span className="indicator-number-value"><input type="number" min="0" max="12" value={indicators.pd_padding} disabled={busy || !settings} onChange={event => editIndicators({ pd_padding: Number(event.target.value) })} /><span>px</span></span></label>
+        <div className="indicator-environment-list">
+          {[[t('운영'), 'production', 'P'], [t('개발'), 'development', 'D']].map(([label, environment, badge]) => <div className="indicator-environment-row" key={environment}>
+            <span className={`environment-row-badge ${environment}`} style={{ color: indicators[`pd_${environment}_text`], backgroundColor: indicators[`pd_${environment}_background`] }}>{badge}</span>
+            <strong>{label}</strong>
+            <IndicatorColor label={t('텍스트 색')} value={indicators[`pd_${environment}_text`]} disabled={busy || !settings} onChange={value => editIndicators({ [`pd_${environment}_text`]: value })} />
+            <IndicatorColor label={t('배경 색')} value={indicators[`pd_${environment}_background`]} disabled={busy || !settings} allowNone fallback={indicatorDefaults[`pd_${environment}_background`]} onChange={value => editIndicators({ [`pd_${environment}_background`]: value })} />
+          </div>)}
         </div>
+        <div className="indicator-padding-row"><span>{t('내부 패딩')}</span><label className="indicator-number-control"><input type="number" min="0" max="12" aria-label={t('P/D 배지 내부 패딩')} value={indicators.pd_padding} disabled={busy || !settings} onChange={event => editIndicators({ pd_padding: Number(event.target.value) })} /><span>px</span></label></div>
       </section>
 
       <section className="settings-card vertical indicator-card">
@@ -715,7 +731,7 @@ function Settings({ auth, settings, padsets, services, groups, scenes = [], sche
           {indicatorStates.map(([state, label]) => <div className="indicator-state-row" key={state}>
             <div className="indicator-state-name"><span className="indicator-state-dot" style={{ backgroundColor: indicators[`git_${state}_icon`] }} /><strong>{label}</strong></div>
             <IndicatorColor label={t('아이콘 색')} value={indicators[`git_${state}_icon`]} disabled={busy || !settings} onChange={value => editIndicators({ [`git_${state}_icon`]: value })} />
-            <IndicatorColor label={t('배경 색')} value={indicators[`git_${state}_background`]} disabled={busy || !settings} onChange={value => editIndicators({ [`git_${state}_background`]: value })} />
+            <IndicatorColor label={t('배경 색')} value={indicators[`git_${state}_background`]} disabled={busy || !settings} allowNone fallback={indicatorDefaults[`git_${state}_background`]} onChange={value => editIndicators({ [`git_${state}_background`]: value })} />
           </div>)}
         </div>
       </section>
