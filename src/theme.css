@@ -64,6 +64,7 @@
   button:disabled { cursor: not-allowed; opacity: .48; }
   input, textarea { width: 100%; min-width: 0; padding: 11px 12px; border: 1px solid #c1c7b5; border-radius: 7px; background: var(--color-field); color: #444e40; }
   input:not([type="checkbox"]):not([type="radio"]) { height: 40px; padding: 0 12px; }
+  input[type="checkbox"], input[type="radio"] { width: auto; flex-shrink: 0; }
   input:focus, textarea:focus { outline: 2px solid #8caa8a66; border-color: #7c9a83; }
   input::placeholder, textarea::placeholder { color: #757575; }
   textarea { resize: vertical; font-family: var(--font-mono); }
@@ -129,11 +130,17 @@
   .settings-card.vertical { flex-direction: column; align-items: stretch; }
   .settings-card h2 { font-size: 12px; color: var(--color-heading); }
   .settings-card p { margin-top: 4px; font-size: 11px; line-height: 1.55; color: #5c6654; }
-  .settings-card :is(.settings-card, .component-row, .usage-switch, .scene-item, .schedule-item, .path-code) { border-color: #d4d9cc; }
+  .settings-card :is(.settings-card, .component-row, .usage-switch, .path-code) { border-color: #d4d9cc; }
   .settings-icon { display: flex; width: 32px; height: 32px; flex-shrink: 0; padding: 12px; border-radius: 9px; background: #d8dfce; color: #718567; }
   .section-heading { display: flex; align-items: center; gap: 9px; }
   .section-heading > svg { color: #b0babb; }
   .path-code { padding: 9px; border: 1px solid #c2cbb6; border-radius: 6px; background: #e2e7d8; color: #5c704f; font-size: 11px; overflow-wrap: anywhere; white-space: normal; }
+  /* 색상 견본과 폼 하단 버튼 줄 */
+  .color-field legend { margin-bottom: 10px; font-size: 13px; color: #4e5947; }
+  .colors { display: flex; flex-wrap: wrap; gap: 10px; }
+  .colors button { width: 29px; height: 29px; border: 3px solid transparent; border-radius: 6px; background: var(--color); }
+  .colors button.selected { outline: 2px solid #e0e3e2; outline-offset: 3px; }
+  .form-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 3px; padding-top: 17px; border-top: 1px solid #3c4144; }
   @media (max-width: 650px) {
     .switch { width: 42px; }
     .tool-button { width: 34px; height: 34px; }

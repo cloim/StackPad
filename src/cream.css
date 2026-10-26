@@ -56,7 +56,6 @@
 :root .modal-close{color:#7a8672}
 :root .modal-close:hover{color:#3f563c;background:#dce2d2}
 :root .modal-header.is-draggable:focus-visible{outline-color:#658472}
-.color-field legend{color:#4e5947}
 .registration-service{background:#e7e9de;border-color:#c1c8b6;color:#4d5944}
 .padset-settings .padset-grip,.padset-settings .padset-grip:hover,.padset-settings .padset-grip:active{border:0;background:transparent;box-shadow:none}
 .setup-steps h2{color:#46523e}
@@ -77,13 +76,6 @@
 .login-card .brand{color:#555c51}
 .scene-chip-wrap{background:#e0e6d6;border-color:#bdc8af}
 .scene-chip-menu-btn:hover{background:#b7c6aa40}
-.schedule-badge{background:#d4ddc9}
-.schedule-badge.scene{background:#d5e2cf;color:#557c4d}
-.schedule-badge.pad{background:#d7e1e4;color:#5e8396}
-.schedule-action.start{color:#527d4d}
-.schedule-action.stop{color:#a95c61}
-.schedule-timing .next-run{color:#597e4c}
-.ordered-pad-row{background:#dfe5d5}
 .scene-chip.running{background:#d1dcc6}
 .lcd,.command-output{background:#dfe6d6;border-color:#bbc7ad;color:#4e6842}
 .lcd-head,.lcd-bottom{color:#6e8063}
@@ -95,7 +87,6 @@
 .log-line:hover{background:#cfdbc2}
 .pad-error-badge{color:#9d4852;background:#efdedd;border-color:#d7aaad}
 .pad-schedules-summary .summary-title{color:#59774c}
-.day-chip.active{background:#829b73;border-color:#829b73;color:#fffdf3}
 .native-app .toolbar-brand{font-family:'Arial Black','sans-serif-black',sans-serif;font-weight:900;font-synthesis:weight;-webkit-text-stroke:.25px currentColor}
 /* 서비스 상세: 어두운 기본 테마의 밝은 글자를 크림 배경에 맞게 진하게 한다. */
 :root .modal-body dt{color:#6b7564}
@@ -156,12 +147,8 @@
 .log-panel .log-toolbar .search-nav button{width:var(--control-h-sm);height:var(--control-h-sm);min-height:var(--control-h-sm)!important}
 .log-search-input-wrap .clear-btn{width:24px;height:24px;min-height:24px!important}
 /* 읽어야 하는 보조 텍스트와 경계를 밝은 배경에서도 구분되게 한다. */
-.day-chip{border-color:#b9c0ad;color:#3f4d3b}
-.scene-item,.schedule-item{border-color:#c9cebf}
 .pad-schedules-summary{border-color:#c9cebf}
 .scene-chip-ratio{opacity:1;color:#4f5c48}
-.ordered-pad-row .order-num{opacity:1;color:#5d6656}
-.available-pads-section h4{opacity:1}
 .log-line-num{opacity:.7}
 .log-placeholder{opacity:1;color:#5c6654}
 .form-notice{padding:10px 12px;border:1px solid #d7c19f;border-radius:6px;background:#f6ecd9;color:#6e5129;font-size:12px;line-height:1.6}
@@ -202,7 +189,4 @@
 .log-search-input-wrap{flex:1;min-width:0}
 .log-panel .log-toolbar .log-search-input-wrap input{width:100%}
 }
-
 /* 설정 카드 안의 흐름, 예약 행은 카드 안쪽 테두리 색과 설명 간격을 따른다. */
-.settings-card .scene-item,.settings-card .schedule-item{border-color:#d4d9cc}
-.settings-card .scene-pads{margin-top:4px}
