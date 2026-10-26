@@ -12,7 +12,7 @@ export function KindSwitch({ kind, onChange, disabled, local, docker = true }) {
     <button type="button" role="radio" aria-checked={kind === 'local'} disabled={disabled} onClick={() => onChange('local')}><Monitor size={13} aria-hidden="true" />{t('로컬')}</button>
     <button type="button" role="radio" aria-checked={kind === 'remote'} disabled={disabled || (!local && kind !== 'remote')} onClick={() => onChange('remote')}><Server size={13} />{t('원격 서버')}</button>
     {(docker || kind === 'docker') && <button type="button" role="radio" aria-checked={kind === 'docker'} disabled={disabled} onClick={() => onChange('docker')}><Container size={13} aria-hidden="true" />{t('도커')}</button>}
-    {!local && kind !== 'remote' && <small className="kind-switch-hint">{t('원격 서버는 이 PC에서 접속해 등록할 수 있어요.')}</small>}
+    {!local && kind !== 'remote' && <small className="basis-full px-1.5 pt-0.5 text-[11px] text-[#5c6654]">{t('원격 서버는 이 PC에서 접속해 등록할 수 있어요.')}</small>}
   </div>;
 }
 
@@ -38,27 +38,27 @@ export function RemoteFields({ value, onChange, readOnly, api }) {
     try { setTest(await api('/remote/test', { method: 'POST', body: JSON.stringify({ host: value.host }) })); }
     catch (error) { setTest({ ok: false, message: error.message }); }
   }
-  return <div className="remote-fields">
-    <label>{t('호스트')}<div className="remote-host">
+  return <div className="flex flex-col gap-[18px]">
+    <label>{t('호스트')}<div className="flex items-stretch gap-2 max-tablet:flex-wrap [&>:first-child]:min-w-0 [&>:first-child]:flex-1 max-tablet:[&>:first-child]:basis-full">
       <input aria-label={t('호스트')} required readOnly={readOnly} list={listId} maxLength={255} value={value.host} onChange={e => { set('host', e.target.value); setTest(null); }} placeholder={t('SSH 설정 별칭 또는 user@host:22')} />
-      {!readOnly && <button type="button" className="secondary" disabled={!value.host.trim() || test?.pending} onClick={check}>{test?.pending ? <LoaderCircle size={15} className="spin" /> : <PlugZap size={15} />}{t('접속 테스트')}</button>}
+      {!readOnly && <button type="button" className="secondary min-h-0 max-tablet:min-h-[38px] max-tablet:flex-1" disabled={!value.host.trim() || test?.pending} onClick={check}>{test?.pending ? <LoaderCircle size={15} className="spin" /> : <PlugZap size={15} />}{t('접속 테스트')}</button>}
     </div>
       <datalist id={listId}>{hosts.map(host => <option key={host} value={host} />)}</datalist>
-      {test && !test.pending && <small role="status" className={test.ok ? 'remote-ok' : 'remote-fail'}>{test.message}</small>}
+      {test && !test.pending && <small role="status" className={test.ok ? 'text-[#507958]' : 'whitespace-pre-wrap text-[#986b3d]'}>{test.message}</small>}
     </label>
-    {!readOnly && <label><span>{t('systemd 서비스 이름')} <span className="optional">{t('입력하면 아래 명령을 채워 드려요')}</span></span><div className="remote-host">
+    {!readOnly && <label><span>{t('systemd 서비스 이름')} <span className="optional">{t('입력하면 아래 명령을 채워 드려요')}</span></span><div className="flex items-stretch gap-2 max-tablet:flex-wrap [&>:first-child]:min-w-0 [&>:first-child]:flex-1 max-tablet:[&>:first-child]:basis-full">
       <input aria-label={t('systemd 서비스 이름')} value={unit} maxLength={200} onChange={e => setUnit(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (unitPattern.test(unit.trim())) fill(); } }} placeholder={t('예: order-api')} />
-      <button type="button" className="secondary" disabled={!unitPattern.test(unit.trim())} onClick={fill}><WandSparkles size={15} />{t('명령 채우기')}</button>
+      <button type="button" className="secondary min-h-0 max-tablet:min-h-[38px] max-tablet:flex-1" disabled={!unitPattern.test(unit.trim())} onClick={fill}><WandSparkles size={15} />{t('명령 채우기')}</button>
     </div></label>}
-    <div className="remote-row">
+    <div className="grid grid-cols-2 gap-4 max-tablet:grid-cols-1 max-tablet:gap-[18px]">
       <label>{t('시작 명령')}<input required readOnly={readOnly} maxLength={2000} aria-label={t('시작 명령')} value={value.start} onChange={e => set('start', e.target.value)} placeholder="sudo systemctl start order-api" /></label>
       <label>{t('종료 명령')}<input required readOnly={readOnly} maxLength={2000} aria-label={t('종료 명령')} value={value.stop} onChange={e => set('stop', e.target.value)} placeholder="sudo systemctl stop order-api" /></label>
     </div>
-    <div className="remote-row">
+    <div className="grid grid-cols-2 gap-4 max-tablet:grid-cols-1 max-tablet:gap-[18px]">
       <label>{t('상태 명령')}<input required readOnly={readOnly} maxLength={2000} aria-label={t('상태 명령')} value={value.status} onChange={e => set('status', e.target.value)} placeholder="systemctl is-active --quiet order-api" />{!readOnly && <small>{t('종료 코드 0이면 실행 중으로 표시합니다.')}</small>}</label>
       <label><span>{t('로그 명령')} <span className="optional">{t('선택')}</span></span><input readOnly={readOnly} maxLength={2000} aria-label={t('로그 명령')} value={value.logs} onChange={e => set('logs', e.target.value)} placeholder="journalctl -u order-api -n 300 --no-pager" /></label>
     </div>
     <label><span>{t('상태 확인 URL')} <span className="optional">{t('선택')}</span></span><input type="url" readOnly={readOnly} maxLength={1000} aria-label={t('상태 확인 URL')} value={value.health_url} onChange={e => set('health_url', e.target.value)} placeholder="http://10.0.0.5:8000/health" />{!readOnly && <small>{t('사설망 주소나 등록한 호스트 주소를 사용할 수 있고, 응답하면 상태 명령 대신 실행 중으로 봅니다.')}</small>}</label>
-    {!readOnly && <p className="optional remote-guide">{t('SSH 키 인증으로 접속하며 비밀번호는 저장하지 않습니다. 처음 접속하는 호스트는 터미널에서 ssh로 한 번 접속해 호스트 키를 등록해 주세요. sudo가 필요한 명령은 원격 서버의 sudoers에서 비밀번호 없이 허용해 주세요.')}</p>}
+    {!readOnly && <p className="optional m-0 block">{t('SSH 키 인증으로 접속하며 비밀번호는 저장하지 않습니다. 처음 접속하는 호스트는 터미널에서 ssh로 한 번 접속해 호스트 키를 등록해 주세요. sudo가 필요한 명령은 원격 서버의 sudoers에서 비밀번호 없이 허용해 주세요.')}</p>}
   </div>;
 }

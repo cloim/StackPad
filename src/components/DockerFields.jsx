@@ -17,7 +17,7 @@ export function DockerFields({ value, onChange, readOnly, api, containerName }) 
   }, [api, readOnly, revision]);
   const shortId = value && value.length > 12 ? value.slice(0, 12) : value;
   const readOnlyLabel = containerName ? `${containerName}${shortId ? ` (${shortId})` : ''}` : value;
-  return <div className="docker-fields">
+  return <div className="min-w-0">
     <label>{t('도커 컨테이너')}{readOnly ? <input readOnly value={readOnlyLabel} /> : <div className="compact-input-row"><SelectControl required aria-label={t('도커 컨테이너')} disabled={loading} value={value} onChange={e => {
       const nextId = e.target.value;
       const selected = containers.find(c => c.id === nextId);
@@ -27,7 +27,7 @@ export function DockerFields({ value, onChange, readOnly, api, containerName }) 
       {value && !containers.some(c => c.id === value) && <option value={value}>{value}</option>}
       {containers.map(c => <option value={c.id} key={c.id}>{c.name} | {c.image} | {c.status}</option>)}
     </SelectControl><button type="button" className="secondary" disabled={loading} aria-label={t('컨테이너 새로고침')} onClick={() => setRevision(v => v + 1)}><RefreshCw size={15} className={loading ? 'spin' : ''} /></button></div>}</label>
-    {error && <p role="alert" className="inline-error">{error}</p>}
+    {error && <p role="alert" className="bg-[#f0e1df] text-[12px] leading-[1.7] text-danger-ink">{error}</p>}
     {!readOnly && !loading && !error && !containers.length && <p className="optional">{t('Docker에서 컨테이너를 만든 뒤 새로고침해 주세요.')}</p>}
   </div>;
 }

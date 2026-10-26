@@ -49,13 +49,7 @@
 .log-panel{border:1px solid #383e41;background:#171b1d;border-radius:8px;margin-top:30px;overflow:hidden}
 .log-head{padding:14px 19px;border-bottom:1px solid #32383b;display:flex;align-items:center;justify-content:space-between;background:#232729}
 .log-head .panel-title>span{font-size:10px;color:#909d9f;margin-left:6px}
-.service-form{display:flex;flex-direction:column;gap:18px}
-.form-row{display:flex;gap:16px}
-.form-row>label:first-child{width:95px;flex-shrink:0}
-.form-row>label:last-child{flex:1;min-width:0}
 span.optional{margin-left:3px}
-.check-row{flex-direction:row;align-items:center;gap:10px;font-size:12px}
-.check-row input{width:16px;height:16px;accent-color:var(--orange)}
 .login-shell{min-height:100dvh;display:flex;align-items:center;justify-content:center;flex-direction:column;background:radial-gradient(ellipse at 50% 40%,#353937,#1a1d1e 70%);padding:30px 18px}
 .login-card{width:420px;max-width:100%;border:1px solid #4b5153;border-radius:14px;padding:35px;background:linear-gradient(145deg,#303436,#24282a);box-shadow:0 6px 0 #101516,0 8px 0 #343c3e,0 25px 65px #0005}
 .login-card .brand{margin-bottom:35px}
@@ -131,9 +125,6 @@ span.optional{margin-left:3px}
 .detail-message{font-size:9px}
 .log-head{padding:12px}
 .log-head .panel-title>span{font-size:8px}
-.form-row{gap:12px}
-.form-row>label:first-child{width:77px}
-.form-row>label:last-child input{font-size:11px}
 .modal-overlay{padding:12px}
 .modal-panel{max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px)}
 .modal-body{padding:18px!important}
@@ -158,13 +149,6 @@ span.optional{margin-left:3px}
 .pad.empty>span:last-child{font-size:9px}
 }
 /* 툴바와 패드 중심 화면 */
-.pad-common{display:flex;flex-direction:column;gap:18px;padding-bottom:20px;border-bottom:1px solid #414a4d}
-.registration-services{display:flex;flex-direction:column;gap:16px}
-.registration-service{display:flex;flex-direction:column;gap:16px;padding:18px;border:1px solid #414a4d;border-radius:8px;background:#22282a;min-width:0}
-.registration-service-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.registration-service-head h3{font-size:13px;font-weight:600}
-.registration-service-head>div{display:flex;align-items:center;gap:2px}
-.add-service{align-self:flex-start;margin-top:16px}
 .app-shell .pad-wrap.dragging{opacity:.5}
 .app-shell .pad.empty.drop-target{border:2px solid var(--orange);background:#efa66816;box-shadow:inset 0 0 0 2px #efa66820;color:var(--orange)}
 .pad-move{position:absolute;top:3px;left:4px;width:28px;height:30px;padding:0;border:0;border-radius:5px;background:transparent;color:#8b979b;touch-action:none;cursor:grab}
@@ -172,7 +156,6 @@ span.optional{margin-left:3px}
 .pad-move:active{cursor:grabbing}
 @media(max-width:650px){
 .pad-move{top:1px;left:2px;width:24px;height:30px}
-.registration-service{padding:14px}
 }
 .pad.partial .pad-state{color:#f2c278}
 .pad.partial .pad-state i{background:#f2c278}
@@ -211,7 +194,6 @@ span.optional{margin-left:3px}
 .app-shell .pad.skeleton{background:linear-gradient(100deg,#293032 30%,#3c474b 50%,#293032 70%);background-size:200% 100%}
 .log-panel{margin-top:22px;width:100%;max-width:none}
 .log-panel pre{height:230px;font-size:11px;white-space:pre;overflow-wrap:normal;overflow:auto}
-.service-form button:disabled{cursor:default}
 @media(max-width:650px){
 .toolbar{height:52px;padding:0 12px;gap:7px}
 .toolbar-brand{gap:7px;font-size:12px}
@@ -257,40 +239,10 @@ span.optional{margin-left:3px}
 .pad-menu button svg{color:#9fabae;flex-shrink:0}
 .pad-menu button:hover:not(:disabled),.pad-menu button:focus-visible{background:#ffffff14;color:#fff;outline:none}
 .pad-menu button:disabled{opacity:.45;cursor:default}
-.kind-switch{display:inline-flex;align-self:flex-start;border:1px solid #424648;border-radius:7px;background:#1f2223;padding:3px;gap:3px}
-.kind-switch button{border:0;background:transparent;border-radius:5px;padding:6px 13px;font-size:12px;color:#a9b0b2;gap:6px}
-.kind-switch button[aria-checked="true"]{background:#3a3f42;color:#f1b581;box-shadow:inset 0 1px 0 #555b5e}
-.kind-switch button:disabled{cursor:not-allowed}
-.remote-fields{display:flex;flex-direction:column;gap:18px}
-.remote-host{display:flex;gap:8px;align-items:stretch}
-.remote-host>:first-child{flex:1;min-width:0}
-.remote-host .secondary{min-height:0}
-.remote-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-.remote-ok{color:#9ad6b3}
-.remote-fail{color:#f2c278;white-space:pre-wrap}
-.remote-guide{display:block;margin:0}
 .pad.unreachable .pad-state{color:#f2c278}
 .pad.unreachable .pad-state i,.pad.checking .pad-state i{background:#6f7678}
 .pad.checking .pad-state{color:#8d979b}
 .command-output{height:auto;max-height:120px;margin-top:12px;border:1px solid #383e41;border-radius:6px;background:#171b1d;font-size:10px;white-space:pre-wrap;overflow-wrap:anywhere}
-@media(max-width:650px){
-.remote-row{grid-template-columns:1fr;gap:18px}
-.remote-host{flex-wrap:wrap}
-.remote-host>:first-child{flex-basis:100%}
-.remote-host .secondary{flex:1;min-height:38px}
-.kind-switch button{padding:6px 11px}
-}
-.link-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-@media(max-width:650px){
-.link-row{grid-template-columns:1fr;gap:18px}
-}
-.pad-location-row{display:flex;align-items:end;gap:12px}
-.pad-location-row>label{flex:1;min-width:0}
-.pad-location-row>span{white-space:nowrap;padding-bottom:10px}
-.pad-form [hidden]{display:none!important}
-.pad-form .pad-common{padding-bottom:0;border-bottom:0}
-.pad-location-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:16px}
-.pad-location-row input,.pad-location-row select{height:40px;box-sizing:border-box}
 .app-shell .pad-move{top:5px;left:10px;width:calc(100% - 48px);height:30px;padding:0 3px;justify-content:flex-start;text-align:left;font-size:14px;font-weight:650;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:none}
 .app-shell .pad.assigned{padding-top:40px}
 .app-shell .pad.assigned .pad-top{display:none}
@@ -300,9 +252,7 @@ span.optional{margin-left:3px}
 @media(max-width:650px){
 .app-shell .pad-move{left:7px;top:3px;font-size:12px;height:28px;width:calc(100% - 42px)}
 .app-shell .pad.assigned{padding-top:35px}
-.pad-location-row{gap:12px}
 }
-.docker-fields{min-width:0}
 @media(max-height:560px){
 .app-shell .pad-top{display:none}
 .app-shell .pad-name{padding-left:15px;padding-right:20px}
@@ -340,10 +290,6 @@ span.optional{margin-left:3px}
 /* SceneSettings & ScheduleSettings */
 /* Modals */
 /* PadForm schedule summary */
-.pad-schedules-summary{margin-top: 12px; padding: 10px 12px; background: rgba(255,255,255,0.04); border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);}
-.pad-schedules-summary .summary-title{font-size: 12px; font-weight: 600; color: #97f7da; display: block; margin-bottom: 4px;}
-.pad-schedules-summary .summary-list{margin: 0; padding-left: 18px; font-size: 12px;}
-.pad-schedules-summary .summary-list li{margin: 2px 0;}
 /* Stage 6: UX LogViewer and Pad Progress */
 .pad.assigned{position: relative;}
 .pad-progress-bar{position: absolute; bottom: 0; left: 0; height: 3px; background: var(--pad-color, #22c55e); transition: width 0.2s ease; z-index: 2; border-bottom-left-radius: 7px; border-bottom-right-radius: 7px;}

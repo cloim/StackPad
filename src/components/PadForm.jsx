@@ -62,12 +62,12 @@ export function PadForm({ pad, preset, services, slot, padsetId = 'default', pad
     finally { setPending(false); }
   }
   return <Modal isOpen onClose={close} closeOnOverlayClick={false} title={pad ? t('패드 설정') : t('서비스 등록')} storageKey="pad-editor" size="lg">
-    <form className="service-form pad-form" onSubmit={save} noValidate>
-      {readOnly && <p className="form-notice" role="note">{remoteLocked ? t('원격 서버 서비스는 StackPad가 실행 중인 PC에서만 바꿀 수 있어요.') : t('실행 중인 패드는 실행 방식과 명령을 바꿀 수 없어요. 패드를 종료한 뒤 다시 열어 주세요.')}</p>}
+    <form className="flex flex-col gap-[18px] [&_button:disabled]:cursor-default" onSubmit={save} noValidate>
+      {readOnly && <p className="rounded-md border border-warn-line bg-warn-soft px-3 py-2.5 text-[12px] leading-[1.6] text-[#6e5129]" role="note">{remoteLocked ? t('원격 서버 서비스는 StackPad가 실행 중인 PC에서만 바꿀 수 있어요.') : t('실행 중인 패드는 실행 방식과 명령을 바꿀 수 없어요. 패드를 종료한 뒤 다시 열어 주세요.')}</p>}
       <Tabs label={t('패드 설정 카테고리')} tabs={[{ id: 'general', name: t('일반') }, { id: 'services', name: t('서비스') }]} value={tab} onChange={setTab} prefix="pad-editor" />
       <div role="tabpanel" id="pad-editor-panel" aria-labelledby={`pad-editor-tab-${tab}`}>
-      <div className="pad-common" hidden={tab !== 'general'}>
-        <div className="pad-location-row"><label>{t('패드셋')}<SelectControl aria-label={t('패드셋')} value={form.padset_id} disabled={pending} onChange={e => {
+      <div className="flex flex-col gap-[18px]" hidden={tab !== 'general'}>
+        <div className="grid grid-cols-2 items-start gap-4 max-tablet:gap-3 [&>label]:min-w-0"><label>{t('패드셋')}<SelectControl aria-label={t('패드셋')} value={form.padset_id} disabled={pending} onChange={e => {
           const occupied = new Set(services.filter(s => s.padset_id === e.target.value && !(pad?.isGroup ? pad.member_ids : [pad?.id]).includes(s.id)).map(s => s.slot));
           const free = Array.from({ length: 16 }, (_, i) => i).find(i => !occupied.has(i));
           if (free === undefined) { onError(t('선택한 패드셋에 빈 패드를 확보해 주세요.')); return; }
@@ -75,19 +75,19 @@ export function PadForm({ pad, preset, services, slot, padsetId = 'default', pad
         }}>{padsets.map(s => <option value={s.id} key={s.id}>{s.name}</option>)}</SelectControl></label>
         <label>{t('패드 이름')}<input required readOnly={pending} maxLength={40} value={common.name} onChange={e => set('name', e.target.value)} placeholder={t('예: Shop')} autoFocus /></label></div>
         <label>{t('서비스 용도')}<SelectControl aria-label={t('서비스 용도')} value={common.environment || 'development'} disabled={pending} onChange={e => set('environment', e.target.value)}><option value="development">{t('개발용')}</option><option value="production">{t('운영용')}</option></SelectControl></label>
-        <div className="link-row">
+        <div className="grid grid-cols-2 gap-4 max-tablet:grid-cols-1 max-tablet:gap-[18px]">
           <label><span>{t('도메인 URL')} <span className="optional">{t('선택')}</span></span><input aria-label={t('도메인 URL')} type="url" readOnly={pending} maxLength={1000} value={common.domain_url || ''} onChange={e => set('domain_url', e.target.value)} placeholder="https://app.example.com/" /></label>
           <label><span>{t('로컬 URL')} <span className="optional">{t('비우면 포트로 자동 결정')}</span></span><input aria-label={t('로컬 URL')} type="url" readOnly={pending} maxLength={1000} value={common.local_url || ''} onChange={e => set('local_url', e.target.value)} placeholder="http://localhost:5173/" /></label>
         </div>
         <fieldset className="color-field" disabled={pending}><legend>{t('패드 색상')}</legend><div className="colors">{colors.map((color, index) => <button type="button" key={color} className={form.color === color ? 'selected' : ''} style={{ '--color': color }} onClick={() => set('color', color)} aria-label={colorNames[index]} aria-pressed={form.color === color} />)}</div></fieldset>
-        {allRemote ? <p className="optional">{t('원격 서버 서비스는 서버에서 관리하므로 자동 실행 대상에서 제외됩니다.')}</p> : <label className="check-row"><input type="checkbox" disabled={pending} checked={common.autostart} onChange={e => set('autostart', e.target.checked)} /><span>{t('관리 엔진 시작 시 패드 자동 실행')}{someRemote ? t(' (원격 서버 서비스 제외)') : ''}</span></label>}
-        {displayed.length > 1 && <label className="check-row"><input type="checkbox" disabled={pending} checked={common.wait_ready} onChange={e => set('wait_ready', e.target.checked)} /><span>{t('앞 서비스가 정상 응답한 뒤 다음 서비스 실행')}</span></label>}
+        {allRemote ? <p className="optional">{t('원격 서버 서비스는 서버에서 관리하므로 자동 실행 대상에서 제외됩니다.')}</p> : <label className="flex-row items-center gap-2.5 text-[12px] [&>input]:size-4 [&>input]:accent-[#8b715b]"><input type="checkbox" disabled={pending} checked={common.autostart} onChange={e => set('autostart', e.target.checked)} /><span>{t('관리 엔진 시작 시 패드 자동 실행')}{someRemote ? t(' (원격 서버 서비스 제외)') : ''}</span></label>}
+        {displayed.length > 1 && <label className="flex-row items-center gap-2.5 text-[12px] [&>input]:size-4 [&>input]:accent-[#8b715b]"><input type="checkbox" disabled={pending} checked={common.wait_ready} onChange={e => set('wait_ready', e.target.checked)} /><span>{t('앞 서비스가 정상 응답한 뒤 다음 서비스 실행')}</span></label>}
         {pad?.id && (() => {
           const padSchedules = schedules.filter(s => s.target_type === 'pad' && s.target_id === pad.id);
           if (!padSchedules.length) return null;
-          return <div className="pad-schedules-summary">
-            <span className="summary-title">{t('예약 실행')}</span>
-            <ul className="summary-list">
+          return <div className="mt-3 rounded-lg border border-[#c9cebf] bg-[rgba(255,255,255,0.04)] px-3 py-2.5">
+            <span className="mb-1 block text-[12px] font-semibold text-[#59774c]">{t('예약 실행')}</span>
+            <ul className="m-0 list-disc pl-[18px] text-[12px] [&>li]:my-0.5">
               {padSchedules.map(s => <li key={s.id}>
                 <span>{s.action === 'start' ? t('시작') : t('정지')}</span> {s.time} ({formatNextRun(s)})
               </li>)}
@@ -95,10 +95,10 @@ export function PadForm({ pad, preset, services, slot, padsetId = 'default', pad
           </div>;
         })()}
       </div>
-      <div hidden={tab !== 'services'}><div className="registration-services">{displayed.map((component, index) => {
+      <div hidden={tab !== 'services'}><div className="flex flex-col gap-4">{displayed.map((component, index) => {
         const current = component;
-        return <section className="registration-service" key={component.id || `new-${index}`} aria-label={t('서비스 {0}', index + 1)}>
-          <div className="registration-service-head"><h3>{t('서비스')} {index + 1}</h3>{displayed.length > 1 && <div>
+        return <section className="flex min-w-0 flex-col gap-4 rounded-lg border border-line bg-card p-[18px] text-[#4d5944] max-tablet:p-3.5" key={component.id || `new-${index}`} aria-label={t('서비스 {0}', index + 1)}>
+          <div className="flex items-center justify-between gap-2.5"><h3 className="text-[13px] font-semibold">{t('서비스')} {index + 1}</h3>{displayed.length > 1 && <div className="flex items-center gap-0.5">
             <button className="tool-button max-tablet:w-[30px]" type="button" disabled={readOnly || pending || index === 0} aria-label={t('서비스 {0} 순서 앞으로', index + 1)} onClick={() => { const list = [...form.components]; [list[index - 1], list[index]] = [list[index], list[index - 1]]; set('components', list); }}><ArrowUp size={15} /></button>
             <button className="tool-button max-tablet:w-[30px]" type="button" disabled={readOnly || pending || index === form.components.length - 1} aria-label={t('서비스 {0} 순서 뒤로', index + 1)} onClick={() => { const list = [...form.components]; [list[index + 1], list[index]] = [list[index], list[index + 1]]; set('components', list); }}><ArrowDown size={15} /></button>
             <button className="delete-button h-[38px] w-9 rounded-md text-[#ee8e9c] hover:bg-[#ee8e9c15] max-tablet:w-[30px]" type="button" disabled={readOnly || pending} aria-label={t('서비스 {0} 제거', index + 1)} onClick={() => set('components', form.components.filter((_, i) => i !== index))}><Trash2 size={15} /></button>
@@ -108,12 +108,12 @@ export function PadForm({ pad, preset, services, slot, padsetId = 'default', pad
           {current.kind === 'docker' ? <DockerFields value={current.container || ''} containerName={current.container_name || current.name} readOnly={readOnly || pending} api={api} onChange={(containerId, containerObj) => onDockerChange(index, containerId, containerObj)} /> : current.kind === 'remote' ? <RemoteFields value={current.remote || emptyRemote} readOnly={readOnly || pending} api={api} onChange={remote => patch(index, { remote })} /> : <>
           <label>{t('실행 명령')}<textarea required readOnly={readOnly || pending} rows={2} maxLength={2000} value={current.command} onChange={e => set('components', form.components.map((c, i) => i === index ? { ...c, command: e.target.value } : c))} placeholder={t('예: uv run uvicorn main:app --port 8000')} /></label>
           <label>{t('작업 폴더')}<input required readOnly={readOnly || pending} value={current.cwd} onChange={e => set('components', form.components.map((c, i) => i === index ? { ...c, cwd: e.target.value } : c))} placeholder="C:\Users\me\my-app" /></label>
-          <div className="form-row"><label><span>{t('포트')} <span className="optional">{t('선택')}</span></span><input type="number" readOnly={readOnly || pending} min={1} max={65535} value={current.port || ''} onChange={e => set('components', form.components.map((c, i) => i === index ? { ...c, port: e.target.value } : c))} /></label><label><span>{t('상태 확인 URL')} <span className="optional">{t('선택')}</span></span><input type="url" readOnly={pending} value={current.health_url} onChange={e => set('components', form.components.map((c, i) => i === index ? { ...c, health_url: e.target.value } : c))} placeholder="http://127.0.0.1:8000/health" /></label></div>
-          <div className="form-row"><label className="check-row"><input type="checkbox" disabled={pending} checked={current.restart_policy === 'on-failure'} onChange={e => patch(index, { restart_policy: e.target.checked ? 'on-failure' : 'never' })} /><span>{t('비정상 종료 시 자동 재시작')}</span></label>{current.restart_policy === 'on-failure' && <label>{t('최대 재시작 횟수')}<input type="number" min={1} max={10} disabled={pending} value={current.restart_max ?? 3} onChange={e => patch(index, { restart_max: Math.max(1, Math.min(10, Number(e.target.value) || 1)) })} /></label>}</div>
+          <div className="flex gap-4 max-tablet:gap-3 [&>label:first-child]:w-[95px] [&>label:first-child]:shrink-0 max-tablet:[&>label:first-child]:w-[77px] [&>label:last-child]:min-w-0 [&>label:last-child]:flex-1 max-tablet:[&>label:last-child_input]:text-[11px]"><label><span>{t('포트')} <span className="optional">{t('선택')}</span></span><input type="number" readOnly={readOnly || pending} min={1} max={65535} value={current.port || ''} onChange={e => set('components', form.components.map((c, i) => i === index ? { ...c, port: e.target.value } : c))} /></label><label><span>{t('상태 확인 URL')} <span className="optional">{t('선택')}</span></span><input type="url" readOnly={pending} value={current.health_url} onChange={e => set('components', form.components.map((c, i) => i === index ? { ...c, health_url: e.target.value } : c))} placeholder="http://127.0.0.1:8000/health" /></label></div>
+          <div className="flex gap-4 max-tablet:gap-3 [&>label:first-child]:w-[95px] [&>label:first-child]:shrink-0 max-tablet:[&>label:first-child]:w-[77px] [&>label:last-child]:min-w-0 [&>label:last-child]:flex-1 max-tablet:[&>label:last-child_input]:text-[11px]"><label className="flex-row items-center gap-2.5 text-[12px] [&>input]:size-4 [&>input]:accent-[#8b715b]"><input type="checkbox" disabled={pending} checked={current.restart_policy === 'on-failure'} onChange={e => patch(index, { restart_policy: e.target.checked ? 'on-failure' : 'never' })} /><span>{t('비정상 종료 시 자동 재시작')}</span></label>{current.restart_policy === 'on-failure' && <label>{t('최대 재시작 횟수')}<input type="number" min={1} max={10} disabled={pending} value={current.restart_max ?? 3} onChange={e => patch(index, { restart_max: Math.max(1, Math.min(10, Number(e.target.value) || 1)) })} /></label>}</div>
           </>}
         </section>;
       })}</div>
-      {!readOnly && <button className="secondary add-service" type="button" disabled={pending || form.components.length >= 16} onClick={() => set('components', [...form.components.map((c, i) => i === 0 && form.components.length === 1 && !c.name ? { ...c, name: form.name } : c), { kind: 'local', name: '', command: '', cwd: form.components.find(c => c.kind !== 'remote')?.cwd || defaultCwd, port: '', health_url: '', restart_policy: 'never', restart_max: 3, remote: emptyRemote }])}><Plus size={16} />{t('서비스 추가')}</button>}
+      {!readOnly && <button className="secondary mt-4 self-start" type="button" disabled={pending || form.components.length >= 16} onClick={() => set('components', [...form.components.map((c, i) => i === 0 && form.components.length === 1 && !c.name ? { ...c, name: form.name } : c), { kind: 'local', name: '', command: '', cwd: form.components.find(c => c.kind !== 'remote')?.cwd || defaultCwd, port: '', health_url: '', restart_policy: 'never', restart_max: 3, remote: emptyRemote }])}><Plus size={16} />{t('서비스 추가')}</button>}
       </div></div>
       <div className="form-actions"><button type="button" className="secondary" disabled={pending} onClick={close}>{t('취소')}</button><button className="primary" disabled={pending}>{t('저장')}</button></div>
     </form>

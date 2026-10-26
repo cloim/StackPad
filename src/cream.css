@@ -56,14 +56,8 @@
 :root .modal-close{color:#7a8672}
 :root .modal-close:hover{color:#3f563c;background:#dce2d2}
 :root .modal-header.is-draggable:focus-visible{outline-color:#658472}
-.registration-service{background:#e7e9de;border-color:#c1c8b6;color:#4d5944}
 .setup-steps h2{color:#46523e}
-.kind-switch{background:#e3e7d9;border-color:#bfc7b2}
-.kind-switch button{color:#6d7b62}
-.kind-switch button[aria-checked=true]{background:#cbd8bf;color:#425c37;box-shadow:inset 0 1px 0 #e5ecd9}
 .inline-error{color:#a4555e;background:#f0e1df;border-color:#d7b5b6}
-.remote-ok{color:#507958}
-.remote-fail{color:#986b3d}
 .connecting{background:#e9e9e3;color:#515d47}
 .login-card{background:#f2f0e6;border-color:#c7cbbd;color:#444740;box-shadow:0 15px 45px #47593a18}
 .login-card h1{color:#46523e}
@@ -80,7 +74,6 @@
 .log-container{background:#e0e5d8;color:#46583b}
 .log-line:hover{background:#cfdbc2}
 .pad-error-badge{color:#9d4852;background:#efdedd;border-color:#d7aaad}
-.pad-schedules-summary .summary-title{color:#59774c}
 .native-app .toolbar-brand{font-family:'Arial Black','sans-serif-black',sans-serif;font-weight:900;font-synthesis:weight;-webkit-text-stroke:.25px currentColor}
 /* 서비스 상세: 어두운 기본 테마의 밝은 글자를 크림 배경에 맞게 진하게 한다. */
 :root .modal-body dt{color:#6b7564}
@@ -138,13 +131,9 @@
 .log-panel .log-toolbar .search-nav button{width:var(--control-h-sm);height:var(--control-h-sm);min-height:var(--control-h-sm)!important}
 .log-search-input-wrap .clear-btn{width:24px;height:24px;min-height:24px!important}
 /* 읽어야 하는 보조 텍스트와 경계를 밝은 배경에서도 구분되게 한다. */
-.pad-schedules-summary{border-color:#c9cebf}
 .scene-chip-ratio{opacity:1;color:#4f5c48}
 .log-line-num{opacity:.7}
 .log-placeholder{opacity:1;color:#5c6654}
-.form-notice{padding:10px 12px;border:1px solid #d7c19f;border-radius:6px;background:#f6ecd9;color:#6e5129;font-size:12px;line-height:1.6}
-.kind-switch{flex-wrap:wrap}
-.kind-switch-hint{flex-basis:100%;padding:2px 6px 0;color:#5c6654;font-size:11px}
 /* 서비스 상세 지표: 지표 전환은 보이는 버튼으로, 그래프 값은 hover 툴팁으로 확인한다. */
 .lcd-head{overflow:visible}
 .lcd-metric{padding:2px;gap:2px}
