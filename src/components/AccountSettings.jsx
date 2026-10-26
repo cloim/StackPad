@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
-import { Globe, KeyRound, LogOut, QrCode, Smartphone, UserPlus, Users } from 'lucide-react';
-import { CopyValue, OAuthClientForm, OAuthGuide, TailscaleConnect } from './AuthSetup.jsx';
+import { LogOut, QrCode, Smartphone, UserPlus, Users } from 'lucide-react';
 import { isNative, pinWidget } from '../native.js';
 import { t } from '../i18n.js';
 
@@ -50,7 +49,7 @@ function PhonePairing({ settings, api, onError }) {
   return <section className="settings-card vertical">
     <div className="settings-actions"><div className="section-heading"><QrCode size={22} /><div><h2>{t('휴대폰 연결')}</h2><p>{t('휴대폰에 Tailscale과 StackPad Android 앱을 설치하고, 앱에서 이 QR 코드를 찍으면 바로 연결돼요.')}</p></div></div>
       <button className="secondary" disabled={!settings.external_url} onClick={show}>{pairing ? t('새 QR 코드') : t('QR 코드 표시')}</button></div>
-    {!settings.external_url && <p className="optional">{t('먼저 외부 접속을 연결해 주세요.')}</p>}
+    {!settings.external_url && <p className="optional">{t('휴대폰 연결을 사용하려면 StackPad에 외부 주소가 설정되어 있어야 해요.')}</p>}
     {pairing && (left > 0 ? <div className="pairing-qr"><div className="qr-image" role="img" aria-label={t('휴대폰 연결 QR 코드')} dangerouslySetInnerHTML={{ __html: pairing.svg }} /><p className="optional">{t('{0}분 {1}초 동안 한 번 사용할 수 있어요.', Math.floor(left / 60), left % 60)}</p></div>
       : <p className="optional">{t('QR 코드가 만료되었습니다. 새 QR 코드를 띄워 주세요.')}</p>)}
     <p className="optional">{t('Android 앱 내려받기:')} <a className="text-link" href="https://github.com/cloim/StackPad/releases/latest" target="_blank" rel="noreferrer">GitHub Releases</a>. {t('iPhone은 Safari에서 외부 주소를 열고 홈 화면에 추가하세요.')}</p>
@@ -83,7 +82,6 @@ function Devices({ api, onError }) {
 
 export function AccountSettings({ auth, api, onError, onLogout }) {
   const [settings, setSettings] = useState(null);
-  const [editingClient, setEditingClient] = useState(false);
   const report = useRef(onError);
   report.current = onError;
   const load = useCallback(async () => {
@@ -93,19 +91,11 @@ export function AccountSettings({ auth, api, onError, onLogout }) {
   useEffect(() => { load(); }, [load]);
   return <>
     <section className="settings-card"><div className="settings-icon"><LogOut size={22} /></div><div><h2>{auth.email}</h2><p>{isNative ? t('이 기기의 로그인을 해제합니다.') : t('이 브라우저의 로그인을 해제합니다.')}</p></div><button className="secondary logout-button" onClick={onLogout}>{t('로그아웃')}</button></section>
-    {!auth.local && <p className="optional">{t('허용 계정, 외부 접속과 휴대폰 연결은 StackPad가 실행 중인 PC에서 설정할 수 있어요.')}</p>}
+    {!auth.local && <p className="optional">{t('허용 계정과 휴대폰 연결은 StackPad가 실행 중인 PC에서 설정할 수 있어요.')}</p>}
     {settings && <>
       <Accounts {...{ settings, api, onError }} reload={load} />
-      <section className="settings-card vertical"><div className="section-heading"><Globe size={22} /><div><h2>{t('외부 접속')}</h2><p>{t('Tailscale로 이 PC에 HTTPS 주소를 연결해 내 기기에서 접속합니다.')}</p></div></div>
-        <TailscaleConnect api={api} onConnected={load} onError={onError} /></section>
       <PhonePairing {...{ settings, api, onError }} />
     </>}
     <Devices {...{ api, onError }} />
-    {settings && <section className="settings-card vertical"><div className="settings-actions"><div className="section-heading"><KeyRound size={22} /><div><h2>{t('Google 로그인 설정')}</h2><p><code>{settings.client_id}</code></p></div></div>
-      <button className="secondary" onClick={() => setEditingClient(value => !value)}>{editingClient ? t('닫기') : t('변경')}</button></div>
-      <p className="optional">{t('외부 주소를 새로 연결했다면 아래 리디렉션 URI가 OAuth 클라이언트에 모두 등록되어 있는지 확인해 주세요.')}</p>
-      {settings.redirect_uris.map(uri => <CopyValue key={uri} value={uri} label={t('리디렉션 URI')} />)}
-      {editingClient && <><OAuthGuide /><OAuthClientForm api={api} current={settings} onSaved={async () => { setEditingClient(false); await load(); }} onError={onError} /></>}
-    </section>}
   </>;
 }
