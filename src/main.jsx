@@ -79,7 +79,8 @@ function Logo({ small = false }) {
 }
 
 // Pad badges use one fixed palette: P/D for the environment and the Git state of the pad's folders.
-const padBadge = 'pointer-events-none inline-flex size-4 shrink-0 items-center justify-center rounded-[3px] text-[10px] leading-none font-bold max-tablet:size-3.5 max-tablet:text-[9px] max-tablet:[&>svg]:size-2.5';
+const padBadgeBase = 'pointer-events-none inline-flex h-4 items-center justify-center rounded-[3px] text-[10px] leading-none font-bold max-tablet:h-3.5 max-tablet:text-[9px]';
+const padBadge = `${padBadgeBase} w-4 shrink-0 max-tablet:w-3.5 max-tablet:[&>svg]:size-2.5`;
 const badgeColors = {
   production: { color: '#000000', backgroundColor: '#69d39a' },
   development: { color: '#ffffff', backgroundColor: '#9aa4a8' },
@@ -549,7 +550,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
           <button data-pad-status={service.status} className={`${padFrame} items-start justify-normal gap-0 bg-[linear-gradient(115deg,#eeeadd,#e9e5d7)] px-4 pt-10 pb-4 text-ink shadow-[inset_0_1px_0_#fcf9ee,inset_0_-1px_0_#d2cebd,0_1px_1px_#45503b20] hover:bg-[linear-gradient(115deg,#f2eee2,#ede9dc)] max-tablet:px-2 max-tablet:pt-[35px] max-tablet:pb-2.5 short:px-2.5 short:pt-6 short:pb-1`} disabled={pending || !connected} onClick={() => toggle(service)} aria-label={`${service.name} ${service.active ? t('종료') : t('실행')}`} aria-pressed={!!service.active}>
             <span data-pad-port className="mt-[5px] flex min-h-0 w-full flex-col gap-[3px] overflow-auto font-[Consolas,monospace] text-[10px] text-muted max-tablet:mt-1 short:mt-px short:shrink-0 short:gap-px short:text-[9px]">{tags.length ? tags.map(s => <span key={s.id} className="block min-w-0 shrink-0 truncate">{s.name}{s.kind === 'remote' ? ` @${s.remote.host}` : s.kind === 'docker' ? ` ${s.container_ports?.length ? s.container_ports.map(port => `:${port}`).join(', ') : t(':포트 없음')}` : s.port ? ` :${s.port}` : t(' :포트 없음')}</span>) : t('명령 실행')}</span>
             <span className="absolute inset-x-1.5 bottom-1.5 flex min-w-0 items-center justify-between gap-1.5 max-tablet:flex-wrap-reverse max-tablet:gap-y-[3px] short:shrink-0">
-              <span data-pad-state className={`inline-flex min-w-0 shrink items-center gap-[5px] overflow-hidden whitespace-nowrap text-[10px] leading-[1.4] max-tablet:shrink-0 max-tablet:gap-1 max-tablet:text-[9px] short:text-[9px] ${stateTone[service.status] || 'text-[#5a6553]'}`}><i className={`size-1 shrink-0 rounded-full ${stateDot[service.status] || 'bg-[#a8ae9e]'}`} /><span className="block translate-y-[2px] truncate leading-[1.4]">{stateText}</span></span>
+              <span data-pad-state className={`${padBadgeBase} min-w-0 shrink gap-[5px] overflow-hidden bg-[color-mix(in_srgb,currentColor_12%,transparent)] px-1 whitespace-nowrap max-tablet:shrink-0 max-tablet:gap-1 ${stateTone[service.status] || 'text-[#5a6553]'}`}><i className={`size-1 shrink-0 rounded-full ${stateDot[service.status] || 'bg-[#a8ae9e]'}`} /><span className="block truncate">{stateText}</span></span>
               <span className="inline-flex shrink-0 items-center gap-1 max-tablet:ml-auto max-tablet:gap-[3px]">
                 <span data-badge="git" className={padBadge} style={badgeColors[gitState]} role="img" aria-label={gitLabel}><GitBranch size={11} strokeWidth={2.5} aria-hidden="true" /></span>
                 <span data-badge="environment" className={padBadge} style={badgeColors[service.environment === 'production' ? 'production' : 'development']} role="img" aria-label={service.environment === 'production' ? t('운영용') : t('개발용')}>{service.environment === 'production' ? 'P' : 'D'}</span>
