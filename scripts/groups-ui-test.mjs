@@ -82,9 +82,9 @@ try {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: '.jobs/groups-detail-mobile.png' });
   await page.keyboard.press('Escape');
-  // A running group shows its settings read-only.
+  // A running group locks its run commands and explains why.
   await page.getByRole('button', { name: 'Shop 메뉴', exact: true }).click(); await page.getByRole('menuitem', { name: '설정' }).click();
-  await expect(page.getByRole('dialog', { name: '패드 설정', exact: true }).getByLabel('패드 이름', { exact: true })).not.toBeEditable();
+  await expect(page.getByRole('dialog', { name: '패드 설정', exact: true }).getByRole('note')).toContainText('실행 중인 패드');
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Shop 종료', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Shop 실행', exact: true })).toContainText('중지됨');
@@ -97,7 +97,7 @@ try {
   await page.setViewportSize({ width: 1280, height: 930 });
   await page.screenshot({ path: '.jobs/groups-desktop.png' });
   expect(errors).toEqual([]);
-  console.log('GROUP UI PASS: partial and unhealthy states, grouped pads, pad menu detail/settings/VSCode, service tabs with logs and restart, read-only running settings, desktop/mobile');
+  console.log('GROUP UI PASS: partial and unhealthy states, grouped pads, pad menu detail/settings/VSCode, service tabs with logs and restart, locked running commands, desktop/mobile');
 } catch (error) {
   await page.screenshot({ path: '.jobs/groups-ui-test-fail.png', fullPage: true }).catch(() => {});
   throw error;

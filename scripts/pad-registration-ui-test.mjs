@@ -42,6 +42,7 @@ await page.route('http://stackpad.test/**', async route => {
       if (data.components.length > 1) groups.push({ id, name: data.name, slot: data.slot, color: data.color, autostart: data.autostart, wait_ready: data.wait_ready, member_ids: members.map(s => s.id) });
       body = { id };
     } else if (url.pathname.endsWith('/start') || url.pathname.endsWith('/stop')) { actions.push(url.pathname); body = { ok: true }; }
+    else if (url.pathname === '/api/events') { await route.fulfill({ status: 503, body: 'SSE disabled in mock' }); return; }
     else throw new Error(`Unexpected API: ${method} ${url.pathname}`);
     if (url.pathname === '/api/services') {
       body.padsets = [{ id: 'default', name: '기본' }];
@@ -55,6 +56,16 @@ await page.route('http://stackpad.test/**', async route => {
     await route.fulfill({ body: await fs.readFile(file), contentType: file.endsWith('.js') ? 'text/javascript' : file.endsWith('.css') ? 'text/css' : 'text/html' });
   }
 });
+// dnd-kit starts a drag after a few pixels of pointer movement, so move in steps instead of one jump.
+async function dragTo(page, source, target) {
+  const from = await source.boundingBox();
+  const to = await target.boundingBox();
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
+  await page.waitForTimeout(100);
+  await page.mouse.up();
+}
 try {
   await page.goto('http://stackpad.test/');
   await expect(page.getByRole('button', { name: '서비스 그룹', exact: true })).toHaveCount(0);
@@ -83,23 +94,26 @@ try {
   const nova = groups.find(g => g.name === 'NOVA');
   expect(nova.member_ids.map(id => services.find(s => s.id === id).name)).toEqual(['백엔드', '프론트엔드']);
   expect(services.filter(s => nova.member_ids.includes(s.id)).every(s => s.color === '#f97316')).toBe(true);
-  await page.getByRole('button', { name: 'NOVA 자리 이동', exact: true }).dragTo(page.getByRole('button', { name: '패드 5 서비스 등록', exact: true }));
+  await dragTo(page, page.getByRole('button', { name: 'NOVA 자리 이동', exact: true }), page.getByRole('button', { name: '패드 5 서비스 등록', exact: true }));
   await expect.poll(() => nova.slot).toBe(4);
-  await page.getByRole('button', { name: 'Shop 자리 이동', exact: true }).dragTo(page.getByRole('button', { name: '패드 9 서비스 등록', exact: true }));
+  await dragTo(page, page.getByRole('button', { name: 'Shop 자리 이동', exact: true }), page.getByRole('button', { name: '패드 9 서비스 등록', exact: true }));
   await expect.poll(() => groups.find(g => g.id === 'app').slot).toBe(8);
   expect(services.slice(0, 2).map(s => s.pid)).toEqual([100, 101]);
-  await page.getByRole('button', { name: 'NOVA 자리 이동', exact: true }).dragTo(page.getByRole('button', { name: 'Wiki 실행', exact: true }));
+  await dragTo(page, page.getByRole('button', { name: 'NOVA 자리 이동', exact: true }), page.getByRole('button', { name: 'Wiki 실행', exact: true }));
   expect(positions).toHaveLength(2);
   expect(actions).toEqual([]);
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  // A running pad opens its settings read-only; color is a pad setting, not a service setting.
+  // A running pad keeps its run commands locked and says so; name and color stay editable pad settings.
+  // dnd-kit swallows a click that lands in the same instant as a drag ends; a person never clicks that fast.
+  await page.waitForTimeout(150);
   await page.getByRole('button', { name: 'Shop 메뉴', exact: true }).click(); await page.getByRole('menuitem', { name: '설정' }).click();
   const settings = page.getByRole('dialog', { name: '패드 설정', exact: true });
-  await expect(settings.getByLabel('패드 이름', { exact: true })).not.toBeEditable();
-  await expect(settings.locator('.color-field')).toHaveCount(1);
-  await expect(settings.getByRole('button', { name: '블루', exact: true })).toBeDisabled();
+  await expect(settings.getByRole('note')).toContainText('실행 중인 패드');
+  await expect(settings.getByLabel('패드 이름', { exact: true })).toBeEditable();
+  await expect(settings.locator('fieldset', { hasText: '패드 색상' })).toHaveCount(1);
+  await expect(settings.getByRole('button', { name: '블루', exact: true })).toBeEnabled();
   await settings.getByRole('tab', { name: '서비스', exact: true }).click();
-  await expect(settings.locator('.registration-service .color-field')).toHaveCount(0);
+  await expect(settings.locator('section[aria-label="서비스 1"] fieldset')).toHaveCount(0);
   await expect(settings.getByRole('button', { name: '서비스 추가', exact: true })).toHaveCount(0);
   await page.keyboard.press('Escape');
   await page.setViewportSize({ width: 390, height: 844 });
@@ -108,8 +122,8 @@ try {
   const handle = await page.getByRole('button', { name: 'Shop 자리 이동', exact: true }).boundingBox();
   const target = await page.getByRole('button', { name: '패드 8 서비스 등록', exact: true }).boundingBox();
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: handle.x + handle.width / 2, y: handle.y + handle.height / 2 }] });
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: target.x + target.width / 2, y: target.y + target.height / 2 }] });
-  await expect(page.locator('.drop-target')).toHaveCount(1);
+  for (const step of [0.25, 0.5, 0.75, 1]) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: handle.x + handle.width / 2 + (target.x + target.width / 2 - handle.x - handle.width / 2) * step, y: handle.y + handle.height / 2 + (target.y + target.height / 2 - handle.y - handle.height / 2) * step }] });
+  await expect(page.locator('[data-empty-slot].border-2')).toHaveCount(1);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await expect.poll(() => groups.find(g => g.id === 'app').slot).toBe(7);
   expect(actions).toEqual([]);
@@ -117,13 +131,12 @@ try {
   await expect(page.getByRole('dialog')).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: '.jobs/pad-move-mobile.png' });
-  await expect(page.locator('.pad-number')).toHaveCount(0);
   await page.getByRole('button', { name: '서비스 등록', exact: true }).click();
   const mobile = page.getByRole('dialog');
   await mobile.getByLabel('패드 이름', { exact: true }).fill('모바일 등록');
   await mobile.getByRole('tab', { name: '서비스', exact: true }).click();
   await mobile.getByRole('button', { name: '서비스 추가', exact: true }).click();
-  await expect(mobile.locator('.registration-service')).toHaveCount(2);
+  await expect(mobile.locator('section[aria-label^="서비스 "]')).toHaveCount(2);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: '.jobs/pad-registration-mobile.png' });
   expect(errors).toEqual([]);

@@ -110,15 +110,13 @@ try {
   await page.getByRole('button', { name: '저장' }).click();
   await page.getByRole('button', { name: '웹앱 메뉴' }).click();
   await page.screenshot({ path: path.join(shots, 'pad-menu-links-pc.png') });
-  await page.getByRole('menuitem', { name: '도메인으로 열기' }).click();
-  await page.getByRole('button', { name: '웹앱 메뉴' }).click();
-  await page.getByRole('menuitem', { name: '로컬로 열기' }).click();
+  // A development pad opens its local address; only production pads open the domain.
+  await page.getByRole('menuitem', { name: '브라우저에서 열기' }).click();
   const opened = await page.evaluate(() => window.__opened);
-  if (JSON.stringify(opened) !== JSON.stringify(['https://webapp.example.com/', 'http://127.0.0.1:48799/app/'])) throw new Error(`unexpected opened links: ${opened}`);
+  if (JSON.stringify(opened) !== JSON.stringify(['http://127.0.0.1:48799/app/'])) throw new Error(`unexpected opened links: ${opened}`);
   await page.getByRole('button', { name: '주문 API 메뉴' }).click();
   await expect(page.getByRole('menuitem', { name: '상세' })).toBeVisible();
-  await expect(page.getByRole('menuitem', { name: '도메인으로 열기' })).toHaveCount(0);
-  await expect(page.getByRole('menuitem', { name: '로컬로 열기' })).toHaveCount(0);
+  await expect(page.getByRole('menuitem', { name: '브라우저에서 열기' })).toHaveCount(0);
   await page.keyboard.press('Escape');
 
   // Outside this PC the remote settings are read-only and remote cannot be chosen for new pads.
@@ -128,14 +126,14 @@ try {
   });
   await page.reload();
   await page.getByRole('button', { name: '웹앱 메뉴' }).click();
-  await expect(page.getByRole('menuitem', { name: '도메인으로 열기' })).toBeVisible();
-  await expect(page.getByRole('menuitem', { name: '로컬로 열기' })).toHaveCount(0);
+  // Away from this PC a development pad has no address to open.
+  await expect(page.getByRole('menuitem', { name: '브라우저에서 열기' })).toHaveCount(0);
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '주문 API 메뉴' }).click();
   await page.getByRole('menuitem', { name: '설정' }).click();
   await page.getByRole('tab', { name: '서비스', exact: true }).click();
   await expect(page.getByLabel('시작 명령', { exact: true })).toHaveAttribute('readonly', '');
-  await page.getByText('닫기', { exact: true }).click();
+  await page.getByRole('button', { name: '취소', exact: true }).click();
   await page.getByRole('button', { name: '패드 3 서비스 등록' }).click();
   await page.getByRole('tab', { name: '서비스', exact: true }).click();
   await expect(page.getByRole('radio', { name: '원격 서버' })).toBeDisabled();

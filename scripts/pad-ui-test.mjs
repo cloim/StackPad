@@ -27,6 +27,7 @@ await page.route('http://stackpad.test/**', async route => {
     else if (url.pathname.endsWith('/position')) { services.find(s => s.id === 'single').slot = route.request().postDataJSON().slot; body = { ok: true }; }
     else if (url.pathname.endsWith('/color')) { recolored = route.request().postDataJSON(); groups[0].color = recolored.color; services.filter(s => ['api','web'].includes(s.id)).forEach(s => { s.color = recolored.color; }); body = { ok: true }; }
     else if (url.pathname === '/api/pads/single' && route.request().method() === 'DELETE') { deleted++; services = services.filter(s => s.id !== 'single'); body = { ok: true }; }
+    else if (url.pathname === '/api/pads/group' && route.request().method() === 'PUT') { const pad = route.request().postDataJSON(); recolored = { color: pad.color }; groups[0].color = pad.color; services.filter(s => ['api','web'].includes(s.id)).forEach(s => { s.color = pad.color; }); body = { id: 'group' }; }
     else if (url.pathname === '/api/pads' && route.request().method() === 'POST') { saved = route.request().postDataJSON(); body = { id: 'new' }; }
     else if (url.pathname.endsWith('/history')) body = { interval: 10, cpu: [], memory: [] };
     else throw new Error(`Unexpected API: ${url.pathname}`);
@@ -109,15 +110,16 @@ try {
   await page.getByRole('button', { name: '통합 패드 메뉴', exact: true }).click();
   await expect(page.getByRole('menuitem', { name: '삭제', exact: true })).toBeDisabled();
   await page.getByRole('menuitem', { name: '설정', exact: true }).click();
-  await expect(form.getByLabel('패드 이름', { exact: true })).toHaveAttribute('readonly', '');
+  // A running pad locks its run commands and says why; pad settings such as color stay editable.
+  await expect(form.getByRole('note')).toContainText('실행 중인 패드');
+  await expect(form.getByLabel('패드 이름', { exact: true })).toBeEditable();
   await expect(form.getByText('실행 중인 패드의 설정을 확인하고 복사할 수 있어요. 변경하려면 패드를 중지해 주세요.')).toHaveCount(0);
-  await expect(form.getByRole('button', { name: '저장', exact: true })).toBeDisabled();
   await form.getByRole('button', { name: '퍼플', exact: true }).click();
   await expect(form.getByRole('button', { name: '퍼플', exact: true })).toHaveAttribute('aria-pressed','true');
   await form.getByRole('tab', { name: '서비스', exact: true }).click();
   await expect(form.getByRole('textbox', { name: '실행 명령', exact: true }).first()).toHaveAttribute('readonly', '');
   await form.getByRole('button', { name: '저장', exact: true }).click();
-  await expect(page.locator('.pad-form')).toHaveCount(0);
+  await expect(page.getByRole('dialog', { name: '패드 설정' })).toHaveCount(0);
   expect(recolored).toEqual({color:'#a855f7'});
   expect(services[0].pid).toBe(12345);
   expect(services[0].status).toBe('running');
@@ -125,7 +127,8 @@ try {
   await expect(page.getByRole('button', { name: '통합 패드 종료', exact: true })).toBeVisible();
   await page.getByRole('button', { name: '컨테이너 메뉴', exact: true }).click();
   await page.getByRole('menuitem', { name: '상세', exact: true }).click();
-  await expect(detail.getByRole('tab')).toHaveText(['컨테이너']);
+  // A single-service pad shows its details without a one-tab strip.
+  await expect(detail.getByRole('tab')).toHaveCount(0);
   await expect(detail.locator('dd').first()).toHaveText('도커');
   await expect(detail.locator('dd').nth(4)).toHaveText('8080');
   await detail.getByRole('button', { name: '컨테이너 재시작' }).click();

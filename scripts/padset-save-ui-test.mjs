@@ -73,9 +73,9 @@ try {
   expect(moved.autostart).toBe(true);
   await page.getByRole('tab', { name: '이동 대상', exact: true }).click();
   const wrap = page.locator('[data-pad-wrap]').filter({ has: page.getByRole('button', { name: '실행 중 마지막 패드 메뉴', exact: true }) });
-  await expect(wrap.locator('[data-badge=environment]')).toHaveText('PRD');
-  await expect(wrap.locator('[data-badge=environment]')).toHaveCSS('background-color', 'rgb(197, 223, 195)');
-  await expect(wrap.locator('[data-badge=environment]')).toHaveCSS('color', 'rgb(53, 90, 59)');
+  await expect(wrap.locator('[data-badge=environment]')).toHaveText('P');
+  await expect(wrap.locator('[data-badge=environment]')).toHaveCSS('background-color', 'rgb(105, 211, 154)');
+  await expect(wrap.locator('[data-badge=environment]')).toHaveCSS('color', 'rgb(0, 0, 0)');
   await fs.mkdir('.jobs/live-settings-ui', { recursive: true });
   await page.screenshot({ path: '.jobs/live-settings-ui/desktop.png' });
   await page.addInitScript(() => { window.open = url => { window.lastOpenedUrl = url; }; });
@@ -101,7 +101,7 @@ try {
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByRole('dialog', { name: '패드 설정', exact: true })).toHaveCount(0);
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(wrap.locator('[data-badge=environment]')).toHaveText('DEV');
+  await expect(wrap.locator('[data-badge=environment]')).toHaveText('D');
   await expect(wrap.locator('[data-badge=environment]')).toHaveAttribute('aria-label', '개발용');
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
@@ -122,7 +122,7 @@ try {
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.reload();
-  await expect(wrap.locator('[data-badge=environment]')).toHaveText('PRD');
+  await expect(wrap.locator('[data-badge=environment]')).toHaveText('P');
   await page.getByRole('button', { name: '실행 중 마지막 패드 메뉴', exact: true }).click();
   await expect(page.getByRole('menuitem', { name: '브라우저에서 열기', exact: true })).toHaveCount(1);
   await page.getByRole('menuitem', { name: '브라우저에서 열기', exact: true }).click();
@@ -140,7 +140,7 @@ try {
   await expect(page.getByRole('switch', { name: /피드백/ })).toHaveCount(0);
   await expect(page.getByText('이 기기의 피드백', { exact: true })).toHaveCount(0);
   expect(errors).toEqual([]);
-  console.log('PASS: last single/group/running pad moves, occupied slots skipped, runtime preserved, live metadata editable, DEV/PRD badges and environment-specific browser menu verified on desktop/mobile, no detail modal, persisted after reload');
+  console.log('PASS: last single/group/running pad moves, occupied slots skipped, runtime preserved, live metadata editable, P/D badges and environment-specific browser menu verified on desktop/mobile, no detail modal, persisted after reload');
 } finally {
   await browser.close();
 }

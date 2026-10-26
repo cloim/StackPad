@@ -26,6 +26,7 @@ await page.route('http://stackpad.test/**', async route => {
     else if (url.pathname === '/api/recommendations/hidden' && method === 'DELETE') { calls.resets++; hidden.clear(); settings.recommend_hidden = []; body = { ok: true }; }
     else if (url.pathname === '/api/settings/recommend' && method === 'PUT') { const { roots } = route.request().postDataJSON(); calls.roots.push(roots); settings.recommend_roots = roots; body = { roots }; }
     else if (url.pathname === '/api/pads' && method === 'POST') { const data = route.request().postDataJSON(); calls.pads.push(data); services.push({ ...data.components[0], id: 'new', name: data.name, color: data.color, slot: data.slot, autostart: false, pid: null, status: 'external', external_pid: 2572 }); body = { id: 'new' }; }
+    else if (url.pathname === '/api/events') { await route.fulfill({ status: 503, body: 'SSE disabled in mock' }); return; }
     else throw new Error(`Unexpected API: ${method} ${url.pathname}`);
     if (url.pathname === '/api/services') {
       body.padsets = [{ id: 'default', name: '기본' }];
@@ -78,10 +79,10 @@ try {
   const roots = page.getByLabel('등록 추천 스캔 폴더', { exact: true });
   await expect(roots).toHaveValue('C:\\Users\\me\\projects');
   await expect(page.getByRole('heading', { name: '숨긴 추천 1개', exact: true })).toBeVisible();
-  await expect(page.locator('.hidden-recommendations')).toContainText(candidate.command);
+  await expect(page.getByRole('heading', { name: /숨긴 추천/ }).locator('xpath=../..')).toContainText(candidate.command);
   await page.getByRole('button', { name: 'SampleApp 다시 표시', exact: true }).click();
   await expect.poll(() => calls.unhides).toEqual([candidate.key]);
-  await expect(page.locator('.hidden-recommendations')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: /숨긴 추천/ })).toHaveCount(0);
   await roots.fill('C:\\Users\\me\\projects\n\nE:\\WORK  ');
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect.poll(() => calls.roots.length).toBe(1);
@@ -100,7 +101,7 @@ try {
   await page.getByRole('button', { name: '모두 다시 표시', exact: true }).click();
   await expect.poll(() => calls.resets).toBe(1);
   await expect(page.locator('[data-toast]')).toBeVisible();
-  await expect(page.locator('.hidden-recommendations')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: /숨긴 추천/ })).toHaveCount(0);
   await page.keyboard.press('Escape');
 
   await page.setViewportSize({ width: 390, height: 844 });

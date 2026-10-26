@@ -29,7 +29,8 @@ def docker(*args):
     elif args[0] == 'stop':
         running = False
     elif args[0] == 'logs':
-        return 'Container ready\n'
+        # The engine asks for --timestamps and strips the leading timestamp from each line.
+        return '2026-10-12T00:00:00.000000000Z Container ready\n'
     return ''
 
 

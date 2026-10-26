@@ -8,6 +8,16 @@ const page = await browser.newPage({ locale: 'ko-KR', viewport: { width: 1280, h
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 const screenshot = name => page.screenshot({ path: `.jobs/padsets-${name}.png`, fullPage: true });
+// dnd-kit starts a drag after a few pixels of pointer movement, so move in steps instead of one jump.
+async function dragTo(page, source, target) {
+  const from = await source.boundingBox();
+  const to = await target.boundingBox();
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
+  await page.waitForTimeout(100);
+  await page.mouse.up();
+}
 try {
   await page.context().addCookies([{ name: 'stackpad_session', value: session, url: base }]);
   await page.goto(base);
@@ -32,26 +42,32 @@ try {
   await screenshot('settings-general-mobile');
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.getByRole('tab', { name: '일반', exact: true }).press('ArrowRight');
-  await expect(page.getByRole('heading', { name: '등록 추천 스캔 폴더' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '흐름 관리' })).toBeVisible();
   await page.getByRole('tab', { name: '패드셋', exact: true }).click();
   await page.getByLabel('새 패드셋 이름').fill('개발');
   await page.getByRole('button', { name: '추가', exact: true }).click();
   await expect(page.getByLabel('개발 패드셋 이름')).toBeVisible();
   await page.getByLabel('개발 패드셋 이름').fill('도커 셋');
-  await page.locator('.padset-row').filter({ has: page.getByLabel('개발 패드셋 이름') }).getByRole('button', { name: '저장' }).click();
+  await page.locator('form:has(button[aria-label$="패드셋 순서 이동"])').filter({ has: page.getByLabel('개발 패드셋 이름') }).getByRole('button', { name: '저장' }).click();
   await expect(page.getByLabel('도커 셋 패드셋 이름')).toBeVisible();
-  await page.getByRole('button', { name: '도커 셋 패드셋 순서 이동', exact: true }).dragTo(page.locator('.padset-row').filter({ has: page.getByLabel('기본 패드셋 이름', { exact: true }) }));
+  await dragTo(page, page.getByRole('button', { name: '도커 셋 패드셋 순서 이동', exact: true }), page.locator('form:has(button[aria-label$="패드셋 순서 이동"])').filter({ has: page.getByLabel('기본 패드셋 이름', { exact: true }) }));
   await expect(page.getByRole('tablist', { name: '패드셋', exact: true }).getByRole('tab')).toHaveText(['도커 셋0', '기본0']);
   await screenshot('settings-padsets-desktop');
   await page.setViewportSize({ width: 360, height: 800 });
   const cdp = await page.context().newCDPSession(page);
   const grip = await page.getByRole('button', { name: '기본 패드셋 순서 이동', exact: true }).boundingBox();
-  const targetRow = await page.locator('.padset-row').filter({ has: page.getByLabel('도커 셋 패드셋 이름', { exact: true }) }).boundingBox();
+  const targetRow = await page.locator('form:has(button[aria-label$="패드셋 순서 이동"])').filter({ has: page.getByLabel('도커 셋 패드셋 이름', { exact: true }) }).boundingBox();
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: grip.x + grip.width / 2, y: grip.y + grip.height / 2 }] });
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: targetRow.x + targetRow.width / 2, y: targetRow.y + targetRow.height / 2 }] });
+  // dnd-kit needs several moves: one to start the drag and more to find the row underneath.
+  for (const step of [0.25, 0.5, 0.75, 1]) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: grip.x + grip.width / 2 + (targetRow.x + targetRow.width / 2 - grip.x - grip.width / 2) * step, y: grip.y + grip.height / 2 + (targetRow.y + targetRow.height / 2 - grip.y - grip.height / 2) * step }] });
+  await page.waitForTimeout(100);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await expect(page.getByRole('tablist', { name: '패드셋', exact: true }).getByRole('tab')).toHaveText(['기본0', '도커 셋0']);
-  await page.getByRole('button', { name: '기본 패드셋 순서 이동', exact: true }).press('ArrowDown');
+  // Keyboard reorder: Space lifts the pad set, an arrow key moves it, Space drops it.
+  const grip2 = page.getByRole('button', { name: '기본 패드셋 순서 이동', exact: true });
+  await expect(grip2).toBeEnabled();
+  await grip2.focus();
+  for (const key of ['Space', 'ArrowDown', 'Space']) { await page.keyboard.press(key); await page.waitForTimeout(150); }
   await expect(page.getByRole('tablist', { name: '패드셋', exact: true }).getByRole('tab')).toHaveText(['도커 셋0', '기본0']);
   await screenshot('settings-padsets-mobile');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -101,14 +117,15 @@ try {
   const otherTouchPad = await page.request.post(`${base}/api/services`, { headers: { origin: base }, data: { name: '다른 셋 서비스 2', command: 'echo fixture', cwd: dataDirectory, slot: 2, padset_id: 'default' } });
   expect(otherTouchPad.ok()).toBe(true);
   await page.reload();
-  await page.getByRole('button', { name: '도커 API 자리 이동', exact: true }).dragTo(page.getByRole('button', { name: '패드 2 서비스 등록', exact: true }));
+  await dragTo(page, page.getByRole('button', { name: '도커 API 자리 이동', exact: true }), page.getByRole('button', { name: '패드 2 서비스 등록', exact: true }));
   await expect(page.getByRole('button', { name: '패드 1 서비스 등록', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: '패드 2 서비스 등록', exact: true })).toHaveCount(0);
   await expect(page.getByRole('dialog')).toHaveCount(0);
   const moveHandle = await page.getByRole('button', { name: '도커 API 자리 이동', exact: true }).boundingBox();
   const emptyTarget = await page.getByRole('button', { name: '패드 3 서비스 등록', exact: true }).boundingBox();
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: moveHandle.x + moveHandle.width / 2, y: moveHandle.y + moveHandle.height / 2 }] });
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: emptyTarget.x + emptyTarget.width / 2, y: emptyTarget.y + emptyTarget.height / 2 }] });
+  for (const step of [0.25, 0.5, 0.75, 1]) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: moveHandle.x + moveHandle.width / 2 + (emptyTarget.x + emptyTarget.width / 2 - moveHandle.x - moveHandle.width / 2) * step, y: moveHandle.y + moveHandle.height / 2 + (emptyTarget.y + emptyTarget.height / 2 - moveHandle.y - moveHandle.height / 2) * step }] });
+  await page.waitForTimeout(100);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await expect(page.getByRole('button', { name: '패드 2 서비스 등록', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: '패드 3 서비스 등록', exact: true })).toHaveCount(0);

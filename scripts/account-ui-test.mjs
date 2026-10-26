@@ -30,6 +30,7 @@ await page.route('http://stackpad.test/**', async route => {
     else if (url.pathname.startsWith('/api/devices/')) devices = [];
     else if (url.pathname === '/api/auth/accounts') accounts = [...accounts, route.request().postDataJSON().email];
     else if (url.pathname === '/api/pairing') body = { url: 'https://pc.tail1234.ts.net', code: 'fixture-code', expires_in: 300, link: 'stackpad://pair?server=https%3A%2F%2Fpc.tail1234.ts.net&code=fixture-code' };
+    else if (url.pathname === '/api/events') { await route.fulfill({ status: 503, body: 'SSE disabled in mock' }); return; }
     else throw new Error(`Unexpected API: ${method} ${url.pathname}`);
     await route.fulfill({ json: body });
   } else {
@@ -58,6 +59,8 @@ try {
   await expect(page.getByText(/4분 5\d초 동안 한 번 사용할 수 있어요\.|5분 0초 동안/)).toBeVisible();
   await page.screenshot({ path: path.join(shots, 'account-settings-desktop.png'), fullPage: true });
   await page.getByRole('button', { name: 'Pixel 9 연결 해제' }).click();
+  // Disconnecting a device asks first.
+  await page.getByRole('dialog', { name: '기기 연결 해제' }).getByRole('button', { name: '해제', exact: true }).click();
   await expect(page.getByText('연결된 기기가 없습니다.')).toBeVisible();
   expect(requests).toContain('DELETE /api/devices/abcd1234abcd1234');
   expect(errors).toEqual([]);
