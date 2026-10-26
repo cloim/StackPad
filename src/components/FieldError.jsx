@@ -57,5 +57,5 @@ function FieldErrorPopover({ id, field, message }) {
     observer.observe(field);
     return () => { window.removeEventListener('scroll', place, true); window.removeEventListener('resize', place); observer.disconnect(); };
   }, [field, message]);
-  return createPortal(<div ref={ref} id={id} role="alert" className="field-error" data-ui-audit-overlay style={style}><CircleAlert size={14} aria-hidden="true" />{message}</div>, document.body);
+  return createPortal(<div ref={ref} id={id} role="alert" data-field-error className="fixed z-[2200] flex max-w-[min(360px,calc(100vw-16px))] items-start gap-1.5 rounded-md border border-danger-line bg-danger-soft px-2.5 py-[7px] text-[12px] leading-[1.45] text-[#8f3540] shadow-[0_6px_18px_#34442b24]" data-ui-audit-overlay style={style}><CircleAlert size={14} aria-hidden="true" className="mt-0.5" />{message}</div>, document.body);
 }

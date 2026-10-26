@@ -24,15 +24,6 @@
 .usage-provider:nth-child(2) .usage-window:not(.caution):not(.warning){--usage-color:#789cae}
 .usage-provider:nth-child(3) .usage-window:not(.caution):not(.warning){--usage-color:#b28e6f}
 .padset-bar-row{margin-bottom:0}
-.padset-bar-row>.category-tabs{background:transparent;border:0;border-radius:0;padding:4px;gap:10px}
-.padset-bar-row>.category-tabs [role=tab]{min-width:88px;padding:10px 16px;border:1px solid #bfc1b4;border-radius:4px;background:linear-gradient(#efeee4,#e9e7dc);color:#555c51;box-shadow:inset 0 1px 0 #fffdf0,0 1px 1px #59604b19,0 1px 0 #bfc1b4}
-.padset-bar-row>.category-tabs [role=tab]:before{content:'';width:8px;height:3px;border-radius:1px;background:#bbbeb1;flex-shrink:0}
-.padset-bar-row>.category-tabs [role=tab][aria-selected=true]{background:#cfd8c5;color:#33452f;font-weight:700;border-color:#a9b59f;box-shadow:inset 0 1px 3px #4f5c4433,0 1px 0 #fffdf2}
-.padset-bar-row>.category-tabs [role=tab][aria-selected=true]:before{background:#35d982;box-shadow:0 0 4px #35d982cc,0 0 9px #35d98266}
-.category-tabs [role=tab]{color:#717b68}
-.category-tabs [role=tab][aria-selected=true]{background:#fbfaf3;color:#33452f;font-weight:700;box-shadow:0 1px 3px #4a553f38,inset 0 0 0 1px #b2bda7}
-.category-tabs [role=tab]:focus-visible{outline-color:#658472}
-.category-tabs [role=tab][aria-selected=true] .tab-badge{background:#becdb7;color:#445c46}
 .app-shell .pads{flex:1;min-height:0;height:auto;padding:15px;gap:15px;border:1px solid #bfc2b6;border-radius:7px;background:#d1d3c9;box-shadow:inset 0 1px 3px #46503d1c,0 1px 0 #fffff4}
 .app-shell .pad-wrap{border-radius:6px;background:#a9ac9f;box-shadow:0 1px 2px #3e493a25}
 .app-shell .pad-wrap:has(>.pad.running),.app-shell .pad-wrap:has(>.pad.starting){box-shadow:0 0 0 1px color-mix(in srgb,var(--pad-color) 45%,transparent),0 2px 12px color-mix(in srgb,var(--pad-color) 50%,transparent)}
@@ -79,8 +70,6 @@
 :root .modal-close{color:#7a8672}
 :root .modal-close:hover{color:#3f563c;background:#dce2d2}
 :root .modal-header.is-draggable:focus-visible{outline-color:#658472}
-.select-control select{color:#444e40;background:#f9f7ee;border-color:#c1c7b5}
-.select-control select:focus-visible{border-color:#7c9a83;outline-color:#8caa8a66}
 .color-field legend{color:#4e5947}
 .settings-card,.registration-service,.component-row,.usage-switch{background:#e7e9de;border-color:#c1c8b6;color:#4d5944}
 .padset-settings .padset-grip,.padset-settings .padset-grip:hover,.padset-settings .padset-grip:active{border:0;background:transparent;box-shadow:none}
@@ -166,8 +155,6 @@
 .app-shell .pads{padding:8px;gap:8px}
 .app-shell .usage-bar{padding:3px 10px}
 .app-shell .pad-move{font-size:12px}
-.padset-bar-row>.category-tabs{gap:7px;padding:2px}
-.padset-bar-row>.category-tabs [role=tab]{min-width:66px;padding:8px 10px;font-size:11px}
 }
 @media(max-width:767px){
 .modal-panel.service-detail-modal{height:calc(100dvh - 24px)!important}
@@ -177,19 +164,6 @@
 .app-shell .pads{padding:6px;gap:7px}
 }
 /* 알림, 툴팁, 필드 오류: 레이아웃을 밀지 않고 포털 위에 겹쳐 그린다. 모달(1000번대)보다 위에 둔다. */
-.toast-stack{position:fixed;right:16px;bottom:16px;z-index:2300;display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-width:calc(100vw - 32px);pointer-events:none}
-.toast{display:flex;align-items:center;gap:10px;width:min(380px,calc(100vw - 32px));padding:10px 10px 10px 14px;border:1px solid #c1c8b6;border-radius:6px;background:#fbfaf3;color:#3a4535;box-shadow:0 10px 30px #34442b2e;font-size:13px;line-height:1.5;pointer-events:auto}
-.toast>svg{color:#527d4d}
-.toast.error{border-color:#d7aaad;background:#fbf1ef}
-.toast.error>svg{color:#a4555e}
-.toast p{flex:1;min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}
-.toast-action{min-height:var(--control-h-sm);padding:0 10px;border:1px solid #bbc2ad;border-radius:4px;background:#f0eee4;color:#3f4d3b;font-size:12px;font-weight:600;white-space:nowrap}
-.toast-action:hover{background:#e0e5d6}
-.toast-close{width:var(--control-h-sm);height:var(--control-h-sm);padding:0;border:0;border-radius:4px;background:transparent;color:#5d6656}
-.toast-close:hover{background:#e4e8dc;color:#3a4535}
-.tooltip{position:fixed;z-index:2400;max-width:280px;padding:6px 10px;border-radius:6px;background:#3f4a3b;color:#fbfaf3;font-size:12px;line-height:1.45;box-shadow:0 6px 18px #2b352533;pointer-events:none;white-space:pre-wrap;overflow-wrap:anywhere}
-.field-error{position:fixed;z-index:2200;display:flex;align-items:flex-start;gap:6px;max-width:min(360px,calc(100vw - 16px));padding:7px 10px;border:1px solid #d7aaad;border-radius:6px;background:#fbeeee;color:#8f3540;font-size:12px;line-height:1.45;box-shadow:0 6px 18px #34442b24}
-.field-error>svg{margin-top:2px}
 /* 엔진 연결 끊김: 패드가 비활성인 이유를 툴바에서 알린다. */
 .app-shell .engine-status.offline{display:flex;align-items:center;gap:8px;min-width:0;padding:4px 4px 4px 10px;border:1px solid #d7c19f;border-radius:4px;background:#f6ecd9;color:#7a5a2e;font-size:12px}
 .app-shell .engine-status.offline>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -239,8 +213,6 @@
 .service-detail-scroll-track{opacity:1}
 }
 @media(max-width:650px){
-.toast-stack{right:12px;left:12px;bottom:12px;align-items:stretch}
-.toast{width:auto}
 .app-shell .engine-status.offline>span{display:none}
 }
 /* 좁은 패드에서는 상태 글자가 줄어들고 배지는 잘리지 않는다. */

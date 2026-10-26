@@ -1,7 +1,11 @@
 @import "tailwindcss";
 
 /* 크림 MPC 테마 토큰. 화면은 이 토큰을 Tailwind 유틸리티(bg-surface, text-muted 등)로 쓴다. */
+/* max-tablet: 650px 이하 휴대폰 폭, short: 높이 560px 이하 창. */
+@custom-variant short (@media (max-height: 560px));
+
 @theme {
+  --breakpoint-tablet: 651px;
   --font-sans: Deck, 'Malgun Gothic', sans-serif;
   --font-mono: Consolas, 'Malgun Gothic', monospace;
 

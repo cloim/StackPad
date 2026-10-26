@@ -66,7 +66,6 @@ span.optional{margin-left:3px}
 .colors button{width:29px;height:29px;background:var(--color);border-radius:6px;border:3px solid transparent}
 .colors button.selected{outline:2px solid #e0e3e2;outline-offset:3px}
 .form-actions{display:flex;justify-content:flex-end;gap:9px;border-top:1px solid #3c4144;padding-top:17px;margin-top:3px}
-.notice-text{white-space:pre-wrap;line-height:1.9;font-size:13px}
 .settings-stack{max-width:830px;display:flex;flex-direction:column;gap:20px}
 .settings-card{display:flex;align-items:center;gap:20px;padding:26px;border:1px solid #3c4144;border-radius:10px;background:#25292b}
 .settings-card h2{font-size:15px;color:#e0e5e4}
@@ -394,17 +393,6 @@ to{background-position:-200% 0}
 @media(max-width:650px){
 .link-row{grid-template-columns:1fr;gap:18px}
 }
-.select-control{position:relative;display:inline-flex;align-items:center;width:100%;min-width:0;height:40px}
-.select-control select{appearance:none;width:100%;min-width:0;height:40px;min-height:40px;box-sizing:border-box;padding:0 34px 0 12px;border:1px solid #424648;border-radius:7px;background:#1a1c1d;color:#eee;font:inherit}
-.select-control>svg{position:absolute;right:11px;pointer-events:none;color:var(--muted,#9296a4)}
-.select-control select:focus-visible{outline:2px solid #efa66880;border-color:var(--orange)}
-.category-tabs{display:flex;gap:4px;overflow-x:auto;flex-shrink:0;padding:4px;background:rgba(127,127,127,.07);border:1px solid rgba(127,127,127,.14);border-radius:10px;max-width:100%}
-.category-tabs [role=tab]{display:inline-flex;align-items:center;justify-content:center;gap:6px;flex-shrink:0;border:0;background:transparent;color:var(--muted,#9296a4);border-radius:7px;padding:8px 13px;font-size:12px;cursor:pointer;white-space:nowrap}
-.category-tabs [role=tab][aria-selected=true]{background:rgba(151,247,218,.12);color:#97f7da}
-.category-tabs [role=tab]:focus-visible{outline:2px solid #97f7da;outline-offset:-2px}
-.pad-deck>.category-tabs{margin:0}
-.tab-badge{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 5px;font-size:10px;font-weight:600;line-height:1;border-radius:9999px;background:rgba(127,127,127,.2);color:inherit;font-variant-numeric:tabular-nums}
-.category-tabs [role=tab][aria-selected=true] .tab-badge{background:rgba(151,247,218,.22);color:#97f7da}
 .compact-settings{padding-top:12px;gap:10px}
 .compact-settings .settings-card{padding:13px;gap:10px;border-radius:10px}
 .compact-settings .settings-card.vertical{gap:10px}
@@ -446,7 +434,6 @@ to{background-position:-200% 0}
 }
 .docker-fields{min-width:0}
 @media(max-width:480px){
-.category-tabs [role=tab]{padding:8px 10px}
 .padset-row{gap:5px;padding:6px}
 .padset-row .secondary{padding:6px 8px}
 .padset-count{font-size:10px}
@@ -454,8 +441,6 @@ to{background-position:-200% 0}
 .compact-settings .settings-card .settings-icon{display:none}
 }
 @media(max-height:560px){
-.pad-deck>.category-tabs{padding:3px}
-.pad-deck>.category-tabs [role=tab]{padding:6px 11px}
 .app-shell .pad-top{display:none}
 .app-shell .pad-name{padding-left:15px;padding-right:20px}
 }
@@ -491,7 +476,6 @@ to{background-position:-200% 0}
 }
 /* Stage 5: Scenes and Schedules styles */
 .padset-bar-row{display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; flex-wrap: wrap;}
-.padset-bar-row > .category-tabs{margin: 0;}
 .scene-chips-bar{display: flex; align-items: center; gap: 8px; flex-wrap: wrap;}
 .scene-chip-wrap{display: inline-flex; align-items: center; background: rgba(255,255,255,0.06); border-radius: 9999px; border: 1px solid rgba(255,255,255,0.12); position: relative; overflow: hidden; padding-right: 4px;}
 .scene-chip{display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px 4px 10px; background: transparent; border: none; color: inherit; font-size: 12px; cursor: pointer; border-radius: 9999px;}

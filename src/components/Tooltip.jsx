@@ -50,6 +50,6 @@ export function Tooltip({ content, children, side = 'bottom' }) {
       onFocus: chain(props.onFocus, event => { if (event.currentTarget.matches(':focus-visible')) setOpen(true); }),
       onBlur: chain(props.onBlur, () => setOpen(false)),
     })}
-    {open && createPortal(<div ref={bubble} id={id} role="tooltip" className="tooltip" data-ui-audit-overlay style={style || { top: 0, left: 0, visibility: 'hidden' }}>{content}</div>, document.body)}
+    {open && createPortal(<div ref={bubble} id={id} role="tooltip" className="pointer-events-none fixed z-[2400] max-w-[280px] whitespace-pre-wrap wrap-anywhere rounded-md bg-tooltip px-2.5 py-1.5 text-[12px] leading-[1.45] text-raised shadow-[0_6px_18px_#2b352533]" data-ui-audit-overlay style={style || { top: 0, left: 0, visibility: 'hidden' }}>{content}</div>, document.body)}
   </>;
 }

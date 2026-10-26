@@ -476,7 +476,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
     <section className="pad-deck" aria-label={t('서비스 컨트롤 패드')}>
       <UsageBar api={api} expected={settings?.usage_providers?.length || 0} />
       <div className="padset-bar-row">
-        <Tabs label={t('패드셋')} tabs={padsets.map(set => ({ ...set, badge: pads.filter(p => p.padset_id === set.id).length }))} value={padsetId} onChange={onPadsetChange} prefix="padsets" />
+        <Tabs label={t('패드셋')} tabs={padsets.map(set => ({ ...set, badge: pads.filter(p => p.padset_id === set.id).length }))} value={padsetId} onChange={onPadsetChange} prefix="padsets" variant="keys" />
         {scenes.length > 0 && <div className="scene-chips-bar" aria-label={t('흐름 목록')}>
           {scenes.map(sc => {
             const padIds = sc.pad_ids || [];
@@ -671,7 +671,7 @@ function FolderOnboarding({ onDone, onError }) {
     catch (e) { onError(e.message); } finally { setBusy(false); }
   }
   return <Modal isOpen={!hidden} onClose={() => setHidden(true)} closeOnOverlayClick={false} title={t('프로젝트 폴더 지정')} size="sm" draggable={false} footer={<><button className="secondary" disabled={busy} onClick={() => finish([])}>{t('나중에')}</button><button className="primary" disabled={busy || !folder.trim()} onClick={() => finish([folder])}>{t('저장')}</button></>}>
-    <div className="service-form"><p className="notice-text">{t('서버 프로젝트를 모아 두는 폴더를 알려 주세요. 서비스를 등록할 때 기본 작업 폴더로 쓰고, 등록 추천이 이 폴더 아래에서 실행 중인 서버를 찾아 드려요.')}</p>
+    <div className="service-form"><p className="whitespace-pre-wrap text-[13px] leading-[1.9]">{t('서버 프로젝트를 모아 두는 폴더를 알려 주세요. 서비스를 등록할 때 기본 작업 폴더로 쓰고, 등록 추천이 이 폴더 아래에서 실행 중인 서버를 찾아 드려요.')}</p>
       <div className="compact-input-row"><input aria-label={t('프로젝트 폴더')} value={folder} onChange={e => setFolder(e.target.value)} placeholder="C:\Users\me\projects" /><button type="button" className="secondary" disabled={busy} onClick={pick}><Folder size={14} />{t('폴더 선택')}</button></div>
       <p className="optional">{t('환경 설정의 등록 추천 탭에서 언제든 바꿀 수 있어요.')}</p></div>
   </Modal>;
@@ -947,7 +947,7 @@ function App() {
     {settings && !settings.onboarding_done && auth.local && <FolderOnboarding onDone={refresh} onError={onError} />}
     <ConfirmModal isOpen={discardSettings} title={t('저장하지 않은 변경 사항')} confirmLabel={t('버리고 닫기')} message={t('저장하지 않은 변경 사항이 있어요. 버리고 닫을까요?')} onCancel={() => setDiscardSettings(false)} onConfirm={() => { setDiscardSettings(false); settingsDirty.current = false; setPanel(null); }} />
     <Toaster toasts={toasts} onClose={id => setToasts(current => current.filter(item => item.id !== id))} />
-    <Modal isOpen={!!notice} onClose={() => setNotice(null)} title={notice?.title || ''} size="sm" draggable={false} footer={<>{notice?.link && <button className="secondary" onClick={() => { window.open(notice.link, '_blank'); setNotice(null); }}>{t('내려받기')}</button>}<button className="primary" onClick={() => setNotice(null)}>{t('확인')}</button></>}><p className="notice-text">{notice?.message}</p></Modal>
+    <Modal isOpen={!!notice} onClose={() => setNotice(null)} title={notice?.title || ''} size="sm" draggable={false} footer={<>{notice?.link && <button className="secondary" onClick={() => { window.open(notice.link, '_blank'); setNotice(null); }}>{t('내려받기')}</button>}<button className="primary" onClick={() => setNotice(null)}>{t('확인')}</button></>}><p className="whitespace-pre-wrap text-[13px] leading-[1.9]">{notice?.message}</p></Modal>
   </div>;
 }
 

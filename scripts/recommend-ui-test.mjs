@@ -86,7 +86,7 @@ try {
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect.poll(() => calls.roots.length).toBe(1);
   expect(calls.roots[0]).toEqual(['C:\\Users\\me\\projects', 'E:\\WORK']);
-  await expect(page.locator('.toast')).toBeVisible();
+  await expect(page.locator('[data-toast]')).toBeVisible();
   await page.keyboard.press('Escape');
 
   await page.getByRole('button', { name: '등록 추천', exact: true }).click();
@@ -99,7 +99,7 @@ try {
   await page.screenshot({ path: 'docs/reviews/screenshots/recommend-settings-desktop.png' });
   await page.getByRole('button', { name: '모두 다시 표시', exact: true }).click();
   await expect.poll(() => calls.resets).toBe(1);
-  await expect(page.locator('.toast')).toBeVisible();
+  await expect(page.locator('[data-toast]')).toBeVisible();
   await expect(page.locator('.hidden-recommendations')).toHaveCount(0);
   await page.keyboard.press('Escape');
 
