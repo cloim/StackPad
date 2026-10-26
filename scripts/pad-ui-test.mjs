@@ -87,7 +87,7 @@ try {
   const nameBox = await form.getByLabel('패드 이름', { exact: true }).boundingBox();
   expect(selectBox.height).toBe(nameBox.height);
   expect(Math.abs(selectBox.y - nameBox.y)).toBeLessThan(2);
-  await expect(form.locator('.pad-location-row')).not.toContainText(/패드 \d/);
+  await expect(form.locator('label', { hasText: '패드셋' }).locator('..')).not.toContainText(/패드 \d/);
   await form.getByLabel('패드 이름', { exact: true }).fill('신규');
   await form.getByLabel('도메인 URL', { exact: true }).fill('https://example.com');
   await form.getByRole('button', { name: '저장', exact: true }).click();
