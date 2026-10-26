@@ -48,7 +48,7 @@ export function PadForm({ pad, preset, services, slot, padsetId = 'default', pad
     event.preventDefault();
     if (pending) return;
     const invalid = event.currentTarget.querySelector(':invalid:not(fieldset)');
-    if (invalid) setTab(invalid.closest('.pad-common') ? 'general' : 'services');
+    if (invalid) setTab(invalid.closest('[data-pad-general]') ? 'general' : 'services');
     if (!fieldError.validate(event.currentTarget)) return;
     setPending(true);
     try {
@@ -66,7 +66,7 @@ export function PadForm({ pad, preset, services, slot, padsetId = 'default', pad
       {readOnly && <p className="rounded-md border border-warn-line bg-warn-soft px-3 py-2.5 text-[12px] leading-[1.6] text-[#6e5129]" role="note">{remoteLocked ? t('원격 서버 서비스는 StackPad가 실행 중인 PC에서만 바꿀 수 있어요.') : t('실행 중인 패드는 실행 방식과 명령을 바꿀 수 없어요. 패드를 종료한 뒤 다시 열어 주세요.')}</p>}
       <Tabs label={t('패드 설정 카테고리')} tabs={[{ id: 'general', name: t('일반') }, { id: 'services', name: t('서비스') }]} value={tab} onChange={setTab} prefix="pad-editor" />
       <div role="tabpanel" id="pad-editor-panel" aria-labelledby={`pad-editor-tab-${tab}`}>
-      <div className="flex flex-col gap-[18px]" hidden={tab !== 'general'}>
+      <div data-pad-general className="flex flex-col gap-[18px]" hidden={tab !== 'general'}>
         <div className="grid grid-cols-2 items-start gap-4 max-tablet:gap-3 [&>label]:min-w-0"><label>{t('패드셋')}<SelectControl aria-label={t('패드셋')} value={form.padset_id} disabled={pending} onChange={e => {
           const occupied = new Set(services.filter(s => s.padset_id === e.target.value && !(pad?.isGroup ? pad.member_ids : [pad?.id]).includes(s.id)).map(s => s.slot));
           const free = Array.from({ length: 16 }, (_, i) => i).find(i => !occupied.has(i));
