@@ -79,6 +79,16 @@ function Logo({ small = false }) {
 const indicatorDefaults = { pd_enabled: true, pd_text: '#ffffff', pd_background: '#2563eb', pd_padding: 4, git_enabled: true, git_icon: 'folder-git', git_clean_icon: '#69d39a', git_clean_background: '#193b2b', git_dirty_icon: '#ffb45e', git_dirty_background: '#49321c', git_unknown_icon: '#9aa4a8', git_unknown_background: '#303638', git_padding: 4 };
 const gitIcons = { 'folder-git': FolderGit2, 'git-branch': GitBranch, 'git-commit': GitCommit, 'git-fork': GitFork };
 
+function IndicatorColor({ label, value, disabled, onChange }) {
+  return <label className="indicator-color-control">
+    <span>{label}</span>
+    <span className="indicator-color-value">
+      <input type="color" aria-label={label} value={value} disabled={disabled} onChange={event => onChange(event.target.value)} />
+      <code>{value.toUpperCase()}</code>
+    </span>
+  </label>;
+}
+
 function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, loading, settings, refresh, onError, connected, local, scenes = [], sceneProgress = {}, groupProgress = {}, schedules = [], onOpenSettings }) {
   const [selected, setSelected] = useState(null);
   const [padEditor, setPadEditor] = useState(null);
@@ -644,21 +654,15 @@ function Settings({ auth, settings, padsets, services, groups, scenes = [], sche
   }
   function editIndicators(patch) { setIndicatorDraft(current => ({ ...indicatorDefaults, ...(settings?.pad_indicators || {}), ...(current || {}), ...patch })); }
   const indicators = { ...indicatorDefaults, ...(settings?.pad_indicators || {}), ...(indicatorDraft || {}) };
+  const GitBadgeIcon = gitIcons[indicators.git_icon] || FolderGit2;
+  const indicatorStates = [['clean', t('변경 없음')], ['dirty', t('변경 있음')], ['unknown', t('상태 미확인')]];
   return <>
-    <Tabs label={t('환경 설정 카테고리')} tabs={[{ id: 'general', name: t('일반') }, { id: 'scenes', name: t('흐름 및 예약') }, { id: 'recommend', name: t('등록 추천') }, { id: 'padsets', name: t('패드셋') }, { id: 'account', name: t('계정') }]} value={category} onChange={setCategory} prefix="settings" />
+    <Tabs label={t('환경 설정 카테고리')} tabs={[{ id: 'general', name: t('일반') }, { id: 'appearance', name: t('모양') }, { id: 'scenes', name: t('흐름 및 예약') }, { id: 'recommend', name: t('등록 추천') }, { id: 'padsets', name: t('패드셋') }, { id: 'account', name: t('계정') }]} value={category} onChange={setCategory} prefix="settings" />
     <div className="settings-stack compact-settings" role="tabpanel" id="settings-panel" aria-labelledby={`settings-tab-${category}`}>
     {category === 'general' && <><section className="settings-card"><div className="settings-icon"><Power size={22} /></div><div><h2>{t('Windows 로그인 시 자동 실행')}</h2></div><button className={`switch ${settings?.autostart ? 'on' : ''}`} role="switch" aria-checked={!!settings?.autostart} aria-label={t('Windows 로그인 시 자동 실행')} disabled={busy || !settings} onClick={() => change(!settings.autostart)}><span /></button></section>
     <section className="settings-card"><div className="settings-icon"><Languages size={22} /></div><div><h2>{t('언어')}</h2></div><div className="retention-control"><SelectControl aria-label={t('언어')} value={locale} onChange={e => setLocale(e.target.value)}>
       {LOCALES.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
     </SelectControl></div></section>
-    <section className="settings-card vertical indicator-settings"><div className="section-heading"><SlidersHorizontal size={20} /><div><h2>{t('패드 배지 표시')}</h2><p>{t('패드에 표시할 환경 및 Git 배지의 모양을 설정합니다.')}</p></div></div>
-      <div className="indicator-setting-row"><strong>{t('P/D 환경 배지')}</strong><button type="button" className={`switch ${indicators.pd_enabled ? 'on' : ''}`} role="switch" aria-checked={indicators.pd_enabled} aria-label={t('P/D 환경 배지')} disabled={busy || !settings} onClick={() => editIndicators({ pd_enabled: !indicators.pd_enabled })}><span /></button></div>
-      <div className="indicator-fields"><label>{t('텍스트 색')}<input type="color" value={indicators.pd_text} disabled={busy || !settings} onChange={e => editIndicators({ pd_text: e.target.value })} /></label><label>{t('배경 색')}<input type="color" value={indicators.pd_background} disabled={busy || !settings} onChange={e => editIndicators({ pd_background: e.target.value })} /></label><label>{t('내부 패딩')}<input type="number" min="0" max="12" value={indicators.pd_padding} disabled={busy || !settings} onChange={e => editIndicators({ pd_padding: Number(e.target.value) })} /></label></div>
-      <div className="indicator-setting-row"><strong>{t('Git 상태 배지')}</strong><button type="button" className={`switch ${indicators.git_enabled ? 'on' : ''}`} role="switch" aria-checked={indicators.git_enabled} aria-label={t('Git 상태 배지')} disabled={busy || !settings} onClick={() => editIndicators({ git_enabled: !indicators.git_enabled })}><span /></button></div>
-      <div className="indicator-fields"><label>{t('아이콘 모양')}<SelectControl aria-label={t('아이콘 모양')} value={indicators.git_icon} disabled={busy || !settings} onChange={e => editIndicators({ git_icon: e.target.value })}><option value="folder-git">folder-git</option><option value="git-branch">git-branch</option><option value="git-commit">git-commit</option><option value="git-fork">git-fork</option></SelectControl></label><label>{t('내부 패딩')}<input type="number" min="0" max="12" value={indicators.git_padding} disabled={busy || !settings} onChange={e => editIndicators({ git_padding: Number(e.target.value) })} /></label></div>
-      <div className="indicator-fields state-colors">{[['clean', 'Git 변경 없음'], ['dirty', 'Git 변경 있음'], ['unknown', 'Git 상태 확인 정보 없음']].map(([state, label]) => <div className="indicator-color-state" key={state}><strong>{t(label)}</strong><label>{t('아이콘 색')}<input type="color" value={indicators[`git_${state}_icon`]} disabled={busy || !settings} onChange={e => editIndicators({ [`git_${state}_icon`]: e.target.value })} /></label><label>{t('배경 색')}<input type="color" value={indicators[`git_${state}_background`]} disabled={busy || !settings} onChange={e => editIndicators({ [`git_${state}_background`]: e.target.value })} /></label></div>)}</div>
-      <div className="settings-actions"><button className="primary" disabled={busy || !settings || !indicatorDraft} onClick={() => saveIndicators(indicatorDraft)}>{busy ? t('저장 중…') : t('저장')}</button></div>
-    </section>
     <section className="settings-card"><div className="settings-icon"><History size={22} /></div><div><h2>{t('로그 보관 기간')}</h2><p className="optional">{t('지정된 기간이 지난 서비스 및 엔진 로그를 자동 삭제합니다.')}</p></div><div className="retention-control"><SelectControl aria-label={t('로그 보관 기간')} value={settings?.log_retention_days ?? 14} disabled={busy || !settings} onChange={e => changeRetention(e.target.value)}>
       <option value={7}>{t('7일')}</option>
       <option value={14}>{t('14일')}</option>
@@ -677,6 +681,46 @@ function Settings({ auth, settings, padsets, services, groups, scenes = [], sche
       <div className="usage-switches">{[['claude', 'Claude Code'], ['codex', 'Codex'], ['antigravity', 'Antigravity']].map(([id, name]) => <label key={id} className="usage-switch"><span>{name}</span><button type="button" className={`switch ${settings?.usage_providers?.includes(id) ? 'on' : ''}`} role="switch" aria-checked={!!settings?.usage_providers?.includes(id)} aria-label={t('{0} 사용량 표시', name)} disabled={busy || !settings} onClick={() => changeUsage(id, !settings.usage_providers.includes(id))}><span /></button></label>)}</div>
       <p className="optional">{t('Antigravity는 상태줄이 저장한 스냅샷 파일을 읽습니다:')} <code>~/.gemini/antigravity-cli/usage-snapshot.json</code></p></section>
     <section className="settings-card vertical"><div className="settings-actions storage-heading"><div className="section-heading"><Folder size={18} /><div><h2>{t('설정과 로그 저장 위치')}</h2></div></div><button className="secondary" disabled={busy || !settings?.can_select_data_dir} onClick={selectDataDirectory} title={settings?.can_select_data_dir ? t('빈 폴더를 선택하면 바로 적용됩니다.') : t('StackPad가 실행 중인 PC에서 선택해 주세요.')}>{busy ? t('처리 중…') : t('폴더 선택')}</button></div><code className="path-code">{settings?.data_dir || t('불러오는 중…')}</code></section></>}
+    {category === 'appearance' && <>
+      <div className="indicator-page-heading"><h2>{t('패드 배지 표시')}</h2><p>{t('패드에 표시할 환경 및 Git 배지의 모양을 설정합니다.')}</p></div>
+      <section className="settings-card vertical indicator-card">
+        <div className="indicator-card-heading">
+          <div className="indicator-title"><h3>{t('P/D 환경 배지')}</h3><p>{t('운영과 개발 환경을 표시하는 배지입니다.')}</p></div>
+          <div className="indicator-preview-pair" role="img" aria-label={t('배지 미리보기')}>
+            <span className="indicator-preview-label">{t('미리보기')}</span>
+            {['P', 'D'].map(value => <span key={value} className="environment-badge-preview" style={{ color: indicators.pd_text, backgroundColor: indicators.pd_background, padding: `${indicators.pd_padding}px 8px` }}>{value}</span>)}
+          </div>
+          <button type="button" className={`switch ${indicators.pd_enabled ? 'on' : ''}`} role="switch" aria-checked={indicators.pd_enabled} aria-label={t('P/D 환경 배지')} disabled={busy || !settings} onClick={() => editIndicators({ pd_enabled: !indicators.pd_enabled })}><span /></button>
+        </div>
+        <div className="indicator-control-grid">
+          <IndicatorColor label={t('텍스트 색')} value={indicators.pd_text} disabled={busy || !settings} onChange={value => editIndicators({ pd_text: value })} />
+          <IndicatorColor label={t('배경 색')} value={indicators.pd_background} disabled={busy || !settings} onChange={value => editIndicators({ pd_background: value })} />
+          <label className="indicator-number-control"><span>{t('내부 패딩')}</span><span className="indicator-number-value"><input type="number" min="0" max="12" value={indicators.pd_padding} disabled={busy || !settings} onChange={event => editIndicators({ pd_padding: Number(event.target.value) })} /><span>px</span></span></label>
+        </div>
+      </section>
+
+      <section className="settings-card vertical indicator-card">
+        <div className="indicator-card-heading">
+          <div className="indicator-title"><h3>{t('Git 상태 배지')}</h3><p>{t('저장소 상태마다 아이콘과 배경 색을 정합니다.')}</p></div>
+          <div className="git-preview-list" role="img" aria-label={t('배지 미리보기')}>
+            {indicatorStates.map(([state, label]) => <span key={state} className="git-badge-preview" style={{ color: indicators[`git_${state}_icon`], backgroundColor: indicators[`git_${state}_background`], padding: indicators.git_padding }}><GitBadgeIcon size={13} aria-hidden="true" /><span>{label}</span></span>)}
+          </div>
+          <button type="button" className={`switch ${indicators.git_enabled ? 'on' : ''}`} role="switch" aria-checked={indicators.git_enabled} aria-label={t('Git 상태 배지')} disabled={busy || !settings} onClick={() => editIndicators({ git_enabled: !indicators.git_enabled })}><span /></button>
+        </div>
+        <div className="indicator-control-grid git-indicator-controls">
+          <label className="indicator-select-control"><span>{t('아이콘 모양')}</span><SelectControl aria-label={t('아이콘 모양')} value={indicators.git_icon} disabled={busy || !settings} onChange={event => editIndicators({ git_icon: event.target.value })}><option value="folder-git">folder-git</option><option value="git-branch">git-branch</option><option value="git-commit">git-commit</option><option value="git-fork">git-fork</option></SelectControl></label>
+          <label className="indicator-number-control"><span>{t('내부 패딩')}</span><span className="indicator-number-value"><input type="number" min="0" max="12" value={indicators.git_padding} disabled={busy || !settings} onChange={event => editIndicators({ git_padding: Number(event.target.value) })} /><span>px</span></span></label>
+        </div>
+        <div className="indicator-state-list">
+          {indicatorStates.map(([state, label]) => <div className="indicator-state-row" key={state}>
+            <div className="indicator-state-name"><span className="indicator-state-dot" style={{ backgroundColor: indicators[`git_${state}_icon`] }} /><strong>{label}</strong></div>
+            <IndicatorColor label={t('아이콘 색')} value={indicators[`git_${state}_icon`]} disabled={busy || !settings} onChange={value => editIndicators({ [`git_${state}_icon`]: value })} />
+            <IndicatorColor label={t('배경 색')} value={indicators[`git_${state}_background`]} disabled={busy || !settings} onChange={value => editIndicators({ [`git_${state}_background`]: value })} />
+          </div>)}
+        </div>
+      </section>
+      <div className="indicator-save-row"><button className="primary" disabled={busy || !settings || !indicatorDraft} onClick={() => saveIndicators(indicatorDraft)}>{busy ? t('저장 중…') : t('저장')}</button></div>
+    </>}
     {category === 'recommend' && <section className="settings-card vertical"><div className="section-heading"><ScanSearch size={22} /><div><h2>{t('등록 추천 스캔 폴더')}</h2><p>{t('이 폴더 아래에서 실행 중인 Python, Node 서버를 등록 추천 대상으로 찾습니다. 한 줄에 폴더 하나씩 입력하세요.')}</p></div></div><textarea aria-label={t('등록 추천 스캔 폴더')} rows={3} value={roots ?? settings?.recommend_roots?.join('\n') ?? ''} onChange={e => setRoots(e.target.value)} /><div className="settings-actions"><button className="primary" disabled={busy || roots === null} onClick={saveRoots}>{t('저장')}</button></div>
       {!!settings?.recommend_hidden?.length && <div className="hidden-recommendations"><div className="settings-actions"><h3>{t('숨긴 추천 {0}개', settings.recommend_hidden.length)}</h3><button className="secondary" disabled={busy} onClick={resetHidden}>{t('모두 다시 표시')}</button></div><div className="component-list">{settings.recommend_hidden.map(entry => <div className="component-row" key={entry.key}>
         <div><strong>{entry.name}</strong><p><code>{entry.command}</code></p><p>{entry.cwd}</p></div>
