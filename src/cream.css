@@ -144,10 +144,10 @@ label small,.optional{color:#77816e}
 .filter-btn{background:#f8f7f0;border-color:#bfc4b3;color:#4d5746}.filter-btn.active{background:#f2dcdc;border-color:#c46a6a;color:#9a3c45}
 /* 서비스 상세는 탭을 고정하고 탭 아래 영역만 스크롤한다. */
 .service-detail-modal .modal-body{display:flex;flex-direction:column;gap:12px;overflow:hidden}
-.service-detail-modal .modal-body>[role=tabpanel]{flex:1;min-height:0;overflow-y:auto;margin-right:-14px;padding-right:14px}
+.service-detail-modal .modal-body>[role=tabpanel],.service-detail-modal .modal-body>[role=region]{flex:1;min-height:0;overflow-y:auto;margin-right:-14px;padding-right:14px}
 /* 스크롤바는 크림 톤으로 얇게 두고, 서비스 상세 본문은 마우스를 올렸을 때만 보인다. */
 ::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#c5c9ba}::-webkit-scrollbar-thumb:hover{background:#a9b09e}
-.service-detail-modal .modal-body>[role=tabpanel]{scrollbar-width:thin;scrollbar-color:transparent transparent;transition:scrollbar-color .2s}.service-detail-modal .modal-body>[role=tabpanel]:hover{scrollbar-color:#c5c9ba transparent}
+.service-detail-modal .modal-body>[role=tabpanel],.service-detail-modal .modal-body>[role=region]{scrollbar-width:thin;scrollbar-color:transparent transparent;transition:scrollbar-color .2s}.service-detail-modal .modal-body>[role=tabpanel]:hover,.service-detail-modal .modal-body>[role=region]:hover{scrollbar-color:#c5c9ba transparent}
 /* 로그 검색란과 오류만 버튼의 높이를 맞춘다. 전역 입력란 높이(40px)보다 우선하도록 선택자를 좁힌다. */
 .log-panel .log-toolbar .log-search-input-wrap input,.log-panel .log-toolbar .filter-btn{height:32px;min-height:32px!important;box-sizing:border-box}
 @media(max-width:650px){
