@@ -2,10 +2,6 @@
 .app-shell{padding:16px;background:linear-gradient(115deg,#f2f1e9,#eae9df);box-shadow:inset 0 1px 0 #fffff5,inset 0 -1px 0 #b8b9ae}
 .app-shell>.toolbar{height:54px;padding:0 8px;background:transparent;border:0;gap:16px}
 .toolbar-brand{margin:0;color:#555c51;font-family:Deck,'Malgun Gothic',sans-serif;font-size:25px;font-weight:700;letter-spacing:-1px}
-:root .logo span{background:#9caf9f;box-shadow:none}
-:root .logo span:nth-child(2){background:#9eb4c3}
-:root .logo span:nth-child(3){background:#b4a9c6}
-:root .logo span:nth-child(4){background:#cbb493}
 .toolbar-actions{gap:10px}
 .app-shell>main{padding:12px 0 0}
 .app-shell .pad-deck{gap:14px}
@@ -56,13 +52,6 @@
 :root .modal-close{color:#7a8672}
 :root .modal-close:hover{color:#3f563c;background:#dce2d2}
 :root .modal-header.is-draggable:focus-visible{outline-color:#658472}
-.setup-steps h2{color:#46523e}
-.inline-error{color:#a4555e;background:#f0e1df;border-color:#d7b5b6}
-.connecting{background:#e9e9e3;color:#515d47}
-.login-card{background:#f2f0e6;border-color:#c7cbbd;color:#444740;box-shadow:0 15px 45px #47593a18}
-.login-card h1{color:#46523e}
-.login-card p{color:#5c6654}
-.login-card .brand{color:#555c51}
 .scene-chip-wrap{background:#e0e6d6;border-color:#bdc8af}
 .scene-chip-menu-btn:hover{background:#b7c6aa40}
 .scene-chip.running{background:#d1dcc6}

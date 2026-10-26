@@ -46,10 +46,10 @@ export function OAuthClientForm({ api, current, onSaved, onError }) {
     try { await api('/auth/client', { method: 'PUT', body: JSON.stringify({ client_id: clientId, client_secret: secret }) }); setSecret(''); await onSaved?.(); }
     catch (e) { onError(e.message); } finally { setBusy(false); }
   }
-  return <form className="flex flex-col gap-[18px]" onSubmit={save} noValidate>
+  return <form className="flex flex-col gap-[17px]" onSubmit={save} noValidate>
     <label>{t('클라이언트 ID')}<input required value={clientId} onChange={e => setClientId(e.target.value)} placeholder="000000000000-xxxx.apps.googleusercontent.com" autoComplete="off" spellCheck={false} /></label>
     <label>{t('클라이언트 보안 비밀번호')}<input type="password" required={!current?.configured} value={secret} onChange={e => setSecret(e.target.value)} placeholder={current?.configured ? t('바꿀 때만 입력') : 'GOCSPX-…'} autoComplete="off" /></label>
-    <div className="flex flex-wrap items-center justify-end gap-2"><button className="primary min-h-[34px] px-3 py-[7px] text-[12px]" disabled={busy}>{busy ? <LoaderCircle className="spin" size={15} /> : <KeyRound size={15} />}{t('저장')}</button></div>
+    <div className="flex flex-wrap items-center justify-end gap-2"><button className="primary mt-1 min-h-[34px] px-3 py-[7px] text-[12px]" disabled={busy}>{busy ? <LoaderCircle className="spin" size={15} /> : <KeyRound size={15} />}{t('저장')}</button></div>
     {fieldError.popover}
   </form>;
 }

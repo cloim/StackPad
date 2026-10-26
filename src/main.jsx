@@ -77,7 +77,7 @@ function timeLabel(seconds) {
 }
 
 function Logo({ small = false }) {
-  return <div className={`logo ${small ? 'small' : ''}`} aria-hidden="true">{[0, 1, 2, 3].map(i => <span key={i} />)}</div>;
+  return <div className={`grid shrink-0 grid-cols-2 ${small ? 'size-[22px] gap-0.5' : 'size-[30px] gap-[3px] max-tablet:size-6'}`} aria-hidden="true">{['#9caf9f', '#9eb4c3', '#b4a9c6', '#cbb493'].map(color => <span key={color} className="rounded-[3px]" style={{ background: color }} />)}</div>;
 }
 
 // Pad badges use one fixed palette: P/D for the environment and the Git state of the pad's folders.
@@ -927,7 +927,7 @@ function App() {
   const onNotice = message => toast('success', message);
   const closePanel = () => { if (panel === 'settings' && settingsDirty.current) setDiscardSettings(true); else setPanel(null); };
   async function logout() { try { await disconnectWidget(api); await api('/logout', { method: 'POST' }); setServices([]); setSettings(null); setLoading(true); checkAuth(); } catch (e) { onError(e.message); } }
-  if (!auth) return <div className="connecting"><Logo /><p>{authError || t('관리 엔진과 연결하고 있어요.')}</p>{authError && <button className="secondary" onClick={checkAuth}><RefreshCw size={16} />{t('다시 연결')}</button>}</div>;
+  if (!auth) return <div className="flex h-dvh flex-col items-center justify-center gap-5 bg-canvas text-[13px] text-[#515d47]"><Logo /><p>{authError || t('관리 엔진과 연결하고 있어요.')}</p>{authError && <button className="secondary" onClick={checkAuth}><RefreshCw size={16} />{t('다시 연결')}</button>}</div>;
   if (!auth.authenticated) return isNative ? <PairPhone api={api} logo={<Logo />} onPaired={checkAuth} /> : <SignIn auth={auth} api={api} logo={<Logo />} onLogin={checkAuth} />;
   return <div className="app-shell">
     <header className="toolbar" aria-label={t('공통 도구')}>

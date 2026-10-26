@@ -1,11 +1,4 @@
 @font-face{font-family:Deck;src:local('Bahnschrift');font-display:swap}
-.logo{display:grid;grid-template-columns:repeat(2,1fr);gap:3px;width:30px;height:30px;flex-shrink:0}
-.logo span{border-radius:3px;background:var(--orange);box-shadow:inset 0 1px 0 #ffc18b}
-.logo span:nth-child(2){background:#cf8c54}
-.logo span:nth-child(3){background:#876347}
-.logo.small{width:22px;height:22px;gap:2px}
-.brand{display:flex;align-items:center;gap:11px}
-.brand strong{font-size:18px;letter-spacing:-.7px}
 .app-shell{height:100dvh;display:flex;overflow:hidden}
 .logout{color:#a8adb0;border:0;background:transparent;font-size:11px;padding:10px}
 .logout:hover{color:#eee}
@@ -50,18 +43,6 @@
 .log-head{padding:14px 19px;border-bottom:1px solid #32383b;display:flex;align-items:center;justify-content:space-between;background:#232729}
 .log-head .panel-title>span{font-size:10px;color:#909d9f;margin-left:6px}
 span.optional{margin-left:3px}
-.login-shell{min-height:100dvh;display:flex;align-items:center;justify-content:center;flex-direction:column;background:radial-gradient(ellipse at 50% 40%,#353937,#1a1d1e 70%);padding:30px 18px}
-.login-card{width:420px;max-width:100%;border:1px solid #4b5153;border-radius:14px;padding:35px;background:linear-gradient(145deg,#303436,#24282a);box-shadow:0 6px 0 #101516,0 8px 0 #343c3e,0 25px 65px #0005}
-.login-card .brand{margin-bottom:35px}
-.login-icon{color:#bbcfbf;margin-bottom:15px}
-.login-card h1{font-size:23px;letter-spacing:-.9px}
-.login-card>p{font-size:12px;color:#a2aeae;line-height:1.9;margin:13px 0 27px}
-.login-card form{display:flex;flex-direction:column;gap:17px}
-.login-card form button{margin-top:4px}
-.login-foot{display:flex;align-items:center;justify-content:center;gap:6px;font-size:10px;color:#8d999b;margin-top:28px}
-.login-caption{font-size:11px;color:#828d91;margin-top:30px;letter-spacing:.8px}
-.inline-error{color:#f0a5a6;font-size:12px;line-height:1.7}
-.connecting{height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;color:#a5b0b3;font-size:13px}
 @keyframes pulse{
 50%{opacity:.4}
 }
@@ -76,7 +57,6 @@ span.optional{margin-left:3px}
 .log-panel{max-width:1380px}
 }
 @media(max-width:1100px){
-.brand strong{font-size:16px}
 .console{padding:17px}
 .pads{gap:9px}
 .pad{padding:10px;aspect-ratio:1}
@@ -93,8 +73,6 @@ span.optional{margin-left:3px}
 }
 @media(max-width:650px){
 .app-shell{flex-direction:column}
-.brand strong{font-size:15px}
-.logo{width:24px;height:24px}
 .logout{padding:8px}
 .logout span{display:none}
 .console{padding:16px 12px 14px;border-radius:10px}
@@ -128,9 +106,6 @@ span.optional{margin-left:3px}
 .modal-overlay{padding:12px}
 .modal-panel{max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px)}
 .modal-body{padding:18px!important}
-.login-card{padding:29px 24px}
-.login-card h1{font-size:21px}
-.login-card .brand{margin-bottom:30px}
 }
 .pad.assigned{align-items:flex-start}
 @media(min-width:901px){
@@ -257,14 +232,7 @@ span.optional{margin-left:3px}
 .app-shell .pad-top{display:none}
 .app-shell .pad-name{padding-left:15px;padding-right:20px}
 }
-.setup-steps{display:flex;flex-direction:column;gap:22px;margin-bottom:6px}
-.setup-steps section{display:flex;flex-direction:column;gap:12px}
-.setup-steps h2{font-size:14px;color:#e0e5e4}
-.login-card:has(.setup-steps){width:560px}
-.login-actions{display:flex;flex-direction:column;gap:10px;margin-bottom:6px}
-.login-card>.inline-error{margin-top:14px}
 /* 설정 카드의 일반 버튼 크기 규칙이 스위치를 키우지 않게 한다. */
-.pair-link{display:flex;flex-direction:column;gap:10px;margin-top:18px}
 @media(max-height:560px){
 .app-shell .pad.assigned{padding-top:24px;padding-bottom:4px}
 .app-shell .pad-state{padding-top:0}
