@@ -14,7 +14,7 @@ function PadsetRow({ set, count, only, busy, draft, onDraft, onSave, onDelete, s
     <input aria-label={t('{0} 패드셋 이름', set.name)} required pattern=".*\S.*" maxLength={40} value={draft ?? set.name} disabled={busy} onChange={event => onDraft(event.target.value)} />
     <span className="optional padset-count">{count}/16</span>
     <button className="secondary" disabled={busy || draft === undefined || draft === set.name}>{t('저장')}</button>
-    <button className="delete-button" type="button" aria-label={t('{0} 패드셋 삭제', set.name)} aria-describedby={deleteHint ? `padset-delete-hint-${set.id}` : undefined} disabled={busy || !!deleteHint} onClick={onDelete}><Trash2 size={16} /></button>
+    <button className="delete-button w-8" type="button" aria-label={t('{0} 패드셋 삭제', set.name)} aria-describedby={deleteHint ? `padset-delete-hint-${set.id}` : undefined} disabled={busy || !!deleteHint} onClick={onDelete}><Trash2 size={16} /></button>
     {deleteHint && <span id={`padset-delete-hint-${set.id}`} hidden>{deleteHint}</span>}
   </form>;
 }

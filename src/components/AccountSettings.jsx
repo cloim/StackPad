@@ -53,8 +53,8 @@ function PhonePairing({ settings, api, onError }) {
   }
   const left = pairing ? Math.max(0, Math.round((pairing.expires - now) / 1000)) : 0;
   return <section className="settings-card vertical">
-    <div className="settings-actions"><div className="section-heading"><QrCode size={22} /><div><h2>{t('휴대폰 연결')}</h2><p>{t('휴대폰에 Tailscale과 StackPad Android 앱을 설치하고, 앱에서 이 QR 코드를 찍으면 바로 연결돼요.')}</p></div></div>
-      <button className="secondary" disabled={!settings.external_url} onClick={show}>{pairing ? t('새 QR 코드') : t('QR 코드 표시')}</button></div>
+    <div className="flex flex-wrap items-center justify-end gap-2"><div className="section-heading mr-auto min-w-[220px] flex-1"><QrCode size={22} /><div><h2>{t('휴대폰 연결')}</h2><p>{t('휴대폰에 Tailscale과 StackPad Android 앱을 설치하고, 앱에서 이 QR 코드를 찍으면 바로 연결돼요.')}</p></div></div>
+      <button className="secondary min-h-8 px-[11px] py-1.5 text-[12px]" disabled={!settings.external_url} onClick={show}>{pairing ? t('새 QR 코드') : t('QR 코드 표시')}</button></div>
     {!settings.external_url && <p className="optional">{t('휴대폰 연결을 사용하려면 StackPad에 외부 주소가 설정되어 있어야 해요.')}</p>}
     {pairing && (left > 0 ? <div className="pairing-qr"><div className="qr-image" role="img" aria-label={t('휴대폰 연결 QR 코드')} dangerouslySetInnerHTML={{ __html: pairing.svg }} /><p className="optional">{t('{0}분 {1}초 동안 한 번 사용할 수 있어요.', Math.floor(left / 60), left % 60)}</p></div>
       : <p className="optional">{t('QR 코드가 만료되었습니다. 새 QR 코드를 띄워 주세요.')}</p>)}
@@ -78,8 +78,8 @@ function Devices({ api, onError }) {
     catch (e) { onError(e.message); } finally { setBusy(false); }
   }
   return <section className="settings-card vertical">
-    <div className="settings-actions"><div className="section-heading"><Smartphone size={22} /><div><h2>{t('연결된 기기')}</h2><p>{t('QR 코드로 연결한 휴대폰입니다. 해제하면 앱과 홈 화면 위젯의 연결이 바로 끊어져요.')}</p></div></div>
-      {isNative && <button className="secondary" onClick={() => pinWidget().catch(e => onError(e.message))}>{t('위젯 추가')}</button>}</div>
+    <div className="flex flex-wrap items-center justify-end gap-2"><div className="section-heading mr-auto min-w-[220px] flex-1"><Smartphone size={22} /><div><h2>{t('연결된 기기')}</h2><p>{t('QR 코드로 연결한 휴대폰입니다. 해제하면 앱과 홈 화면 위젯의 연결이 바로 끊어져요.')}</p></div></div>
+      {isNative && <button className="secondary min-h-8 px-[11px] py-1.5 text-[12px]" onClick={() => pinWidget().catch(e => onError(e.message))}>{t('위젯 추가')}</button>}</div>
     {data === null ? <div className="widget-device skeleton" aria-label={t('연결된 기기 불러오는 중')} /> : !data.devices.length ? <p className="optional">{t('연결된 기기가 없습니다.')}</p> : <div className="component-list">{data.devices.map(device => <div className="component-row" key={device.id}>
       <div><strong>{device.name}{device.id === data.current ? t(' (이 기기)') : ''}</strong><p>{device.email} {t('| 연결')} {dateLabel(device.created_at)}</p></div>
       <div className="component-actions"><button className="secondary" disabled={busy} onClick={() => setRevoking(device)} aria-label={t('{0} 연결 해제', device.name)}>{t('해제')}</button></div>
@@ -98,7 +98,7 @@ export function AccountSettings({ auth, api, onError, onLogout }) {
   }, [api, auth.local]);
   useEffect(() => { load(); }, [load]);
   return <>
-    <section className="settings-card"><div className="settings-icon"><LogOut size={22} /></div><div><h2>{auth.email}</h2><p>{isNative ? t('이 기기의 로그인을 해제합니다.') : t('이 브라우저의 로그인을 해제합니다.')}</p></div><button className="secondary logout-button" onClick={onLogout}>{t('로그아웃')}</button></section>
+    <section className="settings-card"><div className="settings-icon"><LogOut size={22} /></div><div><h2>{auth.email}</h2><p>{isNative ? t('이 기기의 로그인을 해제합니다.') : t('이 브라우저의 로그인을 해제합니다.')}</p></div><button className="secondary ml-auto min-h-9 shrink-0 px-3.5 py-[7px] text-[12px]" onClick={onLogout}>{t('로그아웃')}</button></section>
     {!auth.local && <p className="optional">{t('허용 계정과 휴대폰 연결은 StackPad가 실행 중인 PC에서 설정할 수 있어요.')}</p>}
     {settings && <>
       <Accounts {...{ settings, api, onError }} reload={load} />

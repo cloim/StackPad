@@ -100,6 +100,51 @@
   .optional { color: #5c6654; font-size: 11px; line-height: 1.7; }
   .wide { width: 100%; }
   .spin { animation: spin 1s linear infinite; }
+  .small-btn { height: 32px; min-height: 32px; padding: 0 10px; font-size: 12px; }
+
+  /* 켜기/끄기 스위치 */
+  .switch { margin-left: auto; width: 44px; height: 25px; flex-shrink: 0; justify-content: flex-start; padding: 3px; border: 1px solid #b9c2ad; border-radius: 20px; background: #c7ccbe; }
+  .switch > span { width: 17px; height: 17px; border-radius: 50%; background: #faf8ef; transition: transform .15s; }
+  .switch.on { background: #8da57e; border-color: #829c72; }
+  .switch.on > span { background: #302b27; transform: translateX(17px); }
+
+  /* 붉은 삭제 아이콘 버튼 */
+  .delete-button { width: 33px; height: 33px; border: 0; border-radius: 5px; background: transparent; color: #e18b95; }
+  .delete-button:hover { background: #e18b9515; }
+  .delete-button:disabled { cursor: default; }
+
+  /* 볼록한 정사각 도구 버튼 */
+  .tool-button { width: 38px; height: 38px; padding: 0; border: 1px solid var(--color-line-strong); border-radius: 4px; background: linear-gradient(#efeee4, #e9e7dc); color: #555c51; box-shadow: inset 0 1px 0 #fffdf0, 0 1px 1px #59604b19, 0 1px 0 #bfc1b4; }
+  .tool-button:hover { background: #f5f3e9; color: #3f5143; }
+  .tool-button:active { transform: translateY(1px); background: #e1e3d7; box-shadow: inset 0 1px 2px #59604b19; }
+
+  /* 설정 카드와 그 안의 제목, 설명, 목록 행 */
+  .component-row { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 12px; padding: 14px; border: 1px solid var(--color-line); border-radius: 8px; background: var(--color-card); color: #4d5944; }
+  .component-row > div:first-child { min-width: 0; flex: 1; }
+  .component-row strong { font-size: 13px; overflow-wrap: anywhere; }
+  .component-row p { margin-top: 6px; font-size: 11px; line-height: 1.7; color: #5c6654; overflow-wrap: anywhere; }
+  .usage-switch { flex: 1; min-width: 170px; flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--color-line); border-radius: 8px; background: var(--color-card); color: #4d5944; }
+  .usage-switch .switch { margin-left: 0; }
+  .settings-card { display: flex; align-items: center; gap: 10px; padding: 13px; border: 1px solid var(--color-line); border-radius: 10px; background: var(--color-card); color: #4d5944; }
+  .settings-card.vertical { flex-direction: column; align-items: stretch; }
+  .settings-card h2 { font-size: 12px; color: var(--color-heading); }
+  .settings-card p { margin-top: 4px; font-size: 11px; line-height: 1.55; color: #5c6654; }
+  .settings-card :is(.settings-card, .component-row, .usage-switch, .scene-item, .schedule-item, .path-code) { border-color: #d4d9cc; }
+  .settings-icon { display: flex; width: 32px; height: 32px; flex-shrink: 0; padding: 12px; border-radius: 9px; background: #d8dfce; color: #718567; }
+  .section-heading { display: flex; align-items: center; gap: 9px; }
+  .section-heading > svg { color: #b0babb; }
+  .path-code { padding: 9px; border: 1px solid #c2cbb6; border-radius: 6px; background: #e2e7d8; color: #5c704f; font-size: 11px; overflow-wrap: anywhere; white-space: normal; }
+  @media (max-width: 650px) {
+    .switch { width: 42px; }
+    .tool-button { width: 34px; height: 34px; }
+    .component-row { flex-wrap: wrap; padding: 12px; }
+    .component-row > div:first-child { flex-basis: 100%; }
+    .settings-icon { padding: 9px; }
+  }
+  @media (max-width: 480px) {
+    .settings-card { padding: 10px; }
+    .settings-card .settings-icon { display: none; }
+  }
   .skeleton { background: linear-gradient(100deg, #e0e2d6 30%, #f1f0e6 50%, #e0e2d6 70%); background-size: 200% 100%; animation: skeleton 1.7s infinite; }
 }
 

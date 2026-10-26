@@ -135,15 +135,15 @@ export function SceneSettings({ scenes = [], schedules = [], services = [], grou
     <div className="scene-settings-container">
       {/* 1. Scenes Section */}
       <section className="settings-card vertical">
-        <div className="settings-actions">
-          <div className="section-heading">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="section-heading mr-auto min-w-[220px] flex-1">
             <Film size={22} />
             <div>
               <h2>{t('흐름 관리')}</h2>
               <p>{t('여러 패드를 지정한 순서대로 실행하거나 역순으로 정지하는 흐름을 구성합니다.')}</p>
             </div>
           </div>
-          <button className="secondary" disabled={busy} onClick={() => setSceneModal({ name: '', color: colors[0] || '#10b981', pad_ids: [] })}>
+          <button className="secondary min-h-8 px-[11px] py-1.5 text-[12px]" disabled={busy} onClick={() => setSceneModal({ name: '', color: colors[0] || '#10b981', pad_ids: [] })}>
             <Plus size={15} />{t('흐름 추가')}
           </button>
         </div>
@@ -167,7 +167,7 @@ export function SceneSettings({ scenes = [], schedules = [], services = [], grou
                     <button className="secondary small-btn" disabled={busy} aria-label={t('{0} 흐름 편집', scene.name)} onClick={() => setSceneModal({ ...scene, pad_ids: [...(scene.pad_ids || [])] })}>
                       {t('편집')}
                     </button>
-                    <button className="delete-button" disabled={busy} aria-label={t('{0} 흐름 삭제', scene.name)} onClick={() => setDeleting({ scene })}>
+                    <button className="delete-button size-8" disabled={busy} aria-label={t('{0} 흐름 삭제', scene.name)} onClick={() => setDeleting({ scene })}>
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -180,15 +180,15 @@ export function SceneSettings({ scenes = [], schedules = [], services = [], grou
 
       {/* 2. Schedules Section */}
       <section className="settings-card vertical">
-        <div className="settings-actions">
-          <div className="section-heading">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="section-heading mr-auto min-w-[220px] flex-1">
             <Calendar size={22} />
             <div>
               <h2>{t('예약 관리')}</h2>
               <p>{t('지정한 시각과 요일에 흐름이나 패드를 자동으로 시작하거나 정지합니다.')}</p>
             </div>
           </div>
-          <button className="secondary" disabled={busy || (scenes.length === 0 && allPads.length === 0)} onClick={() => setScheduleModal({
+          <button className="secondary min-h-8 px-[11px] py-1.5 text-[12px]" disabled={busy || (scenes.length === 0 && allPads.length === 0)} onClick={() => setScheduleModal({
             target_type: scenes.length > 0 ? 'scene' : 'pad',
             target_id: scenes[0]?.id || allPads[0]?.id || '',
             action: 'start',
@@ -251,7 +251,7 @@ export function SceneSettings({ scenes = [], schedules = [], services = [], grou
                     <button className="secondary small-btn" disabled={busy} aria-label={t('{0} 예약 편집', targetName)} onClick={() => setScheduleModal({ ...sch, days: [...(sch.days || [])] })}>
                       {t('편집')}
                     </button>
-                    <button className="delete-button" disabled={busy} aria-label={t('{0} 예약 삭제', targetName)} onClick={() => setDeleting({ schedule: sch, name: targetName })}>
+                    <button className="delete-button size-8" disabled={busy} aria-label={t('{0} 예약 삭제', targetName)} onClick={() => setDeleting({ schedule: sch, name: targetName })}>
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -375,13 +375,13 @@ function SceneEditModal({ scene, allPads, colors, colorNames, busy, onClose, onS
                     <span className="order-num">{index + 1}</span>
                     <span className="pad-name">{pad?.name || id}</span>
                     <div className="order-actions">
-                      <button type="button" className="tool-button" disabled={index === 0} aria-label={t('{0} 순서 앞으로', pad?.name || id)} onClick={() => moveUp(index)}>
+                      <button type="button" className="tool-button size-8" disabled={index === 0} aria-label={t('{0} 순서 앞으로', pad?.name || id)} onClick={() => moveUp(index)}>
                         <ArrowUp size={14} />
                       </button>
-                      <button type="button" className="tool-button" disabled={index === selectedIds.length - 1} aria-label={t('{0} 순서 뒤로', pad?.name || id)} onClick={() => moveDown(index)}>
+                      <button type="button" className="tool-button size-8" disabled={index === selectedIds.length - 1} aria-label={t('{0} 순서 뒤로', pad?.name || id)} onClick={() => moveDown(index)}>
                         <ArrowDown size={14} />
                       </button>
-                      <button type="button" className="delete-button" aria-label={t('{0} 흐름에서 빼기', pad?.name || id)} onClick={() => togglePad(id)}>
+                      <button type="button" className="delete-button size-8" aria-label={t('{0} 흐름에서 빼기', pad?.name || id)} onClick={() => togglePad(id)}>
                         <Trash2 size={14} />
                       </button>
                     </div>

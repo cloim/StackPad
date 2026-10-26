@@ -45,9 +45,6 @@
 .lcd-bottom{display:flex;justify-content:space-between;font-family:Consolas,'Malgun Gothic',monospace;font-size:9px;color:#88a796;border-top:1px solid #35473d;padding-top:10px}
 .detail-buttons{display:flex;gap:8px;margin-top:17px}
 .detail-buttons .secondary{flex:1;min-height:32px;font-size:10px;padding:6px}
-.delete-button{background:transparent;border:0;border-radius:5px;color:#e18b95;width:33px;height:33px}
-.delete-button:hover{background:#e18b9515}
-.delete-button:disabled{cursor:default}
 .detail-message{font-size:10px;line-height:1.7;color:#e0b598;margin-top:15px;overflow-wrap:anywhere}
 .detail-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;min-height:200px;text-align:center;color:#7f8a8e}
 .detail-empty p{font-size:11px;line-height:1.8}
@@ -67,17 +64,6 @@ span.optional{margin-left:3px}
 .colors button.selected{outline:2px solid #e0e3e2;outline-offset:3px}
 .form-actions{display:flex;justify-content:flex-end;gap:9px;border-top:1px solid #3c4144;padding-top:17px;margin-top:3px}
 .settings-stack{max-width:830px;display:flex;flex-direction:column;gap:20px}
-.settings-card{display:flex;align-items:center;gap:20px;padding:26px;border:1px solid #3c4144;border-radius:10px;background:#25292b}
-.settings-card h2{font-size:15px;color:#e0e5e4}
-.settings-card p{font-size:12px;color:#939fa2;line-height:1.8;margin-top:8px}
-.settings-icon{background:#3b332c;padding:12px;border-radius:9px;color:var(--orange);display:flex}
-.switch{margin-left:auto;width:44px;height:25px;border-radius:20px;border:1px solid #515c60;background:#384045;padding:3px;justify-content:flex-start;flex-shrink:0}
-.switch>span{width:17px;height:17px;border-radius:50%;background:#bdc6c9;transition:transform .15s}
-.switch.on{background:var(--orange);border-color:var(--orange)}
-.switch.on>span{background:#302b27;transform:translateX(17px)}
-.settings-card.vertical{align-items:stretch;flex-direction:column;gap:23px}
-.section-heading{display:flex;align-items:center;gap:18px}
-.section-heading>svg{color:#b0babb}
 .copy-value{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#1c2225;border:1px solid #404a50;border-radius:7px;padding:10px 12px}
 .copy-value code{font-size:12px;overflow-wrap:anywhere;min-width:0}
 .copy-value .secondary{min-height:32px;font-size:11px;padding:6px 12px}
@@ -86,7 +72,6 @@ span.optional{margin-left:3px}
 .connection-guide ol{padding-left:20px;margin:13px 0 0;color:#acb8bb}
 .connection-guide li{margin:6px 0}
 .connection-guide code{font-size:11px;color:#d0d9d8;overflow-wrap:anywhere}
-.path-code{font-size:12px;background:#1c2225;padding:15px;border-radius:6px;border:1px solid #404a50;overflow-wrap:anywhere}
 .login-shell{min-height:100dvh;display:flex;align-items:center;justify-content:center;flex-direction:column;background:radial-gradient(ellipse at 50% 40%,#353937,#1a1d1e 70%);padding:30px 18px}
 .login-card{width:420px;max-width:100%;border:1px solid #4b5153;border-radius:14px;padding:35px;background:linear-gradient(145deg,#303436,#24282a);box-shadow:0 6px 0 #101516,0 8px 0 #343c3e,0 25px 65px #0005}
 .login-card .brand{margin-bottom:35px}
@@ -165,16 +150,9 @@ span.optional{margin-left:3px}
 .detail-message{font-size:9px}
 .log-head{padding:12px}
 .log-head .panel-title>span{font-size:8px}
-.settings-card{padding:19px 16px;gap:12px}
-.settings-icon{padding:9px}
-.settings-card h2{font-size:13px}
-.settings-card p{font-size:10px}
-.section-heading{gap:12px}
 .connection-guide{padding:14px;font-size:10px}
 .copy-value{padding:9px}
 .copy-value code{font-size:10px}
-.settings-card.vertical{gap:18px}
-.switch{width:42px}
 .form-row{gap:12px}
 .form-row>label:first-child{width:77px}
 .form-row>label:last-child input{font-size:11px}
@@ -208,8 +186,6 @@ span.optional{margin-left:3px}
 .registration-service-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .registration-service-head h3{font-size:13px;font-weight:600}
 .registration-service-head>div{display:flex;align-items:center;gap:2px}
-.registration-service-head .delete-button{width:36px;height:38px;border:0;background:transparent;color:#ee8e9c;border-radius:6px}
-.registration-service-head .delete-button:hover{background:#ee8e9c15}
 .add-service{align-self:flex-start;margin-top:16px}
 .app-shell .pad-wrap.dragging{opacity:.5}
 .app-shell .pad.empty.drop-target{border:2px solid var(--orange);background:#efa66816;box-shadow:inset 0 0 0 2px #efa66820;color:var(--orange)}
@@ -219,14 +195,8 @@ span.optional{margin-left:3px}
 @media(max-width:650px){
 .pad-move{top:1px;left:2px;width:24px;height:30px}
 .registration-service{padding:14px}
-.registration-service-head .tool-button{width:30px}
-.registration-service-head .delete-button{width:30px}
 }
 .component-list{display:flex;flex-direction:column;gap:14px;margin-top:16px}
-.component-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px;border:1px solid #414a4d;border-radius:8px;background:#22282a;min-width:0}
-.component-row>div:first-child{min-width:0;flex:1}
-.component-row strong{font-size:13px;overflow-wrap:anywhere}
-.component-row p{color:#a3afb3;font-size:11px;line-height:1.7;margin-top:6px;overflow-wrap:anywhere}
 .component-actions{display:flex;gap:5px;flex-wrap:wrap}
 .component-actions .secondary{padding:7px 10px;min-height:34px;font-size:11px}
 .component-actions .active{border-color:var(--orange);color:var(--orange)}
@@ -237,8 +207,6 @@ span.optional{margin-left:3px}
 .pad.conflict .pad-state{color:#f2a0a7}
 .pad.conflict .pad-state i{background:#f2a0a7}
 @media(max-width:650px){
-.component-row{flex-wrap:wrap;padding:12px}
-.component-row>div:first-child{flex-basis:100%}
 .component-actions{width:100%}
 .component-actions .secondary{flex:1;min-height:38px}
 }
@@ -246,9 +214,6 @@ span.optional{margin-left:3px}
 .toolbar{display:flex;align-items:center;gap:14px;height:54px;flex-shrink:0;padding:0 20px;border-bottom:1px solid #34393b;background:#202425}
 .toolbar-brand{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;white-space:nowrap}
 .toolbar-actions{display:flex;align-items:center;gap:3px;margin-left:auto}
-.tool-button{width:38px;height:38px;border:0;border-radius:6px;background:transparent;color:#a9b3b5;padding:0}
-.tool-button:hover{background:#343b3d;color:#f4bf94}
-.tool-button:active{background:#40494b}
 .engine-status{display:flex;align-items:center;padding:6px}
 .engine-status i{width:5px;height:5px;border-radius:50%;background:#75d9a5}
 .engine-status.offline i{background:#f2ad62;animation:pulse 1.5s infinite}
@@ -277,16 +242,11 @@ span.optional{margin-left:3px}
 .log-panel{margin-top:22px;width:100%;max-width:none}
 .log-panel pre{height:230px;font-size:11px;white-space:pre;overflow-wrap:normal;overflow:auto}
 .settings-stack{max-width:none;gap:14px}
-.settings-card{padding:18px;gap:14px}
-.settings-card.vertical{gap:16px}
-.settings-card h2{font-size:13px}
-.settings-card p{font-size:12px}
 .service-form button:disabled{cursor:default}
 @media(max-width:650px){
 .toolbar{height:52px;padding:0 12px;gap:7px}
 .toolbar-brand{gap:7px;font-size:12px}
 .toolbar-actions{gap:1px}
-.tool-button{width:36px;height:38px}
 .app-shell>main{padding:12px}
 .app-shell .pads{gap:8px}
 .app-shell .pad{aspect-ratio:auto;min-height:0;padding:10px 8px}
@@ -318,10 +278,6 @@ span.optional{margin-left:3px}
 .recommend-head p{color:#a3afb3;font-size:12px;line-height:1.8;overflow-wrap:anywhere}
 .recommend-head .secondary{flex-shrink:0;min-height:34px;font-size:11px;padding:7px 10px}
 .recommendations code{font-size:11px;color:#d0d9d8;overflow-wrap:anywhere}
-.settings-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
-.settings-actions>span{margin-right:auto;font-size:12px;color:#939fa2}
-.settings-actions button{min-height:34px;font-size:12px;padding:7px 12px}
-.settings-card .logout-button{margin-left:auto;flex-shrink:0;min-height:36px;font-size:12px;padding:7px 14px}
 .hidden-recommendations{display:flex;flex-direction:column;gap:12px;border-top:1px solid #3c4144;padding-top:18px}
 .hidden-recommendations h3{margin-right:auto;font-size:13px;color:#dce0df}
 .hidden-recommendations .component-list{margin-top:0}
@@ -369,14 +325,7 @@ span.optional{margin-left:3px}
 .link-row{grid-template-columns:1fr;gap:18px}
 }
 .compact-settings{padding-top:12px;gap:10px}
-.compact-settings .settings-card{padding:13px;gap:10px;border-radius:10px}
-.compact-settings .settings-card.vertical{gap:10px}
-.compact-settings .settings-card h2{font-size:12px}
-.compact-settings .settings-card p{font-size:11px;line-height:1.55;margin-top:4px}
-.compact-settings .settings-icon{width:32px;height:32px;flex-shrink:0}
-.compact-settings .section-heading{gap:9px}
-.compact-settings .path-code{padding:9px;font-size:11px;overflow-wrap:anywhere;white-space:normal}
-.compact-settings .settings-actions button,.padset-settings button{min-height:32px;padding:6px 11px;font-size:12px}
+.padset-settings button{min-height:32px;padding:6px 11px;font-size:12px}
 .padset-settings{display:flex;flex-direction:column;gap:12px;min-width:0}
 .padset-settings>p{margin:0}
 .padset-list{display:flex;flex-direction:column;gap:7px}
@@ -412,14 +361,11 @@ span.optional{margin-left:3px}
 .padset-row{gap:5px;padding:6px}
 .padset-row .secondary{padding:6px 8px}
 .padset-count{font-size:10px}
-.compact-settings .settings-card{padding:10px}
-.compact-settings .settings-card .settings-icon{display:none}
 }
 @media(max-height:560px){
 .app-shell .pad-top{display:none}
 .app-shell .pad-name{padding-left:15px;padding-right:20px}
 }
-.settings-actions.storage-heading{justify-content: space-between; flex-wrap: wrap; gap: 10px;}
 .retention-control{margin-left:auto;width:130px;flex-shrink:0}
 .widget-device{height:52px;border-radius:8px}
 .stack-gap{display:flex;flex-direction:column;gap:8px}
@@ -435,14 +381,8 @@ span.optional{margin-left:3px}
 .pairing-qr{display:flex;flex-direction:column;align-items:center;gap:10px}
 .qr-image{width:220px;max-width:100%;background:#fff;padding:8px;border-radius:8px}
 .qr-image svg{display:block;width:100%;height:auto}
-.settings-actions input[type=email]{flex:1}
-.settings-actions>.section-heading{margin-right:auto;flex:1;min-width:220px}
-.settings-actions>p.optional{margin-right:auto;flex:1}
 .usage-switches{display:flex;flex-wrap:wrap;gap:10px}
-.usage-switch{flex-direction:row;align-items:center;justify-content:space-between;gap:12px;flex:1;min-width:170px;padding:10px 12px;border:1px solid #414a4d;border-radius:8px;background:#22282a;color:#d9dfdf}
-.usage-switch .switch{margin-left:0}
 /* 설정 카드의 일반 버튼 크기 규칙이 스위치를 키우지 않게 한다. */
-.settings-actions button.switch,.compact-settings .settings-actions button.switch{min-height:0;padding:3px}
 .pair-link{display:flex;flex-direction:column;gap:10px;margin-top:18px}
 @media(max-height:560px){
 .app-shell .pad.assigned{padding-top:24px;padding-bottom:4px}
@@ -475,7 +415,6 @@ span.optional{margin-left:3px}
 .scene-details,.schedule-target{display: flex; flex-direction: column; gap: 2px; min-width: 0;}
 .scene-pads{margin: 0; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 .scene-item-actions,.schedule-item-actions{display: flex; align-items: center; gap: 6px; flex-shrink: 0;}
-.small-btn{min-height: 28px !important; padding: 4px 8px !important; font-size: 11px !important;}
 .schedule-item.disabled{opacity: 0.6;}
 .schedule-target{display: flex; flex-direction: row; align-items: center; gap: 8px; flex-wrap: wrap;}
 .schedule-badge{font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; text-transform: uppercase; background: rgba(255,255,255,0.1);}

@@ -7,9 +7,6 @@
 :root .logo span:nth-child(3){background:#b4a9c6}
 :root .logo span:nth-child(4){background:#cbb493}
 .toolbar-actions{gap:10px}
-.tool-button{border:1px solid #bfc1b4;border-radius:4px;background:linear-gradient(#efeee4,#e9e7dc);color:#555c51;box-shadow:inset 0 1px 0 #fffdf0,0 1px 1px #59604b19,0 1px 0 #bfc1b4}
-.tool-button:hover{background:#f5f3e9;color:#3f5143}
-.tool-button:active{transform:translateY(1px);background:#e1e3d7;box-shadow:inset 0 1px 2px #59604b19}
 .app-shell>main{padding:12px 0 0}
 .app-shell .pad-deck{gap:14px}
 .padset-bar-row{margin-bottom:0}
@@ -60,19 +57,13 @@
 :root .modal-close:hover{color:#3f563c;background:#dce2d2}
 :root .modal-header.is-draggable:focus-visible{outline-color:#658472}
 .color-field legend{color:#4e5947}
-.settings-card,.registration-service,.component-row,.usage-switch{background:#e7e9de;border-color:#c1c8b6;color:#4d5944}
-.settings-card :is(.settings-card,.component-row,.usage-switch,.scene-item,.schedule-item,.path-code){border-color:#d4d9cc}
+.registration-service{background:#e7e9de;border-color:#c1c8b6;color:#4d5944}
 .padset-settings .padset-grip,.padset-settings .padset-grip:hover,.padset-settings .padset-grip:active{border:0;background:transparent;box-shadow:none}
-.settings-card h2,.setup-steps h2{color:#46523e}
-.settings-card p,.component-row p{color:#5c6654}
+.setup-steps h2{color:#46523e}
 .recommend-head p{color:#58664f}
 .recommendations code,.hidden-recommendations code{color:#4e634b}
 .hidden-recommendations{border-color:#c7cbbd}
 .hidden-recommendations h3{color:#46523e}
-.settings-icon{background:#d8dfce;color:#718567}
-.switch{background:#c7ccbe;border-color:#b9c2ad}
-.switch.on{background:#8da57e;border-color:#829c72}
-.switch>span{background:#faf8ef}
 .kind-switch{background:#e3e7d9;border-color:#bfc7b2}
 .kind-switch button{color:#6d7b62}
 .kind-switch button[aria-checked=true]{background:#cbd8bf;color:#425c37;box-shadow:inset 0 1px 0 #e5ecd9}
@@ -98,7 +89,7 @@
 .lcd-head,.lcd-bottom{color:#6e8063}
 .lcd-value{color:#52724c}
 .detail-empty,.detail-message{color:#5c6654}
-.path-code,.copy-value{background:#e2e7d8;border-color:#c2cbb6;color:#5c704f}
+.copy-value{background:#e2e7d8;border-color:#c2cbb6;color:#5c704f}
 .log-head{background:#e3e7db;border-color:#c1c9b5;color:#516445}
 .log-container{background:#e0e5d8;color:#46583b}
 .log-line:hover{background:#cfdbc2}
@@ -134,7 +125,6 @@
 .app-shell>.toolbar{height:52px;padding:0 3px;gap:10px}
 .toolbar-brand{font-family:'Arial Black','sans-serif-black',sans-serif;font-size:22px;font-weight:900;font-synthesis:weight;-webkit-text-stroke:.25px currentColor}
 .toolbar-actions{gap:6px}
-.tool-button{width:34px;height:34px}
 .app-shell .pad-deck{gap:8px}
 .app-shell .pads{padding:8px;gap:8px}
 .app-shell .pad-move{font-size:12px}
@@ -163,9 +153,6 @@
 .padset-row{padding:6px 8px}
 .padset-settings .padset-row>input,.padset-row>button{height:var(--control-h-sm);min-height:var(--control-h-sm)}
 .padset-row>.padset-grip{width:28px}
-.padset-row>.delete-button{width:var(--control-h-sm)}
-.small-btn{height:var(--control-h-sm);min-height:var(--control-h-sm)!important;padding:0 10px!important;font-size:12px!important}
-.scene-item .delete-button,.schedule-item .delete-button,.ordered-pad-row .delete-button,.ordered-pad-row .tool-button{width:var(--control-h-sm);height:var(--control-h-sm)}
 .log-panel .log-toolbar .search-nav button{width:var(--control-h-sm);height:var(--control-h-sm);min-height:var(--control-h-sm)!important}
 .log-search-input-wrap .clear-btn{width:24px;height:24px;min-height:24px!important}
 /* 읽어야 하는 보조 텍스트와 경계를 밝은 배경에서도 구분되게 한다. */
@@ -215,3 +202,7 @@
 .log-search-input-wrap{flex:1;min-width:0}
 .log-panel .log-toolbar .log-search-input-wrap input{width:100%}
 }
+
+/* 설정 카드 안의 흐름, 예약 행은 카드 안쪽 테두리 색과 설명 간격을 따른다. */
+.settings-card .scene-item,.settings-card .schedule-item{border-color:#d4d9cc}
+.settings-card .scene-pads{margin-top:4px}
