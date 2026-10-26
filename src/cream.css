@@ -1,7 +1,4 @@
 /* 확정된 크림 MPC 시안. 동작과 사용량 영역의 치수는 기존 화면을 따른다. */
-:root{color-scheme:light;--orange:#8b715b;--muted:#5d6656;--control-h:40px;--control-h-sm:32px;--border:#c7cbbd;--panel:#efeee5;--green:#668a73;color:#444740;background:#e9e9e3}
-body{background:#e9e9e3}
-button:focus-visible,a:focus-visible{outline-color:#658472}
 .app-shell{padding:16px;background:linear-gradient(115deg,#f2f1e9,#eae9df);box-shadow:inset 0 1px 0 #fffff5,inset 0 -1px 0 #b8b9ae}
 .app-shell>.toolbar{height:54px;padding:0 8px;background:transparent;border:0;gap:16px}
 .toolbar-brand{margin:0;color:#555c51;font-family:Deck,'Malgun Gothic',sans-serif;font-size:25px;font-weight:700;letter-spacing:-1px}
@@ -82,17 +79,9 @@ button:focus-visible,a:focus-visible{outline-color:#658472}
 :root .modal-close{color:#7a8672}
 :root .modal-close:hover{color:#3f563c;background:#dce2d2}
 :root .modal-header.is-draggable:focus-visible{outline-color:#658472}
-input,textarea,.select-control select{color:#444e40;background:#f9f7ee;border-color:#c1c7b5}
-input:focus,textarea:focus,.select-control select:focus-visible{border-color:#7c9a83;outline-color:#8caa8a66}
-label{color:#4e5947}
+.select-control select{color:#444e40;background:#f9f7ee;border-color:#c1c7b5}
+.select-control select:focus-visible{border-color:#7c9a83;outline-color:#8caa8a66}
 .color-field legend{color:#4e5947}
-label small,.optional{color:#5c6654}
-.primary,.secondary,.danger{border-radius:4px}
-.primary{background:#859a7b;border-color:#768e6b;color:#fffdf4;box-shadow:inset 0 1px 0 #b6c7a7}
-.primary:hover{background:#738b69}
-.secondary{background:linear-gradient(#f0eee4,#e8e7dc);border-color:#bbc2ad;color:#4f5c45}
-.secondary:hover{background:#e0e5d6}
-.danger{background:#ad6f73;border-color:#aa636a;color:#fff9f3}
 .settings-card,.registration-service,.component-row,.usage-switch{background:#e7e9de;border-color:#c1c8b6;color:#4d5944}
 .padset-settings .padset-grip,.padset-settings .padset-grip:hover,.padset-settings .padset-grip:active{border:0;background:transparent;box-shadow:none}
 .settings-card h2,.setup-steps h2{color:#46523e}
@@ -132,7 +121,7 @@ label small,.optional{color:#5c6654}
 .detail-empty,.detail-message{color:#5c6654}
 .path-code,.copy-value{background:#e2e7d8;border-color:#c2cbb6;color:#5c704f}
 .log-head{background:#e3e7db;border-color:#c1c9b5;color:#516445}
-.log-container,pre{background:#e0e5d8;color:#46583b}
+.log-container{background:#e0e5d8;color:#46583b}
 .log-line:hover{background:#cfdbc2}
 .pad-error-badge{color:#9d4852;background:#efdedd;border-color:#d7aaad}
 .pad-schedules-summary .summary-title{color:#59774c}
@@ -201,7 +190,6 @@ label small,.optional{color:#5c6654}
 .tooltip{position:fixed;z-index:2400;max-width:280px;padding:6px 10px;border-radius:6px;background:#3f4a3b;color:#fbfaf3;font-size:12px;line-height:1.45;box-shadow:0 6px 18px #2b352533;pointer-events:none;white-space:pre-wrap;overflow-wrap:anywhere}
 .field-error{position:fixed;z-index:2200;display:flex;align-items:flex-start;gap:6px;max-width:min(360px,calc(100vw - 16px));padding:7px 10px;border:1px solid #d7aaad;border-radius:6px;background:#fbeeee;color:#8f3540;font-size:12px;line-height:1.45;box-shadow:0 6px 18px #34442b24}
 .field-error>svg{margin-top:2px}
-[aria-invalid=true]{border-color:#b5525c!important}
 /* 엔진 연결 끊김: 패드가 비활성인 이유를 툴바에서 알린다. */
 .app-shell .engine-status.offline{display:flex;align-items:center;gap:8px;min-width:0;padding:4px 4px 4px 10px;border:1px solid #d7c19f;border-radius:4px;background:#f6ecd9;color:#7a5a2e;font-size:12px}
 .app-shell .engine-status.offline>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
