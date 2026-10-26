@@ -64,8 +64,9 @@ try {
   await page.getByRole('button', { name: '환경 설정', exact: true }).click();
   await expect(page.getByRole('dialog', { name: '환경 설정', exact: true })).toBeVisible();
   await page.getByRole('switch', { name: 'Windows 로그인 시 자동 실행' }).click();
-  await expect(page.getByRole('dialog', { name: '설정을 반영했습니다' })).toBeVisible();
-  await page.getByRole('button', { name: '확인', exact: true }).click();
+  // Success notices are non-blocking toasts; the settings dialog stays the only dialog.
+  await expect(page.getByRole('status').filter({ hasText: 'Windows 로그인 시 StackPad가 자동으로 실행됩니다.' })).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(1);
   await expect(page.getByRole('switch', { name: 'Windows 로그인 시 자동 실행' })).toBeChecked();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: '시스템 모니터', exact: true })).toHaveCount(0);
