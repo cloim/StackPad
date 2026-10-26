@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import Ansi from 'ansi-to-react';
 import { createRoot } from 'react-dom/client';
-import { Bell, Code, Film, Folder, FolderGit2, Gauge, GitBranch, GitCommit, GitFork, Globe, Languages, History, Monitor, Info, LoaderCircle, MoreVertical, Play, Plus, Power, RefreshCw, ScanSearch, Settings as Gear, Settings2, SlidersHorizontal, Square, Terminal, Trash2 } from 'lucide-react';
+import { Bell, Code, Folder, Gauge, GitBranch, Globe, Languages, History, Monitor, Info, LoaderCircle, MoreVertical, Play, Plus, Power, RefreshCw, ScanSearch, Settings as Gear, Settings2, SlidersHorizontal, Square, Trash2 } from 'lucide-react';
 import { Modal } from './components/Modal/Modal.jsx';
 import { PadForm } from './components/PadForm.jsx';
 import { SelectControl } from './components/SelectControl.jsx';
@@ -11,7 +10,11 @@ import { UsageBar } from './components/UsageBar.jsx';
 import { AccountSettings } from './components/AccountSettings.jsx';
 import { SceneSettings } from './components/SceneSettings.jsx';
 import { LogViewer } from './components/LogViewer.jsx';
-import DotMatrix from './components/DotMatrix.jsx';
+import { HistoryChart } from './components/HistoryChart.jsx';
+import { ConfirmModal } from './components/ConfirmModal.jsx';
+import { Toaster } from './components/Toast.jsx';
+import { Tooltip } from './components/Tooltip.jsx';
+import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { SignIn } from './components/SignIn.jsx';
 import { appVersion, connectWidget, disconnectWidget, getAlertStatus, isNative, loadServer, nativeHeaders, serverOrigin, setAlertStatus } from './native.js';
 import { PairPhone } from './components/PairPhone.jsx';
@@ -76,36 +79,25 @@ function Logo({ small = false }) {
   return <div className={`logo ${small ? 'small' : ''}`} aria-hidden="true">{[0, 1, 2, 3].map(i => <span key={i} />)}</div>;
 }
 
-const indicatorDefaults = { pd_enabled: true, pd_production_text: '#ffffff', pd_production_background: '#2563eb', pd_development_text: '#ffffff', pd_development_background: '#475569', pd_padding: 4, git_enabled: true, git_icon: 'folder-git', git_clean_icon: '#69d39a', git_clean_background: '#193b2b', git_dirty_icon: '#ffb45e', git_dirty_background: '#49321c', git_unknown_icon: '#9aa4a8', git_unknown_background: '#303638', git_padding: 4 };
-const gitIcons = { 'folder-git': FolderGit2, 'git-branch': GitBranch, 'git-commit': GitCommit, 'git-fork': GitFork };
-
-function indicatorSettings(saved = {}) {
-  return {
-    ...indicatorDefaults,
-    ...saved,
-    pd_production_text: saved.pd_production_text ?? saved.pd_text ?? indicatorDefaults.pd_production_text,
-    pd_production_background: saved.pd_production_background ?? saved.pd_background ?? indicatorDefaults.pd_production_background,
-    pd_development_text: saved.pd_development_text ?? saved.pd_text ?? indicatorDefaults.pd_development_text,
-    pd_development_background: saved.pd_development_background ?? saved.pd_background ?? indicatorDefaults.pd_development_background,
-  };
-}
-
-function IndicatorColor({ label, value, disabled, allowNone = false, fallback = '#ffffff', onChange }) {
-  return <div className="indicator-color-control">
-    <span>{label}</span>
-    <span className="indicator-color-value">
-      <input type="color" aria-label={label} value={value === 'transparent' ? fallback : value} disabled={disabled} onChange={event => onChange(event.target.value)} />
-      {value !== 'transparent' && <code>{value.toUpperCase()}</code>}
-      {allowNone && <button type="button" className={`indicator-none-button ${value === 'transparent' ? 'active' : ''}`} aria-pressed={value === 'transparent'} disabled={disabled} onClick={() => onChange(value === 'transparent' ? fallback : 'transparent')}>{t('없음')}</button>}
-    </span>
-  </div>;
-}
+// Pad badges use one fixed palette: P/D for the environment and the Git state of the pad's folders.
+const badgeColors = {
+  production: { color: '#000000', backgroundColor: '#69d39a' },
+  development: { color: '#ffffff', backgroundColor: '#9aa4a8' },
+  clean: { color: '#000000', backgroundColor: '#69d39a' },
+  dirty: { color: '#000000', backgroundColor: '#ffb45e' },
+  unknown: { color: '#ffffff', backgroundColor: '#9aa4a8' },
+};
 
 function DetailScroll({ children, role, id, ariaLabel, ariaLabelledBy }) {
   const scrollRef = useRef(null);
   const trackRef = useRef(null);
   const dragRef = useRef(null);
   const [thumb, setThumb] = useState(null);
+  // The custom bar stays quiet until the area is hovered, focused or scrolled.
+  const [scrolling, setScrolling] = useState(false);
+  const scrollTimer = useRef(null);
+  useEffect(() => () => clearTimeout(scrollTimer.current), []);
+  const onScroll = () => { measure(); setScrolling(true); clearTimeout(scrollTimer.current); scrollTimer.current = setTimeout(() => setScrolling(false), 900); };
 
   const measure = useCallback(() => {
     const element = scrollRef.current;
@@ -163,13 +155,45 @@ function DetailScroll({ children, role, id, ariaLabel, ariaLabelledBy }) {
   };
 
   return <div className="service-detail-scroll-shell">
-    <div ref={scrollRef} className="service-detail-scroll-content" role={role} id={id} aria-label={ariaLabel} aria-labelledby={ariaLabelledBy} tabIndex={0} onScroll={measure}>
+    <div ref={scrollRef} className="service-detail-scroll-content" role={role} id={id} aria-label={ariaLabel} aria-labelledby={ariaLabelledBy} tabIndex={0} onScroll={onScroll}>
       <div className="service-detail-scroll-inner">{children}</div>
     </div>
-    {thumb && <div ref={trackRef} className="service-detail-scroll-track" aria-hidden="true" onPointerDown={jumpToTrack}>
+    {thumb && <div ref={trackRef} className={`service-detail-scroll-track ${scrolling ? 'active' : ''}`} aria-hidden="true" onPointerDown={jumpToTrack}>
       <span className="service-detail-scroll-thumb" style={{ height: `${thumb.height}px`, transform: `translateY(${thumb.top}px)` }} onPointerDown={startThumbDrag} onPointerMove={moveThumbDrag} onPointerUp={() => { dragRef.current = null; }} onPointerCancel={() => { dragRef.current = null; }} />
     </div>}
   </div>;
+}
+
+// Arrow keys move a lifted pad to the nearest empty pad in that direction instead of a fixed pixel step.
+function gridCoordinates(event, { context: { droppableRects, droppableContainers, collisionRect } }) {
+  const direction = { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] }[event.code];
+  if (!direction || !collisionRect) return undefined;
+  event.preventDefault();
+  const x = collisionRect.left + collisionRect.width / 2;
+  const y = collisionRect.top + collisionRect.height / 2;
+  let best = null;
+  for (const container of droppableContainers.getEnabled()) {
+    const rect = droppableRects.get(container.id);
+    if (!rect) continue;
+    const dx = rect.left + rect.width / 2 - x;
+    const dy = rect.top + rect.height / 2 - y;
+    const along = dx * direction[0] + dy * direction[1];
+    if (along <= 1) continue;
+    const score = along + 2 * Math.abs(dx * direction[1] + dy * direction[0]);
+    if (!best || score < best.score) best = { score, rect };
+  }
+  if (!best) return undefined;
+  return { x: best.rect.left + best.rect.width / 2 - collisionRect.width / 2, y: best.rect.top + best.rect.height / 2 - collisionRect.height / 2 };
+}
+
+function EmptyPad({ slot, enabled, onRegister }) {
+  const { setNodeRef, isOver, active } = useDroppable({ id: `slot-${slot}`, data: { slot }, disabled: !enabled });
+  return <button ref={setNodeRef} data-empty-slot={slot} className={`pad empty ${isOver ? 'drop-target' : active ? 'drop-ready' : ''}`} aria-label={t('패드 {0} 서비스 등록', slot + 1)} onClick={onRegister}><Plus size={20} /></button>;
+}
+
+function PadMoveHandle({ pad, disabled }) {
+  const { setNodeRef, listeners, attributes } = useDraggable({ id: pad.id, data: { name: pad.name }, disabled });
+  return <Tooltip content={t('끌거나 스페이스 키를 눌러 빈 패드로 옮길 수 있어요')}><button ref={setNodeRef} {...attributes} {...listeners} className="pad-move" disabled={disabled} aria-label={t('{0} 자리 이동', pad.name)}>{pad.name}</button></Tooltip>;
 }
 
 function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, loading, settings, refresh, onError, connected, local, scenes = [], sceneProgress = {}, groupProgress = {}, schedules = [], onOpenSettings }) {
@@ -183,11 +207,12 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
   const [componentId, setComponentId] = useState(null);
   const [targetError, setTargetError] = useState(null);
   const [dragged, setDragged] = useState(null);
-  const [dropSlot, setDropSlot] = useState(null);
+  const [stopping, setStopping] = useState(null);
   const [padMenu, setPadMenu] = useState(null);
   const [sceneMenu, setSceneMenu] = useState(null);
-  const dragging = useRef(null);
   const menuRef = useRef(null);
+  const menuTrigger = useRef(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(KeyboardSensor, { coordinateGetter: gridCoordinates }));
   const suppressClick = useRef(0);
   const logPane = useRef(null);
   const follow = useRef(true);
@@ -339,11 +364,12 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
     try {
       await api(`/scenes/${scene.id}/${action}`, { method: 'POST' });
     } catch (e) {
-      onError(e.message);
+      onError(e.message, { label: t('다시 시도'), run: () => triggerScene(scene, action) });
     }
   }
   function openSceneMenu(e, scene) {
     e.stopPropagation();
+    menuTrigger.current = e.currentTarget;
     const rect = e.currentTarget.getBoundingClientRect();
     setSceneMenu({
       scene,
@@ -354,18 +380,20 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
     });
   }
   useEffect(() => { if (logPane.current && follow.current) logPane.current.scrollTop = logPane.current.scrollHeight; }, [logs]);
-  async function toggle(service, confirmed = false) {
+  async function toggle(service, { takeover: takeoverConfirmed = false, stopConfirmed = false } = {}) {
     if (Date.now() < suppressClick.current) return;
     if (busy.has(service.id) || !connected) return;
-    if (!service.active && service.status === 'external' && !confirmed) { setTakeover(service); return; }
+    if (!service.active && service.status === 'external' && !takeoverConfirmed) { setTakeover(service); return; }
+    // A production pad stops real users' service, so one stray click must not stop it.
+    if (service.active && service.environment === 'production' && !stopConfirmed) { setStopping(service); return; }
     setBusy(value => new Set([...value, service.id]));
     const wasActive = service.active;
     try {
-      await api(`/${service.isGroup ? 'groups' : 'services'}/${service.id}/${wasActive ? 'stop' : 'start'}${confirmed ? '?takeover=true' : ''}`, { method: 'POST' });
+      await api(`/${service.isGroup ? 'groups' : 'services'}/${service.id}/${wasActive ? 'stop' : 'start'}${takeoverConfirmed ? '?takeover=true' : ''}`, { method: 'POST' });
       await refresh();
     }
     catch (e) {
-      onError(e.message);
+      onError(e.message, { label: t('다시 시도'), run: () => toggle(service, { takeover: takeoverConfirmed, stopConfirmed: true }) });
     } finally { setBusy(value => { const next = new Set(value); next.delete(service.id); return next; }); }
   }
   async function restart(service) {
@@ -374,7 +402,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
       await api(`/services/${service.id}/restart`, { method: 'POST' });
     }
     catch (error) {
-      onError(error.message);
+      onError(error.message, { label: t('다시 시도'), run: () => restart(service) });
     }
     finally { await refresh(); setBusy(value => { const next = new Set(value); next.delete(service.id); return next; }); }
   }
@@ -394,6 +422,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
   }
   function openPadMenu(event, pad) {
     if (padMenu?.id === pad.id) { setPadMenu(null); return; }
+    menuTrigger.current = event.currentTarget;
     // Fixed positioning keeps the menu out of the pad grid's clipping; it opens upward near the bottom edge.
     const rect = event.currentTarget.getBoundingClientRect();
     const right = Math.max(8, window.innerWidth - rect.right);
@@ -409,7 +438,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
     if (box.top < 8) Object.assign(menu.style, { bottom: 'auto', top: '8px' });
   }, [padMenu]);
   function menuKeys(event) {
-    if (event.key === 'Escape') { setPadMenu(null); return; }
+    if (event.key === 'Escape') { setPadMenu(null); setSceneMenu(null); menuTrigger.current?.focus(); return; }
     if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return;
     event.preventDefault();
     const items = [...event.currentTarget.querySelectorAll('button:not(:disabled)')];
@@ -431,28 +460,20 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
     try { await api(`/pads/${pad.id}/code`, { method: 'POST' }); }
     catch (error) { onError(error.message); }
   }
-  function touchDrag(event, pad) {
-    if (event.button !== 0 || !connected || busy.has(pad.id)) return;
-    event.preventDefault(); event.stopPropagation();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    dragging.current = { id: pad.id, slot: null, pointerId: event.pointerId };
-    setDragged(pad.id);
+  function dragEnd({ active, over }) {
+    setDragged(null); suppressClick.current = Date.now() + 400;
+    if (over) move(active.id, over.data.current.slot);
   }
-  function touchMove(event) {
-    if (dragging.current?.pointerId !== event.pointerId) return;
-    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-empty-slot]');
-    const slot = target ? Number(target.dataset.emptySlot) : null;
-    dragging.current.slot = slot; setDropSlot(slot);
-  }
-  function endTouch(event, cancelled = false) {
-    if (dragging.current?.pointerId !== event.pointerId) return;
-    const { id, slot } = dragging.current;
-    dragging.current = null; setDragged(null); setDropSlot(null); suppressClick.current = Date.now() + 400;
-    if (!cancelled && slot !== null) move(id, slot);
-  }
+  const dragAnnouncements = {
+    onDragStart: ({ active }) => t('{0} 패드를 들었습니다. 방향키로 빈 패드를 고르세요.', active.data.current.name),
+    onDragOver: ({ over }) => over ? t('패드 {0} 위치입니다.', over.data.current.slot + 1) : t('놓을 수 있는 빈 패드가 아닙니다.'),
+    onDragEnd: ({ active, over }) => over ? t('{0} 패드를 패드 {1} 위치로 옮겼습니다.', active.data.current.name, over.data.current.slot + 1) : t('이동을 취소했습니다.'),
+    onDragCancel: () => t('이동을 취소했습니다.'),
+  };
+  const draggedPad = dragged && pads.find(pad => pad.id === dragged);
   return <>
     <section className="pad-deck" aria-label={t('서비스 컨트롤 패드')}>
-      <UsageBar api={api} />
+      <UsageBar api={api} expected={settings?.usage_providers?.length || 0} />
       <div className="padset-bar-row">
         <Tabs label={t('패드셋')} tabs={padsets.map(set => ({ ...set, badge: pads.filter(p => p.padset_id === set.id).length }))} value={padsetId} onChange={onPadsetChange} prefix="padsets" />
         {scenes.length > 0 && <div className="scene-chips-bar" aria-label={t('흐름 목록')}>
@@ -465,21 +486,22 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
             const isPartial = totalCount > 0 && activeCount > 0 && activeCount < totalCount;
             const pct = totalCount > 0 ? (progress ? Math.round(progress.done / progress.total * 100) : Math.round(activeCount / totalCount * 100)) : 0;
             return <div key={sc.id} className="scene-chip-wrap" style={{ '--scene-color': sc.color, '--scene-progress': `${pct}%` }}>
-              <button
+              <Tooltip content={t("클릭하면 '{0}' 흐름을 시작합니다. 정지와 설정은 옆 메뉴에 있어요.", sc.name)}><button
                 type="button"
                 className={`scene-chip ${isRunning ? 'running' : ''} ${isPartial ? 'partial' : ''} ${progress ? 'in-progress' : ''}`}
                 onClick={() => triggerScene(sc, 'start')}
                 onContextMenu={e => { e.preventDefault(); openSceneMenu(e, sc); }}
-                title={t("클릭하여 '{0}' 시작, 우클릭으로 메뉴", sc.name)}
               >
                 <span className="scene-chip-dot" />
                 <span className="scene-chip-name">{sc.name}</span>
                 {totalCount > 0 && <span className="scene-chip-ratio">{progress ? `${progress.done}/${progress.total}` : `${activeCount}/${totalCount}`}</span>}
-              </button>
+              </button></Tooltip>
               <button
                 type="button"
                 className="scene-chip-menu-btn"
                 aria-label={t('{0} 흐름 메뉴', sc.name)}
+                aria-haspopup="menu"
+                aria-expanded={sceneMenu?.scene.id === sc.id}
                 onClick={e => openSceneMenu(e, sc)}
               >
                 <MoreVertical size={13} />
@@ -488,10 +510,11 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
           })}
         </div>}
       </div>
+      <DndContext sensors={sensors} accessibility={{ announcements: dragAnnouncements, screenReaderInstructions: { draggable: t('스페이스 키로 패드를 들고 방향키로 빈 패드를 고른 뒤 스페이스 키로 놓습니다. ESC 키로 취소합니다.') } }} onDragStart={({ active }) => setDragged(active.id)} onDragEnd={dragEnd} onDragCancel={() => setDragged(null)}>
       <div className="pads" role="tabpanel" id="padsets-panel" aria-labelledby={`padsets-tab-${padsetId}`}>{Array.from({ length: 16 }, (_, slot) => {
         const service = pads.find(s => s.padset_id === padsetId && s.slot === slot);
         if (loading) return <div key={slot} className="pad skeleton" />;
-        if (!service) return <button key={slot} data-empty-slot={slot} className={`pad empty ${dropSlot === slot ? 'drop-target' : ''}`} aria-label={t('패드 {0} 서비스 등록', slot + 1)} onClick={() => { if (Date.now() >= suppressClick.current) setPadEditor({ slot }); }} onDragOver={event => { if (dragging.current && connected) { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; setDropSlot(slot); } }} onDragLeave={() => setDropSlot(null)} onDrop={event => { event.preventDefault(); const source = dragging.current; dragging.current = null; setDragged(null); setDropSlot(null); suppressClick.current = Date.now() + 400; if (source) move(source.id, slot); }}><Plus size={20} /></button>;
+        if (!service) return <EmptyPad key={slot} slot={slot} enabled={connected} onRegister={() => { if (Date.now() >= suppressClick.current) setPadEditor({ slot }); }} />;
         const pending = busy.has(service.id) || service.busy || service.members?.some(s => busy.has(s.id));
         const tags = (service.isGroup ? service.members : [service]).filter(s => s.kind === 'remote' || s.kind === 'docker' || s.port);
         const groupProg = groupProgress?.[service.id];
@@ -515,39 +538,39 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
         const gitStates = (service.isGroup ? service.members : [service]).map(s => s.git_state);
         const gitDirty = gitStates.includes('dirty');
         const gitState = gitDirty ? 'dirty' : gitStates.includes('clean') ? 'clean' : 'unknown';
-        const indicators = indicatorSettings(settings?.pad_indicators);
-        const GitIcon = gitIcons[indicators.git_icon] || FolderGit2;
-        const gitColor = indicators[`git_${gitState}_icon`];
-        const gitBackground = indicators[`git_${gitState}_background`];
         const gitLabel = gitDirty ? t('Git 변경 내역 있음') : gitStates.includes('clean') ? t('Git 변경 내역 없음') : t('Git 상태 확인 정보 없음');
         return <div key={slot} className={`pad-wrap ${selected === service.id ? 'chosen' : ''} ${dragged === service.id ? 'dragging' : ''}`} style={{ '--pad-color': service.color, '--cpu': cpuVal }}>
           <button className={`pad assigned ${service.status}`} style={{ '--cpu': cpuVal }} disabled={pending || !connected} onClick={() => toggle(service)} aria-label={`${service.name} ${service.active ? t('종료') : t('실행')}`} aria-pressed={!!service.active}>
             <span className="pad-top">{pending ? <LoaderCircle className="spin" size={14} /> : <Power size={14} />}</span>
-            <span className="pad-port">{tags.length ? tags.map(s => <span key={s.id} title={s.kind === 'remote' ? s.remote.host : undefined}>{s.name}{s.kind === 'remote' ? ` @${s.remote.host}` : s.kind === 'docker' ? ` ${s.container_ports?.length ? s.container_ports.map(port => `:${port}`).join(', ') : t(':포트 없음')}` : s.port ? ` :${s.port}` : t(' :포트 없음')}</span>) : t('명령 실행')}</span>
+            <span className="pad-port">{tags.length ? tags.map(s => <span key={s.id}>{s.name}{s.kind === 'remote' ? ` @${s.remote.host}` : s.kind === 'docker' ? ` ${s.container_ports?.length ? s.container_ports.map(port => `:${port}`).join(', ') : t(':포트 없음')}` : s.port ? ` :${s.port}` : t(' :포트 없음')}</span>) : t('명령 실행')}</span>
             <span className="pad-footer">
               <span className="pad-state"><i /><span>{stateText}</span></span>
               <span className="pad-indicators">
-                {indicators.git_enabled && <span className="pad-git" style={{ color: gitColor, backgroundColor: gitBackground, padding: `${indicators.git_padding}px` }} title={gitLabel} role="img" aria-label={gitLabel}><GitIcon size={12} aria-hidden="true" /></span>}
-                {indicators.pd_enabled && <span className={`pad-environment ${service.environment === 'production' ? 'production' : 'development'}`} style={{ color: service.environment === 'production' ? indicators.pd_production_text : indicators.pd_development_text, backgroundColor: service.environment === 'production' ? indicators.pd_production_background : indicators.pd_development_background, padding: `${indicators.pd_padding}px` }} title={service.environment === 'production' ? t('운영용') : t('개발용')} aria-label={service.environment === 'production' ? t('운영용') : t('개발용')}><span>{service.environment === 'production' ? 'P' : 'D'}</span></span>}
+                <span className="pad-badge pad-git" style={badgeColors[gitState]} role="img" aria-label={gitLabel}><GitBranch size={11} strokeWidth={2.5} aria-hidden="true" /></span>
+                <span className="pad-badge pad-environment" style={badgeColors[service.environment === 'production' ? 'production' : 'development']} role="img" aria-label={service.environment === 'production' ? t('운영용') : t('개발용')}>{service.environment === 'production' ? 'P' : 'D'}</span>
               </span>
             </span>
-            {errorLine && <span className="pad-error-badge" title={errorLine} onClick={e => { e.stopPropagation(); setSelected(service.id); setTargetError(errorLine); }}>{errorLine}</span>}
             {progressPct !== null && <div className="pad-progress-bar" style={{ width: `${progressPct}%` }} />}
-          </button><button className="pad-move" disabled={!connected || pending} title={t('드래그하여 빈 패드로 이동')} aria-label={t('{0} 자리 이동', service.name)} onPointerDown={event => touchDrag(event, service)} onPointerMove={touchMove} onPointerUp={event => endTouch(event)} onPointerCancel={event => endTouch(event, true)}>{service.name}</button><button className="pad-detail" onClick={event => openPadMenu(event, service)} aria-label={t('{0} 메뉴', service.name)} aria-haspopup="menu" aria-expanded={padMenu?.id === service.id}><SlidersHorizontal size={13} /></button>
+          </button>{errorLine && <Tooltip content={errorLine}><button type="button" className="pad-error-badge" aria-label={t('{0} 오류 로그 보기: {1}', service.name, errorLine)} onClick={() => { setSelected(service.id); setTargetError(errorLine); }}>{errorLine}</button></Tooltip>}<PadMoveHandle pad={service} disabled={!connected || pending} /><Tooltip content={t('상세, 설정, 삭제')}><button className="pad-detail" onClick={event => openPadMenu(event, service)} aria-label={t('{0} 메뉴', service.name)} aria-haspopup="menu" aria-expanded={padMenu?.id === service.id}><SlidersHorizontal size={13} /></button></Tooltip>
         </div>;
       })}</div>
+      <DragOverlay dropAnimation={null}>{draggedPad && <div className="pad-drag-ghost" style={{ '--pad-color': draggedPad.color }}>{draggedPad.name}</div>}</DragOverlay>
+      </DndContext>
     </section>
     {menuPad && <div className="pad-menu-layer" onPointerDown={() => setPadMenu(null)} onContextMenu={event => { event.preventDefault(); setPadMenu(null); }}>
       <div ref={menuRef} className="pad-menu" role="menu" aria-label={t('{0} 메뉴', menuPad.name)} style={padMenu.style} onPointerDown={event => event.stopPropagation()} onKeyDown={menuKeys}>
         <button role="menuitem" autoFocus onClick={() => { setPadMenu(null); setSelected(menuPad.id); setComponentId(null); }}><Info size={14} />{t('상세')}</button>
         <button role="menuitem" disabled={busy.has(menuPad.id)} onClick={() => { setPadMenu(null); setPadEditor({ id: menuPad.id, slot: menuPad.slot }); }}><Settings2 size={14} />{t('설정')}</button>
-        <button role="menuitem" className="menu-delete" disabled={!connected || busy.has(menuPad.id) || menuPad.busy || (menuPad.isGroup ? menuPad.members : [menuPad]).some(s => s.kind !== 'remote' && (s.active || s.pid || busy.has(s.id) || s.busy))} onClick={() => { setPadMenu(null); setDeleting(menuPad); }}><Trash2 size={14} />{t('삭제')}</button>
+        {(() => {
+          const running = (menuPad.isGroup ? menuPad.members : [menuPad]).some(s => s.kind !== 'remote' && (s.active || s.pid || busy.has(s.id) || s.busy));
+          return <button role="menuitem" className="menu-delete" disabled={!connected || busy.has(menuPad.id) || menuPad.busy || running} aria-describedby={running ? 'pad-menu-delete-hint' : undefined} onClick={() => { setPadMenu(null); setDeleting(menuPad); }}><Trash2 size={14} /><span>{t('삭제')}</span>{running && <span className="menu-hint" id="pad-menu-delete-hint" aria-hidden="true">{t('종료 후 삭제할 수 있어요')}</span>}</button>;
+        })()}
         {menuLinkTarget && <button role="menuitem" onClick={() => openLink(menuPad, menuLinkTarget)}>{menuLinkTarget === 'domain' ? <Globe size={14} /> : <Monitor size={14} />}{t('브라우저에서 열기')}</button>}
         {settings?.tools?.vscode !== false && (menuPad.isGroup ? menuPad.members : [menuPad]).some(s => !s.kind || s.kind === 'local') && <button role="menuitem" disabled={!connected} onClick={() => openInCode(menuPad)}><Code size={14} />{t('VSCode로 열기')}</button>}
       </div>
     </div>}
     {sceneMenu && <div className="pad-menu-layer" onPointerDown={() => setSceneMenu(null)} onContextMenu={event => { event.preventDefault(); setSceneMenu(null); }}>
-      <div className="pad-menu" role="menu" aria-label={t('{0} 메뉴', sceneMenu.scene.name)} style={sceneMenu.style} onPointerDown={event => event.stopPropagation()}>
+      <div className="pad-menu" role="menu" aria-label={t('{0} 메뉴', sceneMenu.scene.name)} style={sceneMenu.style} onPointerDown={event => event.stopPropagation()} onKeyDown={menuKeys}>
         <button role="menuitem" autoFocus onClick={() => triggerScene(sceneMenu.scene, 'start')}><Play size={14} />{t('흐름 시작')}</button>
         <button role="menuitem" onClick={() => triggerScene(sceneMenu.scene, 'stop')}><Square size={14} />{t('흐름 정지')}</button>
         <button role="menuitem" onClick={() => { setSceneMenu(null); onOpenSettings?.('scenes'); }}><Gear size={14} />{t('흐름 설정')}</button>
@@ -572,25 +595,21 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
           const maxVal = list.length > 0 ? Math.max(...list) : 0;
           return (
             <div className="lcd">
-              <div
-                className="lcd-head"
-                role="button"
-                tabIndex={0}
-                onClick={() => setHistoryMetric(m => m === 'cpu' ? 'memory' : 'cpu')}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setHistoryMetric(m => m === 'cpu' ? 'memory' : 'cpu'); } }}
-                title={t('클릭하여 CPU / MEM 전환')}
-              >
-                <span>{isCpu ? 'CPU USAGE' : 'MEM USAGE'}</span>
+              <div className="lcd-head">
+                <div className="kind-switch lcd-metric" role="radiogroup" aria-label={t('사용량 지표')}>
+                  <button type="button" role="radio" aria-checked={isCpu} onClick={() => setHistoryMetric('cpu')}>CPU</button>
+                  <button type="button" role="radio" aria-checked={!isCpu} onClick={() => setHistoryMetric('memory')}>{t('메모리')}</button>
+                </div>
                 <span>{t('최대: {0}', isCpu ? `${maxVal}%` : `${maxVal} MB`)}</span>
               </div>
               <div className="lcd-value">
                 {currentVal}
                 <span>{isCpu ? '%' : 'MB'}</span>
               </div>
-              <DotMatrix data={list} type={historyMetric} />
+              <HistoryChart values={list} interval={history.interval || 10} metric={historyMetric} />
               <div className="lcd-bottom">
-                <span>10M AGO</span>
-                <span>NOW</span>
+                <span>{t('{0}분 전', Math.round(((list.length - 1) * (history.interval || 10)) / 60))}</span>
+                <span>{t('지금')}</span>
               </div>
             </div>
           );
@@ -602,8 +621,9 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
       </DetailScroll>}
     </>}</Modal>
     {padEditor && <PadForm pad={editingPad} slot={padEditor.slot} defaultCwd={settings?.recommend_roots?.[0] || ''} tools={settings?.tools} {...{ padsets, padsetId, services, api, colors, colorNames, local, onError }} onClose={() => setPadEditor(null)} onSaved={async () => { await refresh(); setSelected(null); }} />}
-    <Modal isOpen={!!takeover} onClose={() => setTakeover(null)} title={t('외부 실행 넘겨받기')} size="sm" draggable={false} footer={<><button className="secondary" onClick={() => setTakeover(null)}>{t('취소')}</button><button className="primary" onClick={() => { const pad = takeover; setTakeover(null); toggle(pad, true); }}>{t('종료 후 다시 실행')}</button></>}><p className="notice-text">{t('{0} 서버가 StackPad 밖에서 실행 중입니다. 외부에서 실행한 서버를 종료하고 StackPad에서 다시 실행할까요?', takeover?.name)}</p></Modal>
-    <Modal isOpen={!!deleting} onClose={() => setDeleting(null)} title={t('패드 삭제')} size="sm" draggable={false} footer={<><button className="secondary" onClick={() => setDeleting(null)}>{t('취소')}</button><button className="danger" onClick={remove}>{t('삭제')}</button></>}><p>{t('{0} 패드 등록을 삭제할까요? 실행 로그 파일은 보관됩니다.', deleting?.name)}{deleting && (deleting.isGroup ? deleting.members : [deleting]).some(s => s.kind === 'docker') ? t(' 도커 컨테이너는 그대로 유지됩니다.') : ''}{deleting && (deleting.isGroup ? deleting.members : [deleting]).some(s => s.kind === 'remote') ? t(' 원격 서버에서 실행 중인 서비스는 그대로 유지됩니다.') : ''}</p></Modal>
+    <ConfirmModal isOpen={!!takeover} title={t('외부 실행 넘겨받기')} danger={false} confirmLabel={t('종료 후 다시 실행')} message={t('{0} 서버가 StackPad 밖에서 실행 중입니다. 외부에서 실행한 서버를 종료하고 StackPad에서 다시 실행할까요?', takeover?.name)} onCancel={() => setTakeover(null)} onConfirm={() => { const pad = takeover; setTakeover(null); toggle(pad, { takeover: true }); }} />
+    <ConfirmModal isOpen={!!stopping} title={t('운영 서비스 종료')} confirmLabel={t('종료')} message={t('{0}은 운영용 패드입니다. 종료하면 이 서비스를 쓰는 사용자의 접속이 끊어집니다. 종료할까요?', stopping?.name)} onCancel={() => setStopping(null)} onConfirm={() => { const pad = stopping; setStopping(null); toggle(pad, { stopConfirmed: true }); }} />
+    <ConfirmModal isOpen={!!deleting} title={t('패드 삭제')} confirmLabel={t('삭제')} message={deleting ? t('{0} 패드 등록을 삭제할까요? 실행 로그 파일은 보관됩니다.', deleting.name) + ((deleting.isGroup ? deleting.members : [deleting]).some(s => s.kind === 'docker') ? t(' 도커 컨테이너는 그대로 유지됩니다.') : '') + ((deleting.isGroup ? deleting.members : [deleting]).some(s => s.kind === 'remote') ? t(' 원격 서버에서 실행 중인 서비스는 그대로 유지됩니다.') : '') : ''} onCancel={() => setDeleting(null)} onConfirm={remove} />
   </>;
 }
 
@@ -638,6 +658,7 @@ function Recommendations({ onRegister, onError }) {
 function FolderOnboarding({ onDone, onError }) {
   const [folder, setFolder] = useState('');
   const [busy, setBusy] = useState(false);
+  const [hidden, setHidden] = useState(false);
   async function pick() {
     setBusy(true);
     try { const { folder: chosen } = await api('/settings/pick-folder', { method: 'POST' }); if (chosen) setFolder(chosen); }
@@ -648,18 +669,18 @@ function FolderOnboarding({ onDone, onError }) {
     try { await api('/settings/onboarding', { method: 'PUT', body: JSON.stringify({ roots }) }); await onDone(); }
     catch (e) { onError(e.message); } finally { setBusy(false); }
   }
-  return <Modal isOpen onClose={() => finish([])} title={t('프로젝트 폴더 지정')} size="sm" draggable={false} footer={<><button className="secondary" disabled={busy} onClick={() => finish([])}>{t('나중에')}</button><button className="primary" disabled={busy || !folder.trim()} onClick={() => finish([folder])}>{t('저장')}</button></>}>
+  return <Modal isOpen={!hidden} onClose={() => setHidden(true)} closeOnOverlayClick={false} title={t('프로젝트 폴더 지정')} size="sm" draggable={false} footer={<><button className="secondary" disabled={busy} onClick={() => finish([])}>{t('나중에')}</button><button className="primary" disabled={busy || !folder.trim()} onClick={() => finish([folder])}>{t('저장')}</button></>}>
     <div className="service-form"><p className="notice-text">{t('서버 프로젝트를 모아 두는 폴더를 알려 주세요. 서비스를 등록할 때 기본 작업 폴더로 쓰고, 등록 추천이 이 폴더 아래에서 실행 중인 서버를 찾아 드려요.')}</p>
-      <div className="settings-actions"><input aria-label={t('프로젝트 폴더')} value={folder} onChange={e => setFolder(e.target.value)} placeholder="C:\Users\me\projects" /><button type="button" className="secondary" disabled={busy} onClick={pick}><Folder size={14} />{t('폴더 선택')}</button></div>
+      <div className="compact-input-row"><input aria-label={t('프로젝트 폴더')} value={folder} onChange={e => setFolder(e.target.value)} placeholder="C:\Users\me\projects" /><button type="button" className="secondary" disabled={busy} onClick={pick}><Folder size={14} />{t('폴더 선택')}</button></div>
       <p className="optional">{t('환경 설정의 등록 추천 탭에서 언제든 바꿀 수 있어요.')}</p></div>
   </Modal>;
 }
 
-function Settings({ auth, settings, padsets, services, groups, scenes = [], schedules = [], initialCategory = 'general', refresh, onError, onNotice, onLogout }) {
+function Settings({ auth, settings, padsets, services, groups, scenes = [], schedules = [], initialCategory = 'general', refresh, onError, onNotice, onLogout, onDirtyChange }) {
   const [category, setCategory] = useState(initialCategory);
   const [busy, setBusy] = useState(false);
   const [roots, setRoots] = useState(null);
-  const [indicatorDraft, setIndicatorDraft] = useState(null);
+  useEffect(() => { onDirtyChange(roots !== null); return () => onDirtyChange(false); }, [roots !== null]);
   const [phoneAlert, setPhoneAlert] = useState(false);
   useEffect(() => { if (isNative) getAlertStatus().then(setPhoneAlert); }, []);
   async function togglePhoneAlert(enabled) {
@@ -725,22 +746,8 @@ function Settings({ auth, settings, padsets, services, groups, scenes = [], sche
       onNotice(t('알림 설정을 반영했습니다.'));
     } catch (e) { onError(e.message); } finally { setBusy(false); }
   }
-  async function saveIndicators(patch) {
-    setBusy(true);
-    const next = { ...indicatorSettings(settings?.pad_indicators), ...patch };
-    try {
-      await api('/settings/pad-indicators', { method: 'PUT', body: JSON.stringify(next) });
-      setIndicatorDraft(null);
-      await refresh();
-      onNotice(t('패드 표시 설정을 저장했습니다.'));
-    } catch (e) { onError(e.message); } finally { setBusy(false); }
-  }
-  function editIndicators(patch) { setIndicatorDraft(current => ({ ...indicatorSettings(settings?.pad_indicators), ...(current || {}), ...patch })); }
-  const indicators = { ...indicatorSettings(settings?.pad_indicators), ...(indicatorDraft || {}) };
-  const GitBadgeIcon = gitIcons[indicators.git_icon] || FolderGit2;
-  const indicatorStates = [['clean', t('변경 없음')], ['dirty', t('변경 있음')], ['unknown', t('상태 미확인')]];
   return <>
-    <Tabs label={t('환경 설정 카테고리')} tabs={[{ id: 'general', name: t('일반') }, { id: 'appearance', name: t('모양') }, { id: 'scenes', name: t('흐름 및 예약') }, { id: 'recommend', name: t('등록 추천') }, { id: 'padsets', name: t('패드셋') }, { id: 'account', name: t('계정') }]} value={category} onChange={setCategory} prefix="settings" />
+    <Tabs label={t('환경 설정 카테고리')} tabs={[{ id: 'general', name: t('일반') }, { id: 'scenes', name: t('흐름 및 예약') }, { id: 'recommend', name: t('등록 추천') }, { id: 'padsets', name: t('패드셋') }, { id: 'account', name: t('계정') }]} value={category} onChange={setCategory} prefix="settings" />
     <div className="settings-stack compact-settings" role="tabpanel" id="settings-panel" aria-labelledby={`settings-tab-${category}`}>
     {category === 'general' && <><section className="settings-card"><div className="settings-icon"><Power size={22} /></div><div><h2>{t('Windows 로그인 시 자동 실행')}</h2></div><button className={`switch ${settings?.autostart ? 'on' : ''}`} role="switch" aria-checked={!!settings?.autostart} aria-label={t('Windows 로그인 시 자동 실행')} disabled={busy || !settings} onClick={() => change(!settings.autostart)}><span /></button></section>
     <section className="settings-card"><div className="settings-icon"><Languages size={22} /></div><div><h2>{t('언어')}</h2></div><div className="retention-control"><SelectControl aria-label={t('언어')} value={locale} onChange={e => setLocale(e.target.value)}>
@@ -763,51 +770,7 @@ function Settings({ auth, settings, padsets, services, groups, scenes = [], sche
     <section className="settings-card vertical"><div className="section-heading"><Gauge size={22} /><div><h2>{t('AI 사용량')}</h2><p>{t('이 PC에 로그인된 AI CLI의 사용 한도를 패드 위와 휴대폰 위젯에 표시합니다. 각 CLI의 비공개 API를 읽기만 하므로 응답 형식이 바뀌면 표시되지 않을 수 있어요.')}</p></div></div>
       <div className="usage-switches">{[['claude', 'Claude Code'], ['codex', 'Codex'], ['antigravity', 'Antigravity']].map(([id, name]) => <label key={id} className="usage-switch"><span>{name}</span><button type="button" className={`switch ${settings?.usage_providers?.includes(id) ? 'on' : ''}`} role="switch" aria-checked={!!settings?.usage_providers?.includes(id)} aria-label={t('{0} 사용량 표시', name)} disabled={busy || !settings} onClick={() => changeUsage(id, !settings.usage_providers.includes(id))}><span /></button></label>)}</div>
       <p className="optional">{t('Antigravity는 상태줄이 저장한 스냅샷 파일을 읽습니다:')} <code>~/.gemini/antigravity-cli/usage-snapshot.json</code></p></section>
-    <section className="settings-card vertical"><div className="settings-actions storage-heading"><div className="section-heading"><Folder size={18} /><div><h2>{t('설정과 로그 저장 위치')}</h2></div></div><button className="secondary" disabled={busy || !settings?.can_select_data_dir} onClick={selectDataDirectory} title={settings?.can_select_data_dir ? t('빈 폴더를 선택하면 바로 적용됩니다.') : t('StackPad가 실행 중인 PC에서 선택해 주세요.')}>{busy ? t('처리 중…') : t('폴더 선택')}</button></div><code className="path-code">{settings?.data_dir || t('불러오는 중…')}</code></section></>}
-    {category === 'appearance' && <>
-      <div className="indicator-page-heading"><h2>{t('패드 배지 표시')}</h2><p>{t('패드에 표시할 환경 및 Git 배지의 모양을 설정합니다.')}</p></div>
-      <section className="settings-card vertical indicator-card">
-        <div className="indicator-card-heading">
-          <div className="indicator-title"><h3>{t('P/D 환경 배지')}</h3><p>{t('운영과 개발 환경을 표시하는 배지입니다.')}</p></div>
-          <div className="indicator-preview-pair" role="img" aria-label={t('배지 미리보기')}>
-            <span className="indicator-preview-label">{t('미리보기')}</span>
-            {[[`P`, 'production'], [`D`, 'development']].map(([badge, environment]) => <span key={badge} className="environment-badge-preview" style={{ color: indicators[`pd_${environment}_text`], backgroundColor: indicators[`pd_${environment}_background`], padding: `${indicators.pd_padding}px 8px` }}>{badge}</span>)}
-          </div>
-          <button type="button" className={`switch ${indicators.pd_enabled ? 'on' : ''}`} role="switch" aria-checked={indicators.pd_enabled} aria-label={t('P/D 환경 배지')} disabled={busy || !settings} onClick={() => editIndicators({ pd_enabled: !indicators.pd_enabled })}><span /></button>
-        </div>
-        <div className="indicator-environment-list">
-          {[[t('운영'), 'production', 'P'], [t('개발'), 'development', 'D']].map(([label, environment, badge]) => <div className="indicator-environment-row" key={environment}>
-            <span className={`environment-row-badge ${environment}`} style={{ color: indicators[`pd_${environment}_text`], backgroundColor: indicators[`pd_${environment}_background`] }}>{badge}</span>
-            <strong>{label}</strong>
-            <IndicatorColor label={t('텍스트 색')} value={indicators[`pd_${environment}_text`]} disabled={busy || !settings} onChange={value => editIndicators({ [`pd_${environment}_text`]: value })} />
-            <IndicatorColor label={t('배경 색')} value={indicators[`pd_${environment}_background`]} disabled={busy || !settings} allowNone fallback={indicatorDefaults[`pd_${environment}_background`]} onChange={value => editIndicators({ [`pd_${environment}_background`]: value })} />
-          </div>)}
-        </div>
-        <div className="indicator-padding-row"><span>{t('내부 패딩')}</span><label className="indicator-number-control"><input type="number" min="0" max="12" aria-label={t('P/D 배지 내부 패딩')} value={indicators.pd_padding} disabled={busy || !settings} onChange={event => editIndicators({ pd_padding: Number(event.target.value) })} /><span>px</span></label></div>
-      </section>
-
-      <section className="settings-card vertical indicator-card">
-        <div className="indicator-card-heading">
-          <div className="indicator-title"><h3>{t('Git 상태 배지')}</h3><p>{t('저장소 상태마다 아이콘과 배경 색을 정합니다.')}</p></div>
-          <div className="git-preview-list" role="img" aria-label={t('배지 미리보기')}>
-            {indicatorStates.map(([state, label]) => <span key={state} className="git-badge-preview" style={{ color: indicators[`git_${state}_icon`], backgroundColor: indicators[`git_${state}_background`], padding: indicators.git_padding }}><GitBadgeIcon size={13} aria-hidden="true" /><span>{label}</span></span>)}
-          </div>
-          <button type="button" className={`switch ${indicators.git_enabled ? 'on' : ''}`} role="switch" aria-checked={indicators.git_enabled} aria-label={t('Git 상태 배지')} disabled={busy || !settings} onClick={() => editIndicators({ git_enabled: !indicators.git_enabled })}><span /></button>
-        </div>
-        <div className="indicator-control-grid git-indicator-controls">
-          <label className="indicator-select-control"><span>{t('아이콘 모양')}</span><SelectControl aria-label={t('아이콘 모양')} value={indicators.git_icon} disabled={busy || !settings} onChange={event => editIndicators({ git_icon: event.target.value })}><option value="folder-git">folder-git</option><option value="git-branch">git-branch</option><option value="git-commit">git-commit</option><option value="git-fork">git-fork</option></SelectControl></label>
-          <label className="indicator-number-control"><span>{t('내부 패딩')}</span><span className="indicator-number-value"><input type="number" min="0" max="12" value={indicators.git_padding} disabled={busy || !settings} onChange={event => editIndicators({ git_padding: Number(event.target.value) })} /><span>px</span></span></label>
-        </div>
-        <div className="indicator-state-list">
-          {indicatorStates.map(([state, label]) => <div className="indicator-state-row" key={state}>
-            <div className="indicator-state-name"><span className="indicator-state-dot" style={{ backgroundColor: indicators[`git_${state}_icon`] }} /><strong>{label}</strong></div>
-            <IndicatorColor label={t('아이콘 색')} value={indicators[`git_${state}_icon`]} disabled={busy || !settings} onChange={value => editIndicators({ [`git_${state}_icon`]: value })} />
-            <IndicatorColor label={t('배경 색')} value={indicators[`git_${state}_background`]} disabled={busy || !settings} allowNone fallback={indicatorDefaults[`git_${state}_background`]} onChange={value => editIndicators({ [`git_${state}_background`]: value })} />
-          </div>)}
-        </div>
-      </section>
-      <div className="indicator-save-row"><button className="primary" disabled={busy || !settings || !indicatorDraft} onClick={() => saveIndicators(indicatorDraft)}>{busy ? t('저장 중…') : t('저장')}</button></div>
-    </>}
+    <section className="settings-card vertical"><div className="settings-actions storage-heading"><div className="section-heading"><Folder size={18} /><div><h2>{t('설정과 로그 저장 위치')}</h2></div></div><button className="secondary" disabled={busy || !settings?.can_select_data_dir} onClick={selectDataDirectory}>{busy ? t('처리 중…') : t('폴더 선택')}</button></div><code className="path-code">{settings?.data_dir || t('불러오는 중…')}</code><p className="optional">{settings?.can_select_data_dir ? t('빈 폴더를 선택하면 바로 적용됩니다.') : t('StackPad가 실행 중인 PC에서 선택해 주세요.')}</p></section></>}
     {category === 'recommend' && <section className="settings-card vertical"><div className="section-heading"><ScanSearch size={22} /><div><h2>{t('등록 추천 스캔 폴더')}</h2><p>{t('이 폴더 아래에서 실행 중인 Python, Node 서버를 등록 추천 대상으로 찾습니다. 한 줄에 폴더 하나씩 입력하세요.')}</p></div></div><textarea aria-label={t('등록 추천 스캔 폴더')} rows={3} value={roots ?? settings?.recommend_roots?.join('\n') ?? ''} onChange={e => setRoots(e.target.value)} /><div className="settings-actions"><button className="primary" disabled={busy || roots === null} onClick={saveRoots}>{t('저장')}</button></div>
       {!!settings?.recommend_hidden?.length && <div className="hidden-recommendations"><div className="settings-actions"><h3>{t('숨긴 추천 {0}개', settings.recommend_hidden.length)}</h3><button className="secondary" disabled={busy} onClick={resetHidden}>{t('모두 다시 표시')}</button></div><div className="component-list">{settings.recommend_hidden.map(entry => <div className="component-row" key={entry.key}>
         <div><strong>{entry.name}</strong><p><code>{entry.command}</code></p><p>{entry.cwd}</p></div>
@@ -839,6 +802,9 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
   const [notice, setNotice] = useState(null);
+  const [toasts, setToasts] = useState([]);
+  const [discardSettings, setDiscardSettings] = useState(false);
+  const settingsDirty = useRef(false);
   const [panel, setPanel] = useState(window.location.pathname === '/settings' ? 'settings' : null);
   const [settingsCategory, setSettingsCategory] = useState('general');
   const inFlight = useRef(false);
@@ -955,26 +921,31 @@ function App() {
   useEffect(() => {
     if (auth?.authenticated) connectWidget(api).catch(e => console.warn(t('위젯 연결을 다시 확인해 주세요.'), e));
   }, [auth?.authenticated]);
-  const onError = message => setNotice({ title: t('확인이 필요해요'), message });
-  const onNotice = message => setNotice({ title: t('설정을 반영했습니다'), message });
+  const toast = (kind, message, action) => setToasts(current => [...current.filter(item => item.message !== message).slice(-2), { id: Date.now() + Math.random(), kind, message, action }]);
+  const onError = (message, action) => toast('error', message, action);
+  const onNotice = message => toast('success', message);
+  const closePanel = () => { if (panel === 'settings' && settingsDirty.current) setDiscardSettings(true); else setPanel(null); };
   async function logout() { try { await disconnectWidget(api); await api('/logout', { method: 'POST' }); setServices([]); setSettings(null); setLoading(true); checkAuth(); } catch (e) { onError(e.message); } }
   if (!auth) return <div className="connecting"><Logo /><p>{authError || t('관리 엔진과 연결하고 있어요.')}</p>{authError && <button className="secondary" onClick={checkAuth}><RefreshCw size={16} />{t('다시 연결')}</button>}</div>;
   if (!auth.authenticated) return isNative ? <PairPhone api={api} logo={<Logo />} onPaired={checkAuth} /> : <SignIn auth={auth} api={api} logo={<Logo />} onLogin={checkAuth} />;
   return <div className="app-shell">
     <header className="toolbar" aria-label={t('공통 도구')}>
       <h1 className="toolbar-brand">StackPad</h1>
+      {!connected && !loading && <div className="engine-status offline" role="status"><i aria-hidden="true" /><span>{t('관리 엔진 연결이 끊겼어요. 다시 연결하는 중입니다.')}</span><button type="button" className="secondary" onClick={refresh}><RefreshCw size={14} />{t('다시 연결')}</button></div>}
       <div className="toolbar-actions">
-        <button className="tool-button" disabled={!connected} onClick={() => setPanel('recommend')} title={t('등록 추천')} aria-label={t('등록 추천')}><ScanSearch size={17} /></button>
-        <button className="tool-button" disabled={!connected} onClick={() => { const slot = Array.from({ length: 16 }, (_, i) => i).find(i => !services.some(s => s.padset_id === padsetId && s.slot === i)); if (slot === undefined) onError(t('빈 패드를 확보해 주세요.')); else setRegistrationSlot(slot); }} title={t('서비스 등록')} aria-label={t('서비스 등록')}><Plus size={17} /></button>
-        <button className="tool-button" onClick={() => { setSettingsCategory('general'); setPanel('settings'); }} title={t('환경 설정')} aria-label={t('환경 설정')}><Gear size={17} /></button>
+        <Tooltip content={t('등록 추천')}><button className="tool-button" disabled={!connected} onClick={() => setPanel('recommend')} aria-label={t('등록 추천')}><ScanSearch size={17} /></button></Tooltip>
+        <Tooltip content={t('서비스 등록')}><button className="tool-button" disabled={!connected} onClick={() => { const slot = Array.from({ length: 16 }, (_, i) => i).find(i => !services.some(s => s.padset_id === padsetId && s.slot === i)); if (slot === undefined) onError(t('빈 패드를 확보해 주세요.')); else setRegistrationSlot(slot); }} aria-label={t('서비스 등록')}><Plus size={17} /></button></Tooltip>
+        <Tooltip content={t('환경 설정')}><button className="tool-button" onClick={() => { setSettingsCategory('general'); setPanel('settings'); }} aria-label={t('환경 설정')}><Gear size={17} /></button></Tooltip>
       </div>
     </header>
     <main aria-label={t('서비스 패드')}><Deck {...{ padsets, padsetId, onPadsetChange, services, groups, links, loading, settings, refresh, onError, connected, scenes, sceneProgress, groupProgress, schedules }} onOpenSettings={cat => { setSettingsCategory(cat || 'general'); setPanel('settings'); }} local={auth.local} /></main>
     {registrationSlot !== null && <PadForm {...{ padsets, padsetId, schedules }} defaultCwd={settings?.recommend_roots?.[0] || ''} tools={settings?.tools} slot={registrationSlot} preset={preset} local={auth.local} {...{ services, api, colors, colorNames, onError }} onClose={() => { setRegistrationSlot(null); setPreset(null); }} onSaved={refresh} />}
-    <Modal isOpen={!!panel} onClose={() => setPanel(null)} title={panel === 'settings' ? t('환경 설정') : t('등록 추천')} size="lg" storageKey="common-settings">
-      {panel === 'settings' ? <Settings {...{ auth, settings, padsets, services, groups, scenes, schedules, initialCategory: settingsCategory, refresh, onError, onNotice }} onLogout={() => { setPanel(null); logout(); }} /> : panel === 'recommend' ? <Recommendations onError={onError} onRegister={candidate => { const slot = Array.from({ length: 16 }, (_, i) => i).find(i => !services.some(s => s.padset_id === padsetId && s.slot === i)); if (slot === undefined) { onError(t('빈 패드를 확보해 주세요.')); return; } setPanel(null); setPreset(candidate); setRegistrationSlot(slot); }} /> : null}
+    <Modal isOpen={!!panel} onClose={closePanel} title={panel === 'settings' ? t('환경 설정') : t('등록 추천')} size="lg" storageKey="common-settings">
+      {panel === 'settings' ? <Settings {...{ auth, settings, padsets, services, groups, scenes, schedules, initialCategory: settingsCategory, refresh, onError, onNotice }} onDirtyChange={dirty => { settingsDirty.current = dirty; }} onLogout={() => { setPanel(null); logout(); }} /> : panel === 'recommend' ? <Recommendations onError={onError} onRegister={candidate => { const slot = Array.from({ length: 16 }, (_, i) => i).find(i => !services.some(s => s.padset_id === padsetId && s.slot === i)); if (slot === undefined) { onError(t('빈 패드를 확보해 주세요.')); return; } setPanel(null); setPreset(candidate); setRegistrationSlot(slot); }} /> : null}
     </Modal>
     {settings && !settings.onboarding_done && auth.local && <FolderOnboarding onDone={refresh} onError={onError} />}
+    <ConfirmModal isOpen={discardSettings} title={t('저장하지 않은 변경 사항')} confirmLabel={t('버리고 닫기')} message={t('저장하지 않은 변경 사항이 있어요. 버리고 닫을까요?')} onCancel={() => setDiscardSettings(false)} onConfirm={() => { setDiscardSettings(false); settingsDirty.current = false; setPanel(null); }} />
+    <Toaster toasts={toasts} onClose={id => setToasts(current => current.filter(item => item.id !== id))} />
     <Modal isOpen={!!notice} onClose={() => setNotice(null)} title={notice?.title || ''} size="sm" draggable={false} footer={<>{notice?.link && <button className="secondary" onClick={() => { window.open(notice.link, '_blank'); setNotice(null); }}>{t('내려받기')}</button>}<button className="primary" onClick={() => setNotice(null)}>{t('확인')}</button></>}><p className="notice-text">{notice?.message}</p></Modal>
   </div>;
 }

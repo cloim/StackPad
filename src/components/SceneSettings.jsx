@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, Calendar, Clock, Film, GripVertical, Play, Plus, Power, Square, Trash2 } from 'lucide-react';
 import { SelectControl } from './SelectControl.jsx';
 import { Modal } from './Modal/Modal.jsx';
+import { ConfirmModal } from './ConfirmModal.jsx';
+import { useFieldError } from './FieldError.jsx';
 import { t } from '../i18n.js';
 
 const dayNames = [t('월'), t('화'), t('수'), t('목'), t('금'), t('토'), t('일')];
@@ -43,6 +45,7 @@ export function SceneSettings({ scenes = [], schedules = [], services = [], grou
   const [sceneModal, setSceneModal] = useState(null); // null | { isNew: true } | scene
   const [scheduleModal, setScheduleModal] = useState(null); // null | { isNew: true } | schedule
   const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState(null); // null | { scene } | { schedule, name }
 
   // Grouped members are not standalone pads
   const groupedIds = new Set(groups.flatMap(g => g.member_ids));
@@ -72,7 +75,6 @@ export function SceneSettings({ scenes = [], schedules = [], services = [], grou
   }
 
   async function deleteScene(scene) {
-    if (!confirm(t("'{0}' 흐름을 삭제할까요?", scene.name))) return;
     setBusy(true);
     try {
       await api(`/scenes/${scene.id}`, { method: 'DELETE' });
@@ -105,7 +107,6 @@ export function SceneSettings({ scenes = [], schedules = [], services = [], grou
   }
 
   async function deleteSchedule(schedule) {
-    if (!confirm(t('예약을 삭제할까요?'))) return;
     setBusy(true);
     try {
       await api(`/schedules/${schedule.id}`, { method: 'DELETE' });
@@ -163,10 +164,10 @@ export function SceneSettings({ scenes = [], schedules = [], services = [], grou
                     </div>
                   </div>
                   <div className="scene-item-actions">
-                    <button className="secondary small-btn" disabled={busy} onClick={() => setSceneModal({ ...scene, pad_ids: [...(scene.pad_ids || [])] })}>
+                    <button className="secondary small-btn" disabled={busy} aria-label={t('{0} 흐름 편집', scene.name)} onClick={() => setSceneModal({ ...scene, pad_ids: [...(scene.pad_ids || [])] })}>
                       {t('편집')}
                     </button>
-                    <button className="delete-button" disabled={busy} aria-label={t('{0} 흐름 삭제', scene.name)} onClick={() => deleteScene(scene)}>
+                    <button className="delete-button" disabled={busy} aria-label={t('{0} 흐름 삭제', scene.name)} onClick={() => setDeleting({ scene })}>
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -178,7 +179,7 @@ export function SceneSettings({ scenes = [], schedules = [], services = [], grou
       </section>
 
       {/* 2. Schedules Section */}
-      <section className="settings-card vertical" style={{ marginTop: '1rem' }}>
+      <section className="settings-card vertical">
         <div className="settings-actions">
           <div className="section-heading">
             <Calendar size={22} />
@@ -241,16 +242,16 @@ export function SceneSettings({ scenes = [], schedules = [], services = [], grou
                       className={`switch ${sch.enabled ? 'on' : ''}`}
                       role="switch"
                       aria-checked={sch.enabled}
-                      aria-label={t('예약 활성화')}
+                      aria-label={t('{0} 예약 활성화', targetName)}
                       disabled={busy}
                       onClick={() => toggleSchedule(sch, !sch.enabled)}
                     >
                       <span />
                     </button>
-                    <button className="secondary small-btn" disabled={busy} onClick={() => setScheduleModal({ ...sch, days: [...(sch.days || [])] })}>
+                    <button className="secondary small-btn" disabled={busy} aria-label={t('{0} 예약 편집', targetName)} onClick={() => setScheduleModal({ ...sch, days: [...(sch.days || [])] })}>
                       {t('편집')}
                     </button>
-                    <button className="delete-button" disabled={busy} aria-label={t('예약 삭제')} onClick={() => deleteSchedule(sch)}>
+                    <button className="delete-button" disabled={busy} aria-label={t('{0} 예약 삭제', targetName)} onClick={() => setDeleting({ schedule: sch, name: targetName })}>
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -260,6 +261,8 @@ export function SceneSettings({ scenes = [], schedules = [], services = [], grou
           )}
         </div>
       </section>
+
+      <ConfirmModal isOpen={!!deleting} title={deleting?.scene ? t('흐름 삭제') : t('예약 삭제')} confirmLabel={t('삭제')} message={deleting?.scene ? t("'{0}' 흐름을 삭제할까요?", deleting.scene.name) : t("'{0}' 예약을 삭제할까요?", deleting?.name)} onCancel={() => setDeleting(null)} onConfirm={() => { const target = deleting; setDeleting(null); if (target.scene) deleteScene(target.scene); else deleteSchedule(target.schedule); }} />
 
       {/* Scene Edit Modal */}
       {sceneModal && (
@@ -293,6 +296,10 @@ function SceneEditModal({ scene, allPads, colors, colorNames, busy, onClose, onS
   const [name, setName] = useState(scene.name || '');
   const [color, setColor] = useState(scene.color || colors[0] || '#10b981');
   const [selectedIds, setSelectedIds] = useState(scene.pad_ids || []);
+  const [discarding, setDiscarding] = useState(false);
+  const fieldError = useFieldError();
+  const dirty = name !== (scene.name || '') || color !== (scene.color || colors[0] || '#10b981') || selectedIds.join() !== (scene.pad_ids || []).join();
+  const close = () => { if (dirty) setDiscarding(true); else onClose(); };
 
   const padMap = new Map(allPads.map(p => [p.id, p]));
 
@@ -320,7 +327,7 @@ function SceneEditModal({ scene, allPads, colors, colorNames, busy, onClose, onS
 
   function handleSubmit(e) {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!fieldError.validate(e.currentTarget)) return;
     onSave({
       ...(scene.id ? { id: scene.id } : {}),
       name: name.trim(),
@@ -330,11 +337,11 @@ function SceneEditModal({ scene, allPads, colors, colorNames, busy, onClose, onS
   }
 
   return (
-    <Modal isOpen onClose={onClose} title={scene.id ? t('흐름 편집') : t('흐름 추가')} size="md">
-      <form onSubmit={handleSubmit} className="scene-form">
+    <Modal isOpen onClose={close} closeOnOverlayClick={false} title={scene.id ? t('흐름 편집') : t('흐름 추가')} size="md">
+      <form onSubmit={handleSubmit} className="scene-form" noValidate>
         <label>
           <span>{t('흐름 이름')}</span>
-          <input required maxLength={40} value={name} onChange={e => setName(e.target.value)} placeholder={t('예: 아침 출근')} autoFocus />
+          <input required pattern=".*\S.*" maxLength={40} value={name} onChange={e => setName(e.target.value)} placeholder={t('예: 아침 출근')} autoFocus />
         </label>
 
         <fieldset className="color-field">
@@ -348,6 +355,7 @@ function SceneEditModal({ scene, allPads, colors, colorNames, busy, onClose, onS
                 style={{ '--color': c }}
                 onClick={() => setColor(c)}
                 aria-label={colorNames[i] || c}
+                aria-pressed={color === c}
               />
             ))}
           </div>
@@ -367,13 +375,13 @@ function SceneEditModal({ scene, allPads, colors, colorNames, busy, onClose, onS
                     <span className="order-num">{index + 1}</span>
                     <span className="pad-name">{pad?.name || id}</span>
                     <div className="order-actions">
-                      <button type="button" className="tool-button" disabled={index === 0} onClick={() => moveUp(index)}>
+                      <button type="button" className="tool-button" disabled={index === 0} aria-label={t('{0} 순서 앞으로', pad?.name || id)} onClick={() => moveUp(index)}>
                         <ArrowUp size={14} />
                       </button>
-                      <button type="button" className="tool-button" disabled={index === selectedIds.length - 1} onClick={() => moveDown(index)}>
+                      <button type="button" className="tool-button" disabled={index === selectedIds.length - 1} aria-label={t('{0} 순서 뒤로', pad?.name || id)} onClick={() => moveDown(index)}>
                         <ArrowDown size={14} />
                       </button>
-                      <button type="button" className="delete-button" onClick={() => togglePad(id)}>
+                      <button type="button" className="delete-button" aria-label={t('{0} 흐름에서 빼기', pad?.name || id)} onClick={() => togglePad(id)}>
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -402,14 +410,16 @@ function SceneEditModal({ scene, allPads, colors, colorNames, busy, onClose, onS
         </div>
 
         <div className="form-actions">
-          <button type="button" className="secondary" disabled={busy} onClick={onClose}>
+          <button type="button" className="secondary" disabled={busy} onClick={close}>
             {t('취소')}
           </button>
-          <button type="submit" className="primary" disabled={busy || !name.trim()}>
+          <button type="submit" className="primary" disabled={busy}>
             {t('저장')}
           </button>
         </div>
       </form>
+      {fieldError.popover}
+      <ConfirmModal isOpen={discarding} title={t('저장하지 않은 변경 사항')} confirmLabel={t('버리고 닫기')} message={t('저장하지 않은 변경 사항이 있어요. 버리고 닫을까요?')} onCancel={() => setDiscarding(false)} onConfirm={() => { setDiscarding(false); onClose(); }} />
     </Modal>
   );
 }
@@ -420,6 +430,11 @@ function ScheduleEditModal({ schedule, scenes, allPads, busy, onClose, onSave })
   const [action, setAction] = useState(schedule.action || 'start');
   const [time, setTime] = useState(schedule.time || '09:00');
   const [days, setDays] = useState(schedule.days || [0, 1, 2, 3, 4]);
+  const [discarding, setDiscarding] = useState(false);
+  const fieldError = useFieldError();
+  const initial = useRef({ targetType, targetId, action, time, days: days.join() });
+  const dirty = targetType !== initial.current.targetType || targetId !== initial.current.targetId || action !== initial.current.action || time !== initial.current.time || days.join() !== initial.current.days;
+  const close = () => { if (dirty) setDiscarding(true); else onClose(); };
 
   function toggleDay(dayIndex) {
     if (days.includes(dayIndex)) {
@@ -438,7 +453,7 @@ function ScheduleEditModal({ schedule, scenes, allPads, busy, onClose, onSave })
 
   function handleSubmit(e) {
     e.preventDefault();
-    if (!targetId || !time) return;
+    if (!fieldError.validate(e.currentTarget)) return;
     onSave({
       ...(schedule.id ? { id: schedule.id } : {}),
       target_type: targetType,
@@ -451,8 +466,8 @@ function ScheduleEditModal({ schedule, scenes, allPads, busy, onClose, onSave })
   }
 
   return (
-    <Modal isOpen onClose={onClose} title={schedule.id ? t('예약 편집') : t('예약 추가')} size="md">
-      <form onSubmit={handleSubmit} className="schedule-form">
+    <Modal isOpen onClose={close} closeOnOverlayClick={false} title={schedule.id ? t('예약 편집') : t('예약 추가')} size="md">
+      <form onSubmit={handleSubmit} className="schedule-form" noValidate>
         <label>
           <span>{t('대상 종류')}</span>
           <SelectControl
@@ -470,7 +485,7 @@ function ScheduleEditModal({ schedule, scenes, allPads, busy, onClose, onSave })
 
         <label>
           <span>{t('실행 대상')}</span>
-          <SelectControl value={targetId} onChange={e => setTargetId(e.target.value)}>
+          <SelectControl required value={targetId} onChange={e => setTargetId(e.target.value)}>
             {targetType === 'scene'
               ? scenes.map(s => <option value={s.id} key={s.id}>{s.name}</option>)
               : allPads.map(p => <option value={p.id} key={p.id}>{p.name}</option>)}
@@ -519,14 +534,16 @@ function ScheduleEditModal({ schedule, scenes, allPads, busy, onClose, onSave })
         </div>
 
         <div className="form-actions">
-          <button type="button" className="secondary" disabled={busy} onClick={onClose}>
+          <button type="button" className="secondary" disabled={busy} onClick={close}>
             {t('취소')}
           </button>
-          <button type="submit" className="primary" disabled={busy || !targetId || !time}>
+          <button type="submit" className="primary" disabled={busy}>
             {t('저장')}
           </button>
         </div>
       </form>
+      {fieldError.popover}
+      <ConfirmModal isOpen={discarding} title={t('저장하지 않은 변경 사항')} confirmLabel={t('버리고 닫기')} message={t('저장하지 않은 변경 사항이 있어요. 버리고 닫을까요?')} onCancel={() => setDiscarding(false)} onConfirm={() => { setDiscarding(false); onClose(); }} />
     </Modal>
   );
 }

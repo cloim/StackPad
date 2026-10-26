@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { DockerFields } from './DockerFields.jsx';
 import { SelectControl } from './SelectControl.jsx';
 import { Tabs } from './Tabs.jsx';
 import { Modal } from './Modal/Modal.jsx';
+import { ConfirmModal } from './ConfirmModal.jsx';
+import { useFieldError } from './FieldError.jsx';
 import { emptyRemote, KindSwitch, RemoteFields } from './RemoteFields.jsx';
 import { formatNextRun } from './SceneSettings.jsx';
 import { t } from '../i18n.js';
@@ -13,6 +15,10 @@ export function PadForm({ pad, preset, services, slot, padsetId = 'default', pad
   const [form, setForm] = useState({ environment: pad?.environment || 'development', name: pad?.name || preset?.name || '', color: pad?.color || colors.find(color => !services.some(s => s.color === color)) || colors[slot % colors.length], autostart: pad?.autostart || false, domain_url: pad?.domain_url || '', local_url: pad?.local_url || '', wait_ready: pad?.wait_ready || false, slot: pad?.slot ?? slot, padset_id: pad?.padset_id || padsetId, components: initialComponents.map(s => ({ ...(s.id ? { id: s.id } : {}), container: s.container || '', kind: s.kind || 'local', name: s.name, command: s.command || '', cwd: s.cwd || defaultCwd, port: s.port || '', health_url: s.health_url || '', restart_policy: s.restart_policy || 'never', restart_max: s.restart_max ?? 3, remote: s.remote || emptyRemote })) });
   const [tab, setTab] = useState('general');
   const [pending, setPending] = useState(false);
+  const [discarding, setDiscarding] = useState(false);
+  const initialForm = useRef(form);
+  const fieldError = useFieldError();
+  const close = () => { if (pending) return; if (form !== initialForm.current) setDiscarding(true); else onClose(); };
   const running = (pad?.isGroup ? pad.members : pad ? [pad] : []).some(s => s.active || s.pid || s.external_pid || s.status === 'restarting');
   // Remote commands run with this PC's SSH keys, so only this PC may change them.
   const remoteLocked = !local && initialComponents.some(s => s.kind === 'remote');
@@ -41,12 +47,9 @@ export function PadForm({ pad, preset, services, slot, padsetId = 'default', pad
   async function save(event) {
     event.preventDefault();
     if (pending) return;
-    const invalid = event.currentTarget.querySelector(':invalid');
-    if (invalid) {
-      setTab(invalid.closest('.pad-common') ? 'general' : 'services');
-      requestAnimationFrame(() => { invalid.focus(); invalid.reportValidity(); });
-      return;
-    }
+    const invalid = event.currentTarget.querySelector(':invalid:not(fieldset)');
+    if (invalid) setTab(invalid.closest('.pad-common') ? 'general' : 'services');
+    if (!fieldError.validate(event.currentTarget)) return;
     setPending(true);
     try {
       const components = form.components.map(c => {
@@ -58,8 +61,9 @@ export function PadForm({ pad, preset, services, slot, padsetId = 'default', pad
     } catch (error) { onError(error.message); }
     finally { setPending(false); }
   }
-  return <Modal isOpen onClose={() => { if (!pending) onClose(); }} title={pad ? t('패드 설정') : t('서비스 등록')} storageKey="pad-editor" size="lg">
+  return <Modal isOpen onClose={close} closeOnOverlayClick={false} title={pad ? t('패드 설정') : t('서비스 등록')} storageKey="pad-editor" size="lg">
     <form className="service-form pad-form" onSubmit={save} noValidate>
+      {readOnly && <p className="form-notice" role="note">{remoteLocked ? t('원격 서버 서비스는 StackPad가 실행 중인 PC에서만 바꿀 수 있어요.') : t('실행 중인 패드는 실행 방식과 명령을 바꿀 수 없어요. 패드를 종료한 뒤 다시 열어 주세요.')}</p>}
       <Tabs label={t('패드 설정 카테고리')} tabs={[{ id: 'general', name: t('일반') }, { id: 'services', name: t('서비스') }]} value={tab} onChange={setTab} prefix="pad-editor" />
       <div role="tabpanel" id="pad-editor-panel" aria-labelledby={`pad-editor-tab-${tab}`}>
       <div className="pad-common" hidden={tab !== 'general'}>
@@ -111,7 +115,9 @@ export function PadForm({ pad, preset, services, slot, padsetId = 'default', pad
       })}</div>
       {!readOnly && <button className="secondary add-service" type="button" disabled={pending || form.components.length >= 16} onClick={() => set('components', [...form.components.map((c, i) => i === 0 && form.components.length === 1 && !c.name ? { ...c, name: form.name } : c), { kind: 'local', name: '', command: '', cwd: form.components.find(c => c.kind !== 'remote')?.cwd || defaultCwd, port: '', health_url: '', restart_policy: 'never', restart_max: 3, remote: emptyRemote }])}><Plus size={16} />{t('서비스 추가')}</button>}
       </div></div>
-      <div className="form-actions"><button type="button" className="secondary" disabled={pending} onClick={onClose}>{t('취소')}</button><button className="primary" disabled={pending}>{t('저장')}</button></div>
+      <div className="form-actions"><button type="button" className="secondary" disabled={pending} onClick={close}>{t('취소')}</button><button className="primary" disabled={pending}>{t('저장')}</button></div>
     </form>
+    {fieldError.popover}
+    <ConfirmModal isOpen={discarding} title={t('저장하지 않은 변경 사항')} confirmLabel={t('버리고 닫기')} message={t('저장하지 않은 변경 사항이 있어요. 버리고 닫을까요?')} onCancel={() => setDiscarding(false)} onConfirm={() => { setDiscarding(false); onClose(); }} />
   </Modal>;
 }

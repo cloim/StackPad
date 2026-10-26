@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Ansi from 'ansi-to-react';
 import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronUp, Filter, Terminal, X } from 'lucide-react';
+import { Tooltip } from './Tooltip.jsx';
 import { t } from '../i18n.js';
 
 const ANSI_REGEX = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
@@ -220,16 +221,15 @@ export function LogViewer({ rawLogs, serviceName, loading, targetErrorLine }) {
             </div>
           )}
 
-          <button
+          <Tooltip content={t('오류가 있는 줄만 보기')}><button
             type="button"
             className={`filter-btn ${onlyErrors ? 'active' : ''}`}
             onClick={() => setOnlyErrors(!onlyErrors)}
-            title={t('오류 줄만 보기')}
             aria-pressed={onlyErrors}
           >
             <Filter size={13} />
             <span>{t('오류만')}</span>
-          </button>
+          </button></Tooltip>
         </div>
       </div>
 

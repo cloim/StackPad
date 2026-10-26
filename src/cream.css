@@ -1,5 +1,5 @@
 /* 확정된 크림 MPC 시안. 동작과 사용량 영역의 치수는 기존 화면을 따른다. */
-:root{color-scheme:light;--orange:#8b715b;--muted:#747d6d;--border:#c7cbbd;--panel:#efeee5;--green:#668a73;color:#444740;background:#e9e9e3}
+:root{color-scheme:light;--orange:#8b715b;--muted:#5d6656;--control-h:40px;--control-h-sm:32px;--border:#c7cbbd;--panel:#efeee5;--green:#668a73;color:#444740;background:#e9e9e3}
 body{background:#e9e9e3}
 button:focus-visible,a:focus-visible{outline-color:#658472}
 .app-shell{padding:16px;background:linear-gradient(115deg,#f2f1e9,#eae9df);box-shadow:inset 0 1px 0 #fffff5,inset 0 -1px 0 #b8b9ae}
@@ -13,7 +13,7 @@ button:focus-visible,a:focus-visible{outline-color:#658472}
 .app-shell>main{padding:12px 0 0}
 .app-shell .pad-deck{gap:14px}
 .usage-bar{background:#dfe5d9;border-bottom-color:#cbd2c1;border-radius:3px;box-shadow:inset 0 1px 2px #45533c20,0 1px 0 #fffef4,0 0 0 2px #d1d5c8}
-.app-shell .usage-bar{padding-left:12px;padding-right:12px}
+.app-shell .usage-bar{padding:4px 12px}
 .usage-track{position:relative;height:6px;border-radius:1px;background:#cbd3c3;box-shadow:inset 0 1px 2px #697a5712}
 .usage-segments{position:absolute;inset:0;display:grid;pointer-events:none}
 .usage-segments>b{min-width:0;border-right:1px solid #dfe5d9}
@@ -36,32 +36,29 @@ button:focus-visible,a:focus-visible{outline-color:#658472}
 .app-shell .pads{flex:1;min-height:0;height:auto;padding:15px;gap:15px;border:1px solid #bfc2b6;border-radius:7px;background:#d1d3c9;box-shadow:inset 0 1px 3px #46503d1c,0 1px 0 #fffff4}
 .app-shell .pad-wrap{border-radius:6px;background:#a9ac9f;box-shadow:0 1px 2px #3e493a25}
 .app-shell .pad-wrap:has(>.pad.running),.app-shell .pad-wrap:has(>.pad.starting){box-shadow:0 0 0 1px color-mix(in srgb,var(--pad-color) 45%,transparent),0 2px 12px color-mix(in srgb,var(--pad-color) 50%,transparent)}
+/* 패드 아래 2px는 키캡 그림자 깊이라서 의도적으로 비대칭이다. */
 .app-shell .pad,.app-shell .pad.running{height:calc(100% - 2px);border:1px solid #c5c4b5;border-radius:6px;background:linear-gradient(115deg,#eeeadd,#e9e5d7);color:#444740;box-shadow:inset 0 1px 0 #fcf9ee,inset 0 -1px 0 #d2cebd,0 1px 1px #45503b20;transition:transform .14s ease,filter .2s ease}
 .app-shell .pad:hover,.app-shell .pad.running:hover{background:linear-gradient(115deg,#f2eee2,#ede9dc);border-color:#b7bba9}
 .app-shell .pad:active{transform:translateY(1px);box-shadow:inset 0 1px 2px #67705822}
 .app-shell .pad:after{content:none;display:none;animation:none}
 .app-shell .pad.assigned:before{top:auto;bottom:-2px;left:8px;right:8px;width:auto;height:2px;border-radius:1px;opacity:0}
 .app-shell .pad.running:before,.app-shell .pad.starting:before{opacity:.85;background:var(--pad-color);box-shadow:0 2px 8px color-mix(in srgb,var(--pad-color) 65%,transparent)}
-.app-shell .pad.empty{background:linear-gradient(115deg,#e8e6da,#e4e2d5);border:1px solid #c5c4b5;color:#a4ac99;box-shadow:inset 0 1px 0 #fcf9ee,0 1px 1px #45503b20}
+.app-shell .pad.empty{background:linear-gradient(115deg,#e8e6da,#e4e2d5);border:1px solid #c5c4b5;color:#6c7663;box-shadow:inset 0 1px 0 #fcf9ee,0 1px 1px #45503b20}
 .app-shell .pad.empty:hover{background:#efecdf;color:#7e8c73}
 .app-shell .pad.empty.drop-target{border:2px solid #7c9a83;background:#dce4d4;color:#4b7058}
 .app-shell .pad.skeleton{background:linear-gradient(100deg,#e0e2d6 30%,#f1f0e6 50%,#e0e2d6 70%);background-size:200% 100%}
 .app-shell .pad-move{font-weight:500;color:#444740;font-size:16px}
 .app-shell .pad-move:hover{background:#cdd2c344;color:#354a37}
-.app-shell .pad-detail{color:#929687;border-radius:3px}
+.app-shell .pad-detail{color:#636b5a;border-radius:3px}
 .app-shell .pad-detail:hover{background:#d2d5c866;color:#55654b}
-.app-shell .pad-port{color:#7f8878}
+.app-shell .pad-port{color:#5d6656}
 .app-shell .pad-footer{position:absolute;left:6px;right:6px;bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0}
-.app-shell .pad-footer .pad-state,.app-shell .pad-environment{display:inline-flex;align-items:center;line-height:1.4}
-.app-shell .pad-environment{justify-content:center;flex-shrink:0;padding:2px 2px 1px;border:0;border-radius:3px;background:#a5a5a0;color:#eeeadd;font-size:8px;font-weight:400;pointer-events:none}
-.app-shell .pad-environment.production{background:#c5dfc3;color:#355a3b}
+.app-shell .pad-footer .pad-state{display:inline-flex;align-items:center;line-height:1.4}
+.app-shell .pad-badge{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:16px;height:16px;padding:0;border:0;border-radius:3px;font-size:10px;font-weight:700;line-height:1;pointer-events:none}
 .app-shell .pad-indicators{display:inline-flex;align-items:center;gap:4px;flex-shrink:0}
-.app-shell .pad-git{display:inline-flex;align-items:center;color:#7b8175}
-.app-shell .pad-git.dirty{color:#95603b}
 .app-shell .pad-footer .pad-state{min-width:0;margin:0;padding:0;overflow:hidden}
-.app-shell .pad-state,.app-shell .pad.running .pad-state{color:#75816e}
+.app-shell .pad-state,.app-shell .pad.running .pad-state{color:#5a6553}
 .app-shell .pad-state>span{display:block;line-height:1.4;transform:translateY(2px)}
-.app-shell .pad-environment>span{display:block;line-height:1.5}
 .app-shell .pad-state i{width:4px;height:4px;flex-shrink:0;background:#a8ae9e}
 .app-shell .pad.running .pad-state i{background:#35d982;box-shadow:0 0 4px #35d982cc,0 0 9px #35d98266}
 .app-shell .pad.starting .pad-state,.app-shell .pad.partial .pad-state,.app-shell .pad.unreachable .pad-state{color:#9b774d}
@@ -81,11 +78,13 @@ button:focus-visible,a:focus-visible{outline-color:#658472}
 :root .modal-body{color:#4d5746}
 :root .modal-close{color:#7a8672}
 :root .modal-close:hover{color:#3f563c;background:#dce2d2}
+
+:root .modal-header.is-draggable:focus-visible{outline-color:#658472}
 input,textarea,.select-control select{color:#444e40;background:#f9f7ee;border-color:#c1c7b5}
 input:focus,textarea:focus,.select-control select:focus-visible{border-color:#7c9a83;outline-color:#8caa8a66}
 label{color:#4e5947}
 .color-field legend{color:#4e5947}
-label small,.optional{color:#77816e}
+label small,.optional{color:#5c6654}
 .primary,.secondary,.danger{border-radius:4px}
 .primary{background:#859a7b;border-color:#768e6b;color:#fffdf4;box-shadow:inset 0 1px 0 #b6c7a7}
 .primary:hover{background:#738b69}
@@ -96,7 +95,7 @@ label small,.optional{color:#77816e}
 .settings-card :is(.settings-card,.component-row,.group-list-row,.group-members,.usage-switch,.scene-item,.schedule-item,.path-code){border-color:#d4d9cc}
 .padset-settings .padset-grip,.padset-settings .padset-grip:hover,.padset-settings .padset-grip:active{border:0;background:transparent;box-shadow:none}
 .settings-card h2,.setup-steps h2{color:#46523e}
-.settings-card p,.component-row p,.group-list-row p{color:#77816e}
+.settings-card p,.component-row p,.group-list-row p{color:#5c6654}
 .recommend-head p{color:#58664f}
 .recommendations code,.hidden-recommendations code{color:#4e634b}
 .hidden-recommendations{border-color:#c7cbbd}
@@ -112,7 +111,7 @@ label small,.optional{color:#77816e}
 .remote-ok{color:#507958}.remote-fail{color:#986b3d}
 .connecting,.login-page{background:#e9e9e3;color:#515d47}
 .login-card{background:#f2f0e6;border-color:#c7cbbd;color:#444740;box-shadow:0 15px 45px #47593a18}
-.login-card h1{color:#46523e}.login-card p{color:#77816e}
+.login-card h1{color:#46523e}.login-card p{color:#5c6654}
 .login-card .brand{color:#555c51}
 .scene-chip-wrap{background:#e0e6d6;border-color:#bdc8af}
 .scene-chip-menu-btn:hover{background:#b7c6aa40}
@@ -122,7 +121,7 @@ label small,.optional{color:#77816e}
 .state-label{color:#63805d;border-color:#a8bba0}.state-label.error,.state-label.conflict{color:#a7565f;border-color:#d1a3a7}
 .lcd,.command-output{background:#dfe6d6;border-color:#bbc7ad;color:#4e6842}
 .lcd-head,.lcd-bottom{color:#6e8063}.lcd-value{color:#52724c}
-.detail-empty,.detail-message{color:#78896d}
+.detail-empty,.detail-message{color:#5c6654}
 .path-code,.copy-value{background:#e2e7d8;border-color:#c2cbb6;color:#5c704f}
 .log-head{background:#e3e7db;border-color:#c1c9b5;color:#516445}
 .log-container,pre{background:#e0e5d8;color:#46583b}
@@ -159,9 +158,107 @@ label small,.optional{color:#77816e}
  .app-shell{padding:10px}.app-shell>.toolbar{height:52px;padding:0 3px;gap:10px}
  .toolbar-brand{font-family:'Arial Black','sans-serif-black',sans-serif;font-size:22px;font-weight:900;font-synthesis:weight;-webkit-text-stroke:.25px currentColor}.toolbar-actions{gap:6px}.tool-button{width:34px;height:34px}
  .app-shell .pad-deck{gap:8px}.app-shell .pads{padding:8px;gap:8px}
- .app-shell .usage-bar{padding-left:10px;padding-right:10px}
+ .app-shell .usage-bar{padding:3px 10px}
  .app-shell .pad-move{font-size:12px}.padset-bar-row>.category-tabs{gap:7px;padding:2px}
  .padset-bar-row>.category-tabs [role=tab]{min-width:66px;padding:8px 10px;font-size:11px}
 }
 @media(max-width:767px){.modal-panel.service-detail-modal{height:calc(100dvh - 24px)!important}}
 @media(max-height:560px){.app-shell{padding:8px}.app-shell .pads{padding:6px;gap:7px}}
+
+/* 알림, 툴팁, 필드 오류: 레이아웃을 밀지 않고 포털 위에 겹쳐 그린다. 모달(1000번대)보다 위에 둔다. */
+.toast-stack{position:fixed;right:16px;bottom:16px;z-index:2300;display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-width:calc(100vw - 32px);pointer-events:none}
+.toast{display:flex;align-items:center;gap:10px;width:min(380px,calc(100vw - 32px));padding:10px 10px 10px 14px;border:1px solid #c1c8b6;border-radius:6px;background:#fbfaf3;color:#3a4535;box-shadow:0 10px 30px #34442b2e;font-size:13px;line-height:1.5;pointer-events:auto}
+.toast>svg{color:#527d4d}
+.toast.error{border-color:#d7aaad;background:#fbf1ef}
+.toast.error>svg{color:#a4555e}
+.toast p{flex:1;min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.toast-action{min-height:var(--control-h-sm);padding:0 10px;border:1px solid #bbc2ad;border-radius:4px;background:#f0eee4;color:#3f4d3b;font-size:12px;font-weight:600;white-space:nowrap}
+.toast-action:hover{background:#e0e5d6}
+.toast-close{width:var(--control-h-sm);height:var(--control-h-sm);padding:0;border:0;border-radius:4px;background:transparent;color:#5d6656}
+.toast-close:hover{background:#e4e8dc;color:#3a4535}
+
+.tooltip{position:fixed;z-index:2400;max-width:280px;padding:6px 10px;border-radius:6px;background:#3f4a3b;color:#fbfaf3;font-size:12px;line-height:1.45;box-shadow:0 6px 18px #2b352533;pointer-events:none;white-space:pre-wrap;overflow-wrap:anywhere}
+
+.field-error{position:fixed;z-index:2200;display:flex;align-items:flex-start;gap:6px;max-width:min(360px,calc(100vw - 16px));padding:7px 10px;border:1px solid #d7aaad;border-radius:6px;background:#fbeeee;color:#8f3540;font-size:12px;line-height:1.45;box-shadow:0 6px 18px #34442b24}
+.field-error>svg{margin-top:2px}
+[aria-invalid=true]{border-color:#b5525c!important}
+
+/* 엔진 연결 끊김: 패드가 비활성인 이유를 툴바에서 알린다. */
+.app-shell .engine-status.offline{display:flex;align-items:center;gap:8px;min-width:0;padding:4px 4px 4px 10px;border:1px solid #d7c19f;border-radius:4px;background:#f6ecd9;color:#7a5a2e;font-size:12px}
+.app-shell .engine-status.offline>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app-shell .engine-status.offline i{width:7px;height:7px;flex-shrink:0;background:#c08a3e}
+.app-shell .engine-status.offline .secondary{min-height:var(--control-h-sm);padding:0 10px;font-size:12px;flex-shrink:0}
+
+/* 패드 이동: 놓을 수 있는 빈 패드를 미리 보여 주고, 끄는 패드는 이름표로 따라온다. */
+.app-shell .pad.empty.drop-ready{border-style:dashed;border-color:#93a68f}
+.pad-drag-ghost{display:flex;align-items:center;height:100%;padding:0 10px;border:1px solid #93a68f;border-left:3px solid var(--pad-color);border-radius:4px;background:#fbfaf3;color:#3a4535;font-size:14px;font-weight:600;box-shadow:0 10px 24px #34442b33;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:grabbing}
+.app-shell .pad-move:focus-visible{outline:2px solid #658472;outline-offset:0}
+.app-shell .pad-wrap>.pad-error-badge{position:absolute;left:8px;right:8px;bottom:28px;z-index:2;width:auto;margin:0;font:inherit;font-size:10px;line-height:1.5}
+
+.pad-menu button:disabled{opacity:.6}
+.pad-menu .menu-hint{margin-left:auto;padding-left:10px;font-size:11px;color:#5d6656}
+
+/* 같은 행의 컨트롤은 한 높이를 쓴다. */
+.padset-row{padding:6px 8px}
+.padset-settings .padset-row>input,.padset-row>button{height:var(--control-h-sm);min-height:var(--control-h-sm)}
+.padset-row>.padset-grip{width:28px}
+.padset-row>.delete-button{width:var(--control-h-sm)}
+.small-btn{height:var(--control-h-sm);min-height:var(--control-h-sm)!important;padding:0 10px!important;font-size:12px!important}
+.scene-item .delete-button,.schedule-item .delete-button,.ordered-pad-row .delete-button,.ordered-pad-row .tool-button{width:var(--control-h-sm);height:var(--control-h-sm)}
+.log-panel .log-toolbar .search-nav button{width:var(--control-h-sm);height:var(--control-h-sm);min-height:var(--control-h-sm)!important}
+.log-search-input-wrap .clear-btn{width:24px;height:24px;min-height:24px!important}
+
+/* 읽어야 하는 보조 텍스트와 경계를 밝은 배경에서도 구분되게 한다. */
+.day-chip{border-color:#b9c0ad;color:#3f4d3b}
+.scene-item,.schedule-item{border-color:#c9cebf}
+.pad-schedules-summary{border-color:#c9cebf}
+.scene-chip-ratio{opacity:1;color:#4f5c48}
+.ordered-pad-row .order-num{opacity:1;color:#5d6656}
+.available-pads-section h4{opacity:1}
+.log-line-num{opacity:.7}
+.log-placeholder{opacity:1;color:#5c6654}
+
+.form-notice{padding:10px 12px;border:1px solid #d7c19f;border-radius:6px;background:#f6ecd9;color:#6e5129;font-size:12px;line-height:1.6}
+.kind-switch{flex-wrap:wrap}
+.kind-switch-hint{flex-basis:100%;padding:2px 6px 0;color:#5c6654;font-size:11px}
+
+.usage-provider>.usage-loading:last-child{width:100%}
+
+/* 서비스 상세 지표: 지표 전환은 보이는 버튼으로, 그래프 값은 hover 툴팁으로 확인한다. */
+.lcd-head{overflow:visible}
+.lcd-metric{padding:2px;gap:2px}
+.lcd-metric button{padding:3px 10px;font-size:11px;font-family:inherit;letter-spacing:0}
+.history-chart{height:64px;margin:6px 0 10px}
+.chart-tooltip{display:flex;flex-direction:column;gap:2px;padding:6px 10px;border:1px solid #c1c8b6;border-radius:6px;background:#fbfaf3;color:#3a4535;font-size:12px;line-height:1.4;white-space:nowrap;box-shadow:0 6px 18px #34442b24}
+.chart-tooltip-label{color:#5d6656;font-size:11px}
+.chart-tooltip-key{margin-right:8px;color:#5d6656}
+
+/* 서비스 상세 스크롤바: 평소에는 숨기고 hover, 포커스, 스크롤 중에 보인다. */
+.service-detail-scroll-track{opacity:0;transition:opacity .2s}
+.service-detail-scroll-shell:hover .service-detail-scroll-track,.service-detail-scroll-shell:focus-within .service-detail-scroll-track,.service-detail-scroll-track.active{opacity:1}
+@media(forced-colors:active){.service-detail-scroll-track{opacity:1}}
+
+@media(max-width:650px){
+.toast-stack{right:12px;left:12px;bottom:12px;align-items:stretch}
+.toast{width:auto}
+.app-shell .engine-status.offline>span{display:none}
+}
+
+/* 좁은 패드에서는 상태 글자가 줄어들고 배지는 잘리지 않는다. */
+.app-shell .pad-footer .pad-state{flex-shrink:1}
+.app-shell .pad-footer .pad-state>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.log-head{gap:8px}
+.log-head .panel-title h2,.filter-btn{white-space:nowrap}
+@media(max-width:650px){
+.app-shell .pad-footer{flex-wrap:wrap-reverse;row-gap:3px}
+.app-shell .pad-footer .pad-state{flex-shrink:0}
+.app-shell .pad-indicators{margin-left:auto}
+.app-shell .pad-wrap>.pad-error-badge{bottom:44px}
+.app-shell .pad-badge{width:14px;height:14px;font-size:9px}
+.app-shell .pad-badge svg{width:10px;height:10px}
+.app-shell .pad-indicators{gap:3px}
+.log-head{flex-wrap:wrap}
+.log-toolbar{width:100%;margin-left:0}
+.log-search-input-wrap{flex:1;min-width:0}
+.log-panel .log-toolbar .log-search-input-wrap input{width:100%}
+}

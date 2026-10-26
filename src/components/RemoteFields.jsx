@@ -10,8 +10,9 @@ let hostList = null;
 export function KindSwitch({ kind, onChange, disabled, local, docker = true }) {
   return <div className="kind-switch" role="radiogroup" aria-label={t('실행 위치')}>
     <button type="button" role="radio" aria-checked={kind === 'local'} disabled={disabled} onClick={() => onChange('local')}><Monitor size={13} aria-hidden="true" />{t('로컬')}</button>
-    <button type="button" role="radio" aria-checked={kind === 'remote'} disabled={disabled || (!local && kind !== 'remote')} title={local ? undefined : t('원격 서버는 이 PC에서 접속해 등록할 수 있어요.')} onClick={() => onChange('remote')}><Server size={13} />{t('원격 서버')}</button>
+    <button type="button" role="radio" aria-checked={kind === 'remote'} disabled={disabled || (!local && kind !== 'remote')} onClick={() => onChange('remote')}><Server size={13} />{t('원격 서버')}</button>
     {(docker || kind === 'docker') && <button type="button" role="radio" aria-checked={kind === 'docker'} disabled={disabled} onClick={() => onChange('docker')}><Container size={13} aria-hidden="true" />{t('도커')}</button>}
+    {!local && kind !== 'remote' && <small className="kind-switch-hint">{t('원격 서버는 이 PC에서 접속해 등록할 수 있어요.')}</small>}
   </div>;
 }
 

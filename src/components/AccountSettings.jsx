@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { LogOut, QrCode, Smartphone, UserPlus, Users } from 'lucide-react';
 import { isNative, pinWidget } from '../native.js';
+import { ConfirmModal } from './ConfirmModal.jsx';
+import { useFieldError } from './FieldError.jsx';
 import { t } from '../i18n.js';
 
 function dateLabel(seconds) {
@@ -11,6 +13,8 @@ function dateLabel(seconds) {
 function Accounts({ settings, api, reload, onError }) {
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
+  const [removing, setRemoving] = useState(null);
+  const fieldError = useFieldError();
   async function run(action) {
     setBusy(true);
     try { await action(); await reload(); } catch (e) { onError(e.message); } finally { setBusy(false); }
@@ -19,13 +23,15 @@ function Accounts({ settings, api, reload, onError }) {
     <div className="section-heading"><Users size={22} /><div><h2>{t('허용 계정')}</h2><p>{t('이 Google 계정들만 로그인할 수 있어요. 계정을 삭제하면 그 계정의 로그인도 바로 해제됩니다.')}</p></div></div>
     <div className="component-list">{settings.accounts.map(account => <div className="component-row" key={account}>
       <div><strong>{account}</strong>{account === settings.owner && <p>{t('소유자')}</p>}</div>
-      {account !== settings.owner && <div className="component-actions"><button className="secondary" disabled={busy} onClick={() => run(() => api(`/auth/accounts/${encodeURIComponent(account)}`, { method: 'DELETE' }))} aria-label={t('{0} 삭제', account)}>{t('삭제')}</button></div>}
+      {account !== settings.owner && <div className="component-actions"><button className="secondary" disabled={busy} onClick={() => setRemoving(account)} aria-label={t('{0} 삭제', account)}>{t('삭제')}</button></div>}
     </div>)}</div>
     <p className="optional">{t('Google OAuth 클라이언트가 테스트 상태라면 추가한 계정을 Google 인증 플랫폼의 테스트 사용자에도 넣어 주세요.')}</p>
-    <form className="settings-actions" onSubmit={event => { event.preventDefault(); run(async () => { await api('/auth/accounts', { method: 'POST', body: JSON.stringify({ email }) }); setEmail(''); }); }}>
+    <form className="compact-input-row" noValidate onSubmit={event => { event.preventDefault(); if (!fieldError.validate(event.currentTarget)) return; run(async () => { await api('/auth/accounts', { method: 'POST', body: JSON.stringify({ email }) }); setEmail(''); }); }}>
       <input type="email" required aria-label={t('추가할 Google 계정')} placeholder="name@gmail.com" value={email} onChange={e => setEmail(e.target.value)} />
       <button className="primary" disabled={busy}><UserPlus size={15} />{t('추가')}</button>
     </form>
+    {fieldError.popover}
+    <ConfirmModal isOpen={!!removing} title={t('허용 계정 삭제')} confirmLabel={t('삭제')} message={t('{0} 계정을 삭제할까요? 이 계정의 로그인이 바로 해제됩니다.', removing)} onCancel={() => setRemoving(null)} onConfirm={() => { const account = removing; setRemoving(null); run(() => api(`/auth/accounts/${encodeURIComponent(account)}`, { method: 'DELETE' })); }} />
   </section>;
 }
 
@@ -59,6 +65,7 @@ function PhonePairing({ settings, api, onError }) {
 function Devices({ api, onError }) {
   const [data, setData] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [revoking, setRevoking] = useState(null);
   const report = useRef(onError);
   report.current = onError;
   const load = useCallback(async () => {
@@ -75,8 +82,9 @@ function Devices({ api, onError }) {
       {isNative && <button className="secondary" onClick={() => pinWidget().catch(e => onError(e.message))}>{t('위젯 추가')}</button>}</div>
     {data === null ? <div className="widget-device skeleton" aria-label={t('연결된 기기 불러오는 중')} /> : !data.devices.length ? <p className="optional">{t('연결된 기기가 없습니다.')}</p> : <div className="component-list">{data.devices.map(device => <div className="component-row" key={device.id}>
       <div><strong>{device.name}{device.id === data.current ? t(' (이 기기)') : ''}</strong><p>{device.email} {t('| 연결')} {dateLabel(device.created_at)}</p></div>
-      <div className="component-actions"><button className="secondary" disabled={busy} onClick={() => revoke(device)} aria-label={t('{0} 연결 해제', device.name)}>{t('해제')}</button></div>
+      <div className="component-actions"><button className="secondary" disabled={busy} onClick={() => setRevoking(device)} aria-label={t('{0} 연결 해제', device.name)}>{t('해제')}</button></div>
     </div>)}</div>}
+    <ConfirmModal isOpen={!!revoking} title={t('기기 연결 해제')} confirmLabel={t('해제')} message={t('{0} 연결을 해제할까요? 앱과 홈 화면 위젯의 연결이 바로 끊어집니다.', revoking?.name)} onCancel={() => setRevoking(null)} onConfirm={() => { const device = revoking; setRevoking(null); revoke(device); }} />
   </section>;
 }
 

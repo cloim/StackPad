@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, Copy, Globe, KeyRound, LoaderCircle } from 'lucide-react';
+import { useFieldError } from './FieldError.jsx';
 import { t } from '../i18n.js';
 
 export function CopyValue({ value, label }) {
@@ -37,16 +38,19 @@ export function OAuthClientForm({ api, current, onSaved, onError }) {
   const [clientId, setClientId] = useState(current?.client_id || '');
   const [secret, setSecret] = useState('');
   const [busy, setBusy] = useState(false);
+  const fieldError = useFieldError();
   async function save(event) {
     event.preventDefault();
+    if (!fieldError.validate(event.currentTarget)) return;
     setBusy(true);
     try { await api('/auth/client', { method: 'PUT', body: JSON.stringify({ client_id: clientId, client_secret: secret }) }); setSecret(''); await onSaved?.(); }
     catch (e) { onError(e.message); } finally { setBusy(false); }
   }
-  return <form className="service-form" onSubmit={save}>
+  return <form className="service-form" onSubmit={save} noValidate>
     <label>{t('클라이언트 ID')}<input required value={clientId} onChange={e => setClientId(e.target.value)} placeholder="000000000000-xxxx.apps.googleusercontent.com" autoComplete="off" spellCheck={false} /></label>
     <label>{t('클라이언트 보안 비밀번호')}<input type="password" required={!current?.configured} value={secret} onChange={e => setSecret(e.target.value)} placeholder={current?.configured ? t('바꿀 때만 입력') : 'GOCSPX-…'} autoComplete="off" /></label>
     <div className="settings-actions"><span /><button className="primary" disabled={busy}>{busy ? <LoaderCircle className="spin" size={15} /> : <KeyRound size={15} />}{t('저장')}</button></div>
+    {fieldError.popover}
   </form>;
 }
 
