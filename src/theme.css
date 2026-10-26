@@ -100,6 +100,8 @@
   .optional { color: #5c6654; font-size: 11px; line-height: 1.7; }
   .wide { width: 100%; }
   .spin { animation: spin 1s linear infinite; }
+  .skeleton { background: linear-gradient(100deg, #e0e2d6 30%, #f1f0e6 50%, #e0e2d6 70%); background-size: 200% 100%; animation: skeleton 1.7s infinite; }
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+@keyframes skeleton { to { background-position: -200% 0; } }

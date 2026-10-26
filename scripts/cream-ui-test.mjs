@@ -4,7 +4,6 @@ import path from 'node:path';
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ locale: 'ko-KR', viewport: { width: 1440, height: 1000 } });
-const reference = await browser.newPage();
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 const base = { kind: 'local', padset_id: 'default', command: 'echo fixture', cwd: 'C:/example', health_url: '', color: '#75d9a5', active: true, status: 'running', uptime: 120, memory: 128, cpu: 45, autostart: false };
@@ -36,14 +35,14 @@ try {
   await page.goto('http://stackpad.test/');
   await expect(page.getByRole('heading',{name:'StackPad',exact:true})).toBeVisible();
   await expect(page.getByRole('heading',{name:'StackPad',exact:true})).toHaveCSS('font-weight','700');
-  await expect(page.locator('.usage-track')).toHaveCount(6);
+  await expect(page.locator('[data-window]')).toHaveCount(6);
   await expect(page.locator('.pad.running .pad-state i').first()).toHaveCSS('background-color','rgb(53, 217, 130)');
   expect(await page.locator('.pad.running .pad-state i').first().evaluate(el=>getComputedStyle(el).boxShadow)).toContain('9px');
   await expect(page.locator('.pad.stopped .pad-state i').first()).toHaveCSS('background-color','rgb(168, 174, 158)');
-  await expect(page.locator('[data-window="five_hour"] .usage-segments>b')).toHaveCount(15);
-  await expect(page.locator('[data-window="weekly"] .usage-segments>b')).toHaveCount(21);
-  await expect(page.locator('.usage-track').first()).toHaveAttribute('aria-valuenow', '42');
-  expect(await page.locator('.usage-track').first().evaluate(el=>el.querySelector('i').getBoundingClientRect().width/el.getBoundingClientRect().width)).toBeCloseTo(.42,2);
+  await expect(page.locator('[data-window="five_hour"] [data-usage-segment]')).toHaveCount(15);
+  await expect(page.locator('[data-window="weekly"] [data-usage-segment]')).toHaveCount(21);
+  await expect(page.locator('[data-window]').first()).toHaveAttribute('aria-valuenow', '42');
+  expect(await page.locator('[data-window]').first().evaluate(el=>el.querySelector('i').getBoundingClientRect().width/el.getBoundingClientRect().width)).toBeCloseTo(.42,2);
   const shadows=await page.locator('.pad-wrap').evaluateAll(nodes=>nodes.map(el=>({running:!!el.querySelector('.pad.running'),shadow:getComputedStyle(el).boxShadow})));
   expect(shadows.filter(item=>item.running).every(item=>item.shadow.includes('12px'))).toBe(true);
   expect(shadows.filter(item=>!item.running).every(item=>!item.shadow.includes('12px'))).toBe(true);
@@ -56,19 +55,18 @@ try {
   await page.getByRole('button',{name:'작업 워커 종료',exact:true}).click();
   await expect(page.getByRole('button',{name:'작업 워커 실행',exact:true})).toBeVisible();
   expect(actions).toBe(2);
-  const baseline=await fs.readFile('src/styles.css','utf8');
+  // Usage strip heights measured before the Tailwind migration; the strip must keep them.
+  const usageHeights={1440:51,1280:51,760:73,650:63,390:63,320:63,900:51};
   const sizes=[];
   for(const [width,height] of [[1440,1000],[1280,930],[760,1024],[650,700],[390,844],[320,740],[900,500]]) {
     await page.setViewportSize({width,height});
     await expect(page.locator('.toolbar-brand')).toHaveCSS('font-weight',width<=650?'900':'700');
     const layout=await page.evaluate(()=>{const main=document.querySelector('.app-shell>main');const grid=document.querySelector('.pads');return{overflow:document.documentElement.scrollWidth>innerWidth||main.scrollHeight>main.clientHeight+1,columns:getComputedStyle(grid).gridTemplateColumns.split(' ').length,rows:getComputedStyle(grid).gridTemplateRows.split(' ').length,pads:[...document.querySelectorAll('.pad')].every(el=>{const a=el.getBoundingClientRect(),b=grid.getBoundingClientRect(),state=el.querySelector('.pad-state')?.getBoundingClientRect();return a.bottom<=b.bottom+1&&(!state||state.bottom<=a.bottom+1);})};});
     expect(layout,`${width}x${height}`).toEqual({overflow:false,columns:4,rows:4,pads:true});
-    const usage=await page.locator('.usage-bar').evaluate(el=>({html:el.outerHTML,width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height}));
-    const inset=await page.locator('.usage-bar').evaluate(el=>el.querySelector('strong').getBoundingClientRect().left-el.getBoundingClientRect().left);
+    const usage=await page.locator('[data-usage-bar]').evaluate(el=>({html:el.outerHTML,width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height}));
+    const inset=await page.locator('[data-usage-bar]').evaluate(el=>el.querySelector('strong').getBoundingClientRect().left-el.getBoundingClientRect().left);
     expect(inset).toBe(width<=650?10:12);
-    await reference.setViewportSize({width,height});
-    await reference.setContent('<style>'+baseline+'</style><div style="width:'+usage.width+'px">'+usage.html+'</div>');
-    expect(await reference.locator('.usage-bar').evaluate(el=>el.getBoundingClientRect().height)).toBe(usage.height);
+    expect(usage.height,`${width}x${height}`).toBe(usageHeights[width]);
     sizes.push({width,height,usageHeight:usage.height});
     if(width===1440||width===390)await page.screenshot({path:`.jobs/cream-production-${width}.png`});
     if(width===1440||width===390) {

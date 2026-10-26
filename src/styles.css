@@ -99,10 +99,6 @@ span.optional{margin-left:3px}
 .login-caption{font-size:11px;color:#828d91;margin-top:30px;letter-spacing:.8px}
 .inline-error{color:#f0a5a6;font-size:12px;line-height:1.7}
 .connecting{height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;color:#a5b0b3;font-size:13px}
-.skeleton{background:linear-gradient(100deg,#34393c 30%,#41484b 50%,#34393c 70%);background-size:200% 100%;animation:skeleton 1.7s infinite}
-@keyframes skeleton{
-to{background-position:-200% 0}
-}
 @keyframes pulse{
 50%{opacity:.4}
 }
@@ -332,28 +328,7 @@ to{background-position:-200% 0}
 .hidden-recommendations code{font-size:11px;color:#d0d9d8;overflow-wrap:anywhere}
 .app-shell .pad-deck{display:flex;flex-direction:column;gap:10px}
 .app-shell .pads{flex:1;min-height:0;height:auto}
-.usage-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(max(400px,calc(50% - 10px)),1fr));gap:2px 20px;flex-shrink:0;padding:2px 0 6px;border-bottom:1px solid var(--border);font-size:10px;line-height:20px}
-.usage-provider{display:grid;grid-template-columns:100px minmax(0,1fr);align-items:center;gap:8px;min-width:0;white-space:nowrap}
-.usage-provider>strong{min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:10px;font-weight:600}
-.usage-windows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0}
-.usage-window{display:grid;grid-template-columns:14px minmax(16px,1fr) 28px 46px;align-items:center;gap:4px;min-width:0;--usage-color:var(--green)}
-.usage-window.caution{--usage-color:var(--orange)}
-.usage-window.warning{--usage-color:#f2a0a7}
-.usage-label,.usage-reset,.usage-message{color:var(--muted)}
-.usage-track{display:block;height:4px;background:var(--border);border-radius:3px;overflow:hidden}
-.usage-track i{display:block;height:100%;background:var(--usage-color)}
-.usage-percent{color:var(--usage-color);font-variant-numeric:tabular-nums;text-align:right}
-.usage-reset{display:inline-flex;align-items:center;gap:3px;min-width:0;overflow:hidden;font-size:9px;font-variant-numeric:tabular-nums}
-.usage-message{overflow:hidden;text-overflow:ellipsis}
-.usage-loading{width:100px;height:4px;border-radius:3px}
 @media(max-width:650px){
-.usage-bar{grid-template-columns:minmax(0,1fr);gap:1px;font-size:9px;padding-bottom:4px;line-height:18px}
-.usage-provider{grid-template-columns:72px minmax(0,1fr);gap:4px}
-.usage-provider>strong{font-size:9px}
-.usage-windows{gap:6px}
-.usage-window{grid-template-columns:12px minmax(10px,1fr) 24px 30px;gap:2px}
-.usage-reset{font-size:8px;gap:0}
-.usage-reset svg{display:none}
 .app-shell .pad-deck{gap:8px}
 }
 /* Each service occupies its own port row inside the pad. */

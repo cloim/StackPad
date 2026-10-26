@@ -21,37 +21,37 @@ try {
     const page = await context.newPage();
     page.on('pageerror', error => errors.push(error.message));
     await page.goto('http://stackpad.test/tray-usage.html');
-    await expect(page.locator('.tray-loading')).toBeVisible();
+    await expect(page.locator('main [role=status][aria-busy], main div[role=status]').first()).toBeVisible();
     async function update(data) {
       await page.evaluate(data => { window.__STACKPAD_USAGE__ = data; window.dispatchEvent(new Event('stackpad-usage')); }, data);
     }
     await update(snapshot);
     await expect(page.getByRole('heading', { name: 'StackPad', exact: true })).toBeVisible();
     expect(await page.title()).toBe('StackPad');
-    const inset = await page.locator('.usage-bar').evaluate(el => el.querySelector('strong').getBoundingClientRect().left - el.getBoundingClientRect().left);
+    const inset = await page.locator('[data-usage-bar]').evaluate(el => el.querySelector('strong').getBoundingClientRect().left - el.getBoundingClientRect().left);
     expect(inset).toBe(12);
-    await expect(page.locator('[data-window="weekly"] .usage-segments>b').first()).toHaveCSS('border-right-color','rgb(255, 255, 255)');
+    await expect(page.locator('[data-window="weekly"] [data-usage-segment]').first()).toHaveCSS('border-right-color','rgb(255, 255, 255)');
     expect(await page.locator('[data-window="weekly"]').first().evaluate(el => getComputedStyle(el,'::after').content)).toBe('none');
     await expect(page.getByRole('progressbar')).toHaveCount(8);
-    await expect(page.locator('[data-window="five_hour"] .usage-segments>b')).toHaveCount(20);
-    await expect(page.locator('[data-window="weekly"] .usage-segments>b')).toHaveCount(28);
+    await expect(page.locator('[data-window="five_hour"] [data-usage-segment]')).toHaveCount(20);
+    await expect(page.locator('[data-window="weekly"] [data-usage-segment]')).toHaveCount(28);
     await expect(page.getByRole('progressbar').first()).toHaveAttribute('aria-valuenow', '12.5');
-    await expect(page.locator('.usage-percent').first()).toHaveText('13%');
-    await expect(page.locator('.usage-reset').first()).toContainText('1h 31m');
-    await expect(page.locator('.usage-window.warning')).toHaveCount(5);
-    await expect(page.locator('.usage-provider').nth(2).locator('strong')).toContainText(locale === 'ko-KR' ? '1시간 전' : '1h ago');
+    await expect(page.locator('[data-usage-percent]').first()).toHaveText('13%');
+    await expect(page.locator('[data-usage-reset]').first()).toContainText('1h 31m');
+    await expect(page.locator('[data-usage-level=warning]')).toHaveCount(5);
+    await expect(page.locator('[data-usage-provider]').nth(2).locator('strong')).toContainText(locale === 'ko-KR' ? '1시간 전' : '1h ago');
     expect(await page.evaluate(() => document.querySelector('main').scrollHeight <= document.querySelector('main').clientHeight)).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(360);
     await page.screenshot({ path: `.jobs/tray-popup/screenshots/${locale}.png` });
     await update({ providers: [{ name: 'Claude', id: 'claude', status: 'login_required', message: 'CLI 사용 시 갱신' },
       { name: 'AG Gemini', id: 'ag', status: 'unavailable' }] });
-    await expect(page.locator('.usage-message').first()).toHaveText(locale === 'ko-KR' ? 'CLI 사용 시 갱신' : 'Updated when the CLI is used');
+    await expect(page.locator('[data-usage-message]').first()).toHaveText(locale === 'ko-KR' ? 'CLI 사용 시 갱신' : 'Updated when the CLI is used');
     await update({ error: true, providers: [] });
-    await expect(page.locator('.tray-message')).toHaveText(locale === 'ko-KR' ? '사용량 조회 실패' : 'Usage unavailable');
+    await expect(page.locator('main p[role=status]')).toHaveText(locale === 'ko-KR' ? '사용량 조회 실패' : 'Usage unavailable');
     await update({ providers: [], update_available: true });
     await expect(page.getByRole('progressbar')).toHaveCount(0);
-    await expect(page.locator('.tray-message')).toHaveText(locale === 'ko-KR' ? '사용량 표시가 꺼져 있어요.' : 'Usage display is turned off.');
-    await expect(page.locator('.tray-update')).toBeVisible();
+    await expect(page.locator('main p[role=status]')).toHaveText(locale === 'ko-KR' ? '사용량 표시가 꺼져 있어요.' : 'Usage display is turned off.');
+    await expect(page.getByText(locale === 'ko-KR' ? '업데이트 가능' : 'Update available')).toBeVisible();
     await context.close();
   }
   expect(errors).toEqual([]);

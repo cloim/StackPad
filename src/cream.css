@@ -12,17 +12,6 @@
 .tool-button:active{transform:translateY(1px);background:#e1e3d7;box-shadow:inset 0 1px 2px #59604b19}
 .app-shell>main{padding:12px 0 0}
 .app-shell .pad-deck{gap:14px}
-.usage-bar{background:#dfe5d9;border-bottom-color:#cbd2c1;border-radius:3px;box-shadow:inset 0 1px 2px #45533c20,0 1px 0 #fffef4,0 0 0 2px #d1d5c8}
-.app-shell .usage-bar{padding:4px 12px}
-.usage-track{position:relative;height:6px;border-radius:1px;background:#cbd3c3;box-shadow:inset 0 1px 2px #697a5712}
-.usage-segments{position:absolute;inset:0;display:grid;pointer-events:none}
-.usage-segments>b{min-width:0;border-right:1px solid #dfe5d9}
-.usage-segments>b:last-child{border-right:0}
-.usage-window{--usage-color:#779d82}
-.usage-window.caution{--usage-color:#ac865e}
-.usage-window.warning{--usage-color:#ac676c}
-.usage-provider:nth-child(2) .usage-window:not(.caution):not(.warning){--usage-color:#789cae}
-.usage-provider:nth-child(3) .usage-window:not(.caution):not(.warning){--usage-color:#b28e6f}
 .padset-bar-row{margin-bottom:0}
 .app-shell .pads{flex:1;min-height:0;height:auto;padding:15px;gap:15px;border:1px solid #bfc2b6;border-radius:7px;background:#d1d3c9;box-shadow:inset 0 1px 3px #46503d1c,0 1px 0 #fffff4}
 .app-shell .pad-wrap{border-radius:6px;background:#a9ac9f;box-shadow:0 1px 2px #3e493a25}
@@ -72,6 +61,7 @@
 :root .modal-header.is-draggable:focus-visible{outline-color:#658472}
 .color-field legend{color:#4e5947}
 .settings-card,.registration-service,.component-row,.usage-switch{background:#e7e9de;border-color:#c1c8b6;color:#4d5944}
+.settings-card :is(.settings-card,.component-row,.usage-switch,.scene-item,.schedule-item,.path-code){border-color:#d4d9cc}
 .padset-settings .padset-grip,.padset-settings .padset-grip:hover,.padset-settings .padset-grip:active{border:0;background:transparent;box-shadow:none}
 .settings-card h2,.setup-steps h2{color:#46523e}
 .settings-card p,.component-row p{color:#5c6654}
@@ -115,12 +105,6 @@
 .pad-error-badge{color:#9d4852;background:#efdedd;border-color:#d7aaad}
 .pad-schedules-summary .summary-title{color:#59774c}
 .day-chip.active{background:#829b73;border-color:#829b73;color:#fffdf3}
-:root .tray-usage{background:#efeee5;border-color:#c2c7b6;color:#444740}
-:root .tray-usage h1{font-weight:700;color:#555c51}
-:root .tray-usage .usage-bar{padding:0 12px}
-:root .tray-usage .usage-track{background:#cbd3c3}
-:root .tray-usage .usage-track:after{content:none}
-:root .tray-usage .usage-segments>b{border-right-color:#fff}
 .native-app .toolbar-brand{font-family:'Arial Black','sans-serif-black',sans-serif;font-weight:900;font-synthesis:weight;-webkit-text-stroke:.25px currentColor}
 /* 서비스 상세: 어두운 기본 테마의 밝은 글자를 크림 배경에 맞게 진하게 한다. */
 :root .modal-body dt{color:#6b7564}
@@ -153,7 +137,6 @@
 .tool-button{width:34px;height:34px}
 .app-shell .pad-deck{gap:8px}
 .app-shell .pads{padding:8px;gap:8px}
-.app-shell .usage-bar{padding:3px 10px}
 .app-shell .pad-move{font-size:12px}
 }
 @media(max-width:767px){
@@ -197,7 +180,6 @@
 .form-notice{padding:10px 12px;border:1px solid #d7c19f;border-radius:6px;background:#f6ecd9;color:#6e5129;font-size:12px;line-height:1.6}
 .kind-switch{flex-wrap:wrap}
 .kind-switch-hint{flex-basis:100%;padding:2px 6px 0;color:#5c6654;font-size:11px}
-.usage-provider>.usage-loading:last-child{width:100%}
 /* 서비스 상세 지표: 지표 전환은 보이는 버튼으로, 그래프 값은 hover 툴팁으로 확인한다. */
 .lcd-head{overflow:visible}
 .lcd-metric{padding:2px;gap:2px}
