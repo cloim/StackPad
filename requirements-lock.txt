@@ -25,6 +25,7 @@ pyjwt==2.15.1
 pywin32-ctypes==0.2.3
 setuptools==84.0.0
 starlette==1.7.0
+truststore==0.10.5
 typing-extensions==4.16.0
 typing-inspection==0.4.4
 uvicorn==0.54.0

@@ -165,6 +165,7 @@ EN = {
     'CLI 로그인 필요': 'Sign in to the CLI',
     'CLI 사용 시 갱신': 'Updates when you use the CLI',
     '사용량 조회 실패': 'Usage unavailable',
+    '보안 인증서 확인 실패': 'Secure connection verification failed',
     'Antigravity 실행 후 표시': 'Shown after running Antigravity',
     '위젯 연결 기기가 너무 많습니다. 사용하지 않는 기기를 해제해 주세요.': 'Too many widget devices. Disconnect ones you no longer use.',
     '위젯 연결을 찾지 못했습니다.': 'Widget connection not found.',

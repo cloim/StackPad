@@ -3,13 +3,16 @@ import copy
 import json
 import math
 import os
+import ssl
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+
+import truststore
 
 _cache = {}
 # Last successful answer per (home, provider id); a failed refresh shows it instead of an error.
@@ -19,6 +22,7 @@ CACHE_SECONDS = 60
 MIN_REFRESH_INTERVAL = 10
 STALE_SECONDS = 600
 API_TIMEOUT_SECONDS = 4
+_ssl_context = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 
 
 def _utc(value=None):
@@ -53,7 +57,7 @@ def _fetch(provider, name, home, filename, read_token, url, headers, map_respons
         if not token or (expires_at is not None and float(expires_at) <= time.time() * 1000):
             return _result(provider, name, 'login_required', 'CLI 사용 시 갱신' if token else 'CLI 로그인 필요')
         request = Request(url, headers={**headers, **extra_headers, 'Authorization': 'Bearer ' + token})
-        with urlopen(request, timeout=API_TIMEOUT_SECONDS) as response:
+        with urlopen(request, timeout=API_TIMEOUT_SECONDS, context=_ssl_context) as response:
             data = json.load(response)
         result['plan'], result['windows'] = map_response(data, plan)
     except FileNotFoundError:
@@ -62,6 +66,11 @@ def _fetch(provider, name, home, filename, read_token, url, headers, map_respons
         if error.code in (401, 403):
             return _result(provider, name, 'login_required', 'CLI 사용 시 갱신')
         result.update(status='error', message='사용량 조회 실패')
+    except URLError as error:
+        if isinstance(error.reason, ssl.SSLCertVerificationError):
+            result.update(status='error', message='보안 인증서 확인 실패')
+        else:
+            result.update(status='error', message='사용량 조회 실패')
     except Exception:
         # Never expose credentials, provider response bodies or exception text.
         result.update(status='error', message='사용량 조회 실패')
