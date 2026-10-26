@@ -1,33 +1,4 @@
 @font-face{font-family:Deck;src:local('Bahnschrift');font-display:swap}
-.app-shell{height:100dvh;display:flex;overflow:hidden}
-.logout{color:#a8adb0;border:0;background:transparent;font-size:11px;padding:10px}
-.logout:hover{color:#eee}
-.console{flex:1;min-width:0;background:linear-gradient(135deg,#393b3d 0,#2d3032 42%,#303234 100%);border:1px solid #4e5052;border-radius:13px;padding:23px;box-shadow:0 9px 0 #111314,0 12px 0 #36383a,0 16px 25px #0004,inset 0 1px 0 #696b6d}
-.pads{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-.pad-wrap{position:relative;min-width:0;border-radius:8px}
-.pad{position:relative;display:flex;flex-direction:column;justify-content:initial;text-align:left;width:100%;aspect-ratio:1.12;border-radius:8px;min-width:0;gap:0;border:1px solid #5c6062;padding:12px 13px;background:linear-gradient(145deg,#474b4d,#393d3f);box-shadow:0 4px 0 #17191a,0 5px 0 #54585a,0 6px 5px #0005,inset 0 1px 0 #747778;transition:transform .12s,box-shadow .12s,background .2s}
-.pad:hover{background:linear-gradient(145deg,#525759,#424648);border-color:#7e8283}
-.pad:active{transform:translateY(3px);box-shadow:0 1px 0 #17191a,inset 0 1px 0 #747778}
-.pad-top{display:flex;justify-content:flex-end;width:100%;color:#979e9e;margin-bottom:auto}
-.pad-name{width:100%;font-size:13px;font-weight:650;letter-spacing:-.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-top:8px}
-.pad-port{font-family:Consolas,monospace;font-size:10px;margin-top:5px;color:#adb2b3}
-.pad-state{display:flex;align-items:center;gap:5px;font-size:9px;margin-top:12px;color:#aeb4b4;padding-right:14px;white-space:nowrap}
-.pad-state i{width:5px;height:5px;background:#92999a;border-radius:50%}
-.pad.assigned::before{content:'';position:absolute;height:3px;left:13px;right:13px;top:0;background:var(--pad-color);opacity:.35;border-radius:0 0 3px 3px}
-.pad.running{border-color:color-mix(in srgb,var(--pad-color) 60%,#4a4f4d);background:linear-gradient(145deg,color-mix(in srgb,var(--pad-color) 14%,#3a4040),#343b38)}
-.pad.running::before,.pad.starting::before{opacity:1;box-shadow:0 0 12px var(--pad-color)}
-.pad.running .pad-state,.pad.running .pad-top>svg{color:var(--pad-color)}
-.pad.running .pad-state i{background:var(--pad-color);box-shadow:0 0 7px var(--pad-color)}
-.pad.starting .pad-state{color:#f2c278}
-.pad.starting .pad-state i{background:#f2c278;animation:pulse 1.5s infinite}
-.pad.error .pad-state,.pad.unhealthy .pad-state{color:#f2a0a7}
-.pad.error .pad-state i,.pad.unhealthy .pad-state i{background:#f2a0a7}
-.pad-detail{position:absolute;bottom:8px;right:5px;height:29px;width:29px;background:transparent;border:0;color:#adb6b5;border-radius:4px}
-.pad-detail:hover{background:#ffffff16;color:white}
-.pad-wrap.chosen:after{content:'';position:absolute;inset:-3px;border:1px solid #aeb7b666;border-radius:11px;pointer-events:none}
-.pad.empty{background:#282c2e;border:1px dashed #4f5456;box-shadow:inset 0 2px 4px #0003;color:#6f787b;align-items:center;justify-content:center;gap:9px}
-.pad.empty>span:last-child{font-size:10px}
-.pad.empty:hover{color:#a5afb3;background:#303537;border-color:#8a9498}
 .panel-title{display:flex;align-items:center;gap:8px;color:#adb5b8}
 .panel-title h2{font-size:12px;font-weight:600;color:#dce0df}
 .lcd{background:#151f1c;border:1px solid #435149;box-shadow:inset 0 3px 8px #0006,0 1px 0 #4c514e;border-radius:5px;padding:14px;margin-top:17px;color:#a9d6bb;background-image:repeating-linear-gradient(0deg,#0000,#0000 2px,#0002 2px,#0002 3px)}
@@ -43,53 +14,13 @@
 .log-head{padding:14px 19px;border-bottom:1px solid #32383b;display:flex;align-items:center;justify-content:space-between;background:#232729}
 .log-head .panel-title>span{font-size:10px;color:#909d9f;margin-left:6px}
 span.optional{margin-left:3px}
-@keyframes pulse{
-50%{opacity:.4}
-}
 @media(min-width:1500px){
-.console{padding:28px}
-.pads{gap:16px}
-.pad{aspect-ratio:1.3;padding:17px}
-.pad-name{font-size:16px}
-.pad-state{font-size:11px}
-.pad-port{font-size:12px}
-.pad-detail{bottom:12px;right:9px}
 .log-panel{max-width:1380px}
 }
-@media(max-width:1100px){
-.console{padding:17px}
-.pads{gap:9px}
-.pad{padding:10px;aspect-ratio:1}
-.pad-name{font-size:11px}
-.pad-state{font-size:8px}
-}
 @media(max-width:900px){
-.pad{aspect-ratio:1.15;padding:13px}
-.pad-name{font-size:13px}
-.pad-state{font-size:10px}
-.console{padding:22px}
-.pads{gap:12px}
 .log-panel{margin-top:20px}
 }
 @media(max-width:650px){
-.app-shell{flex-direction:column}
-.logout{padding:8px}
-.logout span{display:none}
-.console{padding:16px 12px 14px;border-radius:10px}
-.pads{gap:10px 7px}
-.pad{padding:9px 7px;aspect-ratio:.78;border-radius:6px}
-.pad-name{font-size:10px;padding-top:10px}
-.pad-top{margin-bottom:auto}
-.pad-top svg{width:12px;height:12px}
-.pad-port{font-size:9px;margin-top:4px}
-.pad-state{font-size:8px;margin-top:10px;gap:4px;padding-right:0}
-.pad-state i{width:4px;height:4px;flex-shrink:0}
-.pad.assigned:before{left:8px;right:8px}
-.pad-detail{right:3px;bottom:25px;height:27px;width:27px}
-.pad-detail svg{width:12px}
-.pad.empty{gap:8px}
-.pad.empty svg{width:18px}
-.pad.empty>span:last-child{font-size:8px}
 .panel-title{gap:6px}
 .panel-title h2{font-size:11px}
 .panel-title svg{width:14px}
@@ -107,211 +38,23 @@ span.optional{margin-left:3px}
 .modal-panel{max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px)}
 .modal-body{padding:18px!important}
 }
-.pad.assigned{align-items:flex-start}
-@media(min-width:901px){
-.pad{aspect-ratio:1.45}
-.pad-name{font-size:14px}
-.pad-state{font-size:10px}
-}
-@media(min-width:1500px){
-.pad{aspect-ratio:1.65}
-.pad-name{font-size:16px}
-}
-@media(max-width:650px){
-.pad-top>svg{visibility:hidden}
-.pad-detail{top:2px;right:2px;bottom:auto;width:32px;height:32px}
-.pad-state{font-size:9px}
-.pad.empty>span:last-child{font-size:9px}
-}
 /* 툴바와 패드 중심 화면 */
-.app-shell .pad-wrap.dragging{opacity:.5}
-.app-shell .pad.empty.drop-target{border:2px solid var(--orange);background:#efa66816;box-shadow:inset 0 0 0 2px #efa66820;color:var(--orange)}
-.pad-move{position:absolute;top:3px;left:4px;width:28px;height:30px;padding:0;border:0;border-radius:5px;background:transparent;color:#8b979b;touch-action:none;cursor:grab}
-.pad-move:hover{background:#ffffff12;color:#d7dfdf}
-.pad-move:active{cursor:grabbing}
-@media(max-width:650px){
-.pad-move{top:1px;left:2px;width:24px;height:30px}
-}
-.pad.partial .pad-state{color:#f2c278}
-.pad.partial .pad-state i{background:#f2c278}
-.pad.external .pad-state{color:#8fc3ee}
-.pad.external .pad-state i{background:#8fc3ee;animation:pulse 2s infinite}
-.pad.conflict .pad-state{color:#f2a0a7}
-.pad.conflict .pad-state i{background:#f2a0a7}
-.app-shell{display:flex;flex-direction:column;height:100dvh;background:#1b1e1f}
-.toolbar{display:flex;align-items:center;gap:14px;height:54px;flex-shrink:0;padding:0 20px;border-bottom:1px solid #34393b;background:#202425}
-.toolbar-brand{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;white-space:nowrap}
-.toolbar-actions{display:flex;align-items:center;gap:3px;margin-left:auto}
-.engine-status{display:flex;align-items:center;padding:6px}
-.engine-status i{width:5px;height:5px;border-radius:50%;background:#75d9a5}
-.engine-status.offline i{background:#f2ad62;animation:pulse 1.5s infinite}
-.app-shell>main{flex:1;min-height:0;padding:12px;overflow:hidden}
-.pad-deck{width:100%;height:100%;max-width:none;margin:0}
-.app-shell .pads{display:grid;height:100%;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(4,minmax(0,1fr));gap:12px}
-.app-shell .pad-wrap{min-width:0;min-height:0}
-.app-shell .pad{height:100%;aspect-ratio:auto;min-height:0;padding:16px;border-radius:8px;background:linear-gradient(145deg,#474b4d,#393d3f);border:1px solid #5c6062;box-shadow:0 4px 0 #17191a,0 5px 0 #54585a,0 6px 5px #0005,inset 0 1px 0 #747778;transition:transform .12s,box-shadow .12s,background .2s}
-.app-shell .pad:hover{background:linear-gradient(145deg,#525759,#424648);border-color:#7e8283}
-.app-shell .pad:active{transform:translateY(3px);box-shadow:0 1px 0 #17191a,inset 0 1px 0 #747778}
-.app-shell .pad.running{border-color:color-mix(in srgb,var(--pad-color) 60%,#4a4f4d);background:linear-gradient(145deg,color-mix(in srgb,var(--pad-color) 14%,#3a4040),#343b38)}
-.app-shell .pad-name{font-size:15px;padding-top:10px}
-.app-shell .pad-port{font-size:10px;color:#98a7ac}
-.app-shell .pad-state{font-size:10px;margin-top:auto;padding-top:12px;padding-right:0}
-.app-shell .pad-top{margin-bottom:auto}
-.app-shell .pad-top>svg{visibility:hidden}
-.app-shell .pad-detail{top:3px;right:3px;bottom:auto;width:32px;height:32px;color:#aab6ba;background:transparent;border-radius:5px}
-.app-shell .pad-detail:hover{background:#ffffff12;color:#fff}
-.app-shell .pad-detail svg{width:14px;height:14px}
-.app-shell .pad.assigned:before{top:0;bottom:auto;left:12px;right:12px;height:3px;opacity:.35}
-.app-shell .pad.running:before,.app-shell .pad.starting:before{opacity:1;box-shadow:0 0 12px var(--pad-color)}
-.app-shell .pad.empty{justify-content:center;align-items:center;background:#282c2e;border:1px dashed #4f5456;box-shadow:inset 0 2px 4px #0003;color:#6f787b}
-.app-shell .pad.empty:hover{background:#252b2d;color:#b1bec1}
-.app-shell .pad.empty svg{width:20px;height:20px}
-.app-shell .pad.skeleton{background:linear-gradient(100deg,#293032 30%,#3c474b 50%,#293032 70%);background-size:200% 100%}
 .log-panel{margin-top:22px;width:100%;max-width:none}
 .log-panel pre{height:230px;font-size:11px;white-space:pre;overflow-wrap:normal;overflow:auto}
 @media(max-width:650px){
-.toolbar{height:52px;padding:0 12px;gap:7px}
-.toolbar-brand{gap:7px;font-size:12px}
-.toolbar-actions{gap:1px}
-.app-shell>main{padding:12px}
-.app-shell .pads{gap:8px}
-.app-shell .pad{aspect-ratio:auto;min-height:0;padding:10px 8px}
-.app-shell .pad-name{font-size:12px;padding-top:6px;white-space:normal;word-break:keep-all;line-height:1.3;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
-.app-shell .pad-port{font-size:10px}
-.app-shell .pad-state{font-size:9px;padding-top:9px}
-.app-shell .pad-detail{top:1px;right:1px;width:30px;height:30px}
 .detail-buttons .secondary{font-size:12px;min-height:36px}
 .log-head .panel-title h2{font-size:12px}
 .log-panel pre{height:210px;padding:12px;font-size:11px}
 }
-@media(max-height:560px){
-.app-shell>main{padding:8px 12px 12px}
-.app-shell .pads{gap:8px}
-.app-shell .pad{padding:4px 10px}
-.app-shell .pad>span{flex-shrink:0}
-.app-shell .pad-top{margin-bottom:0;height:16px;overflow:hidden}
-.app-shell .pad-move,.app-shell .pad-detail{top:1px;height:22px}
-.app-shell .pad-name{font-size:11px;line-height:1.2;padding-top:0;display:block;white-space:nowrap}
-.app-shell .pad-port{font-size:9px;margin-top:1px}
-.app-shell .pad-state{font-size:9px;padding-top:1px}
-}
-.app-shell .pad-top{margin-bottom:0}
-.pad.running .pad-state,.app-shell .pad.running .pad-state{color:#7fdcaa}
-.pad.running .pad-state i,.app-shell .pad.running .pad-state i{background:#7fdcaa;box-shadow:0 0 7px #7fdcaa66}
-.pad-port>span{display:block}
-.app-shell .pad-deck{display:flex;flex-direction:column;gap:10px}
-.app-shell .pads{flex:1;min-height:0;height:auto}
-@media(max-width:650px){
-.app-shell .pad-deck{gap:8px}
-}
 /* Each service occupies its own port row inside the pad. */
-.app-shell .pad{overflow:hidden}
-.app-shell .pad-port{display:flex;flex-direction:column;gap:3px;min-height:0;overflow:auto;width:100%}
-.app-shell .pad-port>span{display:block;white-space:nowrap;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.pad-menu-layer{position:fixed;inset:0;z-index:900}
-.pad-menu{position:fixed;min-width:150px;display:flex;flex-direction:column;padding:4px;background:#2c3133;border:1px solid #4d5458;border-radius:8px;box-shadow:0 12px 32px #0009}
-.pad-menu button{display:flex;align-items:center;justify-content:flex-start;gap:9px;width:100%;min-height:34px;padding:0 11px;border:0;border-radius:5px;background:transparent;color:#d9dfdf;font-size:12px;text-align:left;white-space:nowrap}
-.pad-menu button svg{color:#9fabae;flex-shrink:0}
-.pad-menu button:hover:not(:disabled),.pad-menu button:focus-visible{background:#ffffff14;color:#fff;outline:none}
-.pad-menu button:disabled{opacity:.45;cursor:default}
-.pad.unreachable .pad-state{color:#f2c278}
-.pad.unreachable .pad-state i,.pad.checking .pad-state i{background:#6f7678}
-.pad.checking .pad-state{color:#8d979b}
 .command-output{height:auto;max-height:120px;margin-top:12px;border:1px solid #383e41;border-radius:6px;background:#171b1d;font-size:10px;white-space:pre-wrap;overflow-wrap:anywhere}
-.app-shell .pad-move{top:5px;left:10px;width:calc(100% - 48px);height:30px;padding:0 3px;justify-content:flex-start;text-align:left;font-size:14px;font-weight:650;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:none}
-.app-shell .pad.assigned{padding-top:40px}
-.app-shell .pad.assigned .pad-top{display:none}
-.app-shell .pad-state{margin-top:auto;padding-top:8px;flex-shrink:0}
-.pad-menu .menu-delete,.pad-menu .menu-delete svg{color:#f2a0a7}
-.pad-menu .menu-delete:hover:not(:disabled){background:#f2a0a718;color:#ffc4c9}
-@media(max-width:650px){
-.app-shell .pad-move{left:7px;top:3px;font-size:12px;height:28px;width:calc(100% - 42px)}
-.app-shell .pad.assigned{padding-top:35px}
-}
-@media(max-height:560px){
-.app-shell .pad-top{display:none}
-.app-shell .pad-name{padding-left:15px;padding-right:20px}
-}
 /* 설정 카드의 일반 버튼 크기 규칙이 스위치를 키우지 않게 한다. */
-@media(max-height:560px){
-.app-shell .pad.assigned{padding-top:24px;padding-bottom:4px}
-.app-shell .pad-state{padding-top:0}
-.app-shell .pad-port{gap:1px}
-}
 /* Stage 5: Scenes and Schedules styles */
-.padset-bar-row{display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; flex-wrap: wrap;}
-.scene-chips-bar{display: flex; align-items: center; gap: 8px; flex-wrap: wrap;}
-.scene-chip-wrap{display: inline-flex; align-items: center; background: rgba(255,255,255,0.06); border-radius: 9999px; border: 1px solid rgba(255,255,255,0.12); position: relative; overflow: hidden; padding-right: 4px;}
-.scene-chip{display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px 4px 10px; background: transparent; border: none; color: inherit; font-size: 12px; cursor: pointer; border-radius: 9999px;}
-.scene-chip-dot{width: 8px; height: 8px; border-radius: 50%; background-color: var(--scene-color, #10b981); flex-shrink: 0;}
-.scene-chip-name{font-weight: 500; white-space: nowrap;}
-.scene-chip-ratio{font-size: 10px; opacity: 0.7; font-variant-numeric: tabular-nums;}
-.scene-chip-menu-btn{display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; background: transparent; border: none; color: inherit; opacity: 0.6; cursor: pointer; border-radius: 50%; padding: 0;}
-.scene-chip-menu-btn:hover{opacity: 1; background: rgba(255,255,255,0.1);}
-.scene-chip-wrap::after{content: ''; position: absolute; bottom: 0; left: 0; height: 2px; width: var(--scene-progress, 0%); background: var(--scene-color, #10b981); transition: width 0.3s ease;}
-.scene-chip.running{background: rgba(255,255,255,0.08);}
-.scene-chip.in-progress .scene-chip-dot{animation: pulse-dot 1s infinite alternate;}
-@keyframes pulse-dot{
-0%{opacity: 0.4;}
-100%{opacity: 1; transform: scale(1.2);}
-}
 /* SceneSettings & ScheduleSettings */
 /* Modals */
 /* PadForm schedule summary */
 /* Stage 6: UX LogViewer and Pad Progress */
-.pad.assigned{position: relative;}
-.pad-progress-bar{position: absolute; bottom: 0; left: 0; height: 3px; background: var(--pad-color, #22c55e); transition: width 0.2s ease; z-index: 2; border-bottom-left-radius: 7px; border-bottom-right-radius: 7px;}
-.pad-error-badge{display: block; max-width: 100%; font-size: 10px; color: #ff8b94; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; padding: 2px 6px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; text-align: left;}
-.pad-error-badge:hover{background: rgba(239, 68, 68, 0.25); border-color: rgba(239, 68, 68, 0.5);}
 /* Stage 7: LED Ring, DotMatrix LCD, and Feedback */
-.pad.running::after{content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  pointer-events: none;
-  box-shadow: 0 0 calc(6px + 14px * var(--cpu, 0)) var(--pad-color);
-  opacity: calc(0.5 + 0.3 * var(--cpu, 0));
-  animation: led-breathe calc(3.2s - 2.2s * var(--cpu, 0)) ease-in-out infinite alternate;}
-@keyframes led-breathe{
-0%{opacity: 0.35;}
-100%{opacity: calc(0.7 + 0.3 * var(--cpu, 0));}
-}
-.pad.starting::after,.pad.restarting::after{content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  padding: 2px;
-  background: conic-gradient(from 0deg, transparent 0deg, var(--pad-color, #f2c278) 60deg, transparent 120deg);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  animation: ring-rotate 2s linear infinite;
-  pointer-events: none;
-  z-index: 1;}
-@keyframes ring-rotate{
-to{transform: rotate(360deg);}
-}
-.pad.error::after,.pad.unhealthy::after{content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  pointer-events: none;
-  box-shadow: 0 0 10px #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.6);
-  animation: error-ring-flash 1.6s ease-out forwards;
-  opacity: 0.6;}
-@keyframes error-ring-flash{
-0%{opacity: 0;}
-20%{opacity: 1;}
-40%{opacity: 0.2;}
-60%{opacity: 1;}
-80%{opacity: 0.3;}
-100%{opacity: 0.6;}
-}
-@media (max-width: 650px){
-.pad.running::after{box-shadow: 0 0 calc(3px + 7px * var(--cpu, 0)) var(--pad-color);}
-}
 /* LogViewer toolbar and container */
 .log-toolbar{display: flex; align-items: center; gap: 8px; margin-left: auto;}
 .log-search-input-wrap{position: relative; display: flex; align-items: center;}

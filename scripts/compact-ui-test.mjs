@@ -38,14 +38,14 @@ await page.route('http://stackpad.test/**', async route => {
 });
 try {
   await page.goto('http://stackpad.test/');
-  await expect(page.locator('.pads>.pad-wrap,.pads>.pad.empty')).toHaveCount(16);
+  await expect(page.locator('[data-pads]>[data-pad-wrap],[data-pads]>[data-empty-slot]')).toHaveCount(16);
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.locator('.sidebar,.right-stack,.page-heading,.log-panel')).toHaveCount(0);
   for (const [width, height] of [[1920, 1080], [1280, 930], [1000, 700], [390, 844], [360, 640], [844, 390]]) {
     await page.setViewportSize({ width, height });
     const layout = await page.evaluate(() => {
       const main = document.querySelector('main');
-      const grid = document.querySelector('.pads');
+      const grid = document.querySelector('[data-pads]');
       const bounds = grid.getBoundingClientRect();
       const style = getComputedStyle(grid);
       return { columns: style.gridTemplateColumns.split(' ').length, rows: style.gridTemplateRows.split(' ').length, fullWidth: Math.abs(bounds.width - main.clientWidth + parseFloat(getComputedStyle(main).paddingLeft) + parseFloat(getComputedStyle(main).paddingRight)) < 1, fullHeight: Math.abs(bounds.bottom - main.getBoundingClientRect().bottom + parseFloat(getComputedStyle(main).paddingBottom)) < 1 && bounds.top >= document.querySelector('[aria-label="패드셋"]').getBoundingClientRect().bottom, overflow: main.scrollHeight > main.clientHeight || document.documentElement.scrollWidth > innerWidth, visible: [...document.querySelectorAll('.pad')].every(pad => { const rect = pad.getBoundingClientRect(); const state = pad.querySelector('.pad-state')?.getBoundingClientRect(); return rect.top >= bounds.top - 1 && rect.bottom <= bounds.bottom + 1 && (!state || state.bottom <= rect.bottom + 1); }) };
@@ -70,8 +70,8 @@ try {
   await expect(page.getByRole('switch', { name: 'Windows 로그인 시 자동 실행' })).toBeChecked();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: '시스템 모니터', exact: true })).toHaveCount(0);
-  expect(await page.locator('.toolbar-actions .tool-button').evaluateAll(buttons => buttons.map(b => b.getAttribute('aria-label')))).toEqual(['등록 추천', '서비스 등록', '환경 설정']);
-  await expect(page.locator('.toolbar-actions').getByRole('button', { name: '로그아웃', exact: true })).toHaveCount(0);
+  expect(await page.locator('header .tool-button').evaluateAll(buttons => buttons.map(b => b.getAttribute('aria-label')))).toEqual(['등록 추천', '서비스 등록', '환경 설정']);
+  await expect(page.locator('header').getByRole('button', { name: '로그아웃', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: '환경 설정', exact: true }).click();
   await page.getByRole('tab', { name: '계정', exact: true }).click();
   await expect(page.getByRole('dialog', { name: '환경 설정', exact: true }).getByRole('button', { name: '로그아웃', exact: true })).toBeVisible();

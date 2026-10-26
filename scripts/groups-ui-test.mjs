@@ -45,10 +45,10 @@ await page.route('http://stackpad.test/**', async route => {
 });
 try {
   await page.goto('http://stackpad.test/');
-  await expect(page.locator('.pads>.pad-wrap,.pads>.pad.empty')).toHaveCount(16);
-  await expect(page.locator('.pad.assigned')).toHaveCount(2);
+  await expect(page.locator('[data-pads]>[data-pad-wrap],[data-pads]>[data-empty-slot]')).toHaveCount(16);
+  await expect(page.locator('[data-pad-status]')).toHaveCount(2);
   await expect(page.getByRole('button', { name: 'Shop 종료', exact: true })).toContainText('일부 실행');
-  await expect(page.getByRole('button', { name: 'Shop 종료', exact: true }).locator('.pad-port span')).toHaveText(['Shop 백엔드 :8000', 'Shop 프론트엔드 :8001']);
+  await expect(page.getByRole('button', { name: 'Shop 종료', exact: true }).locator('[data-pad-port] span')).toHaveText(['Shop 백엔드 :8000', 'Shop 프론트엔드 :8001']);
   await expect(page.getByRole('button', { name: '패드 2 서비스 등록', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Shop 메뉴', exact: true }).click();
   await expect(page.getByRole('menuitem')).toHaveText(['상세', '설정', /^삭제/, 'VSCode로 열기']);

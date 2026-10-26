@@ -40,11 +40,11 @@ await page.route('http://stackpad.test/**', async route => {
 try {
   await page.goto('http://stackpad.test/');
   await expect(page.getByRole('button', { name: '통합 패드 메뉴', exact: true })).toBeVisible();
-  await expect(page.locator('.toolbar-brand')).toHaveText('StackPad');
-  await expect(page.locator('.engine-status')).toHaveCount(0);
-  await expect(page.locator('.pad-move svg')).toHaveCount(0);
-  expect(await page.locator('.pad-move').first().evaluate(node => getComputedStyle(node).justifyContent)).toBe('flex-start');
-  const rows = page.locator('.pad-wrap').first().locator('.pad-port>span');
+  await expect(page.locator('[data-toolbar-brand]')).toHaveText('StackPad');
+  await expect(page.locator('[data-engine-offline]')).toHaveCount(0);
+  await expect(page.locator('[data-pad-move] svg')).toHaveCount(0);
+  expect(await page.locator('[data-pad-move]').first().evaluate(node => getComputedStyle(node).justifyContent)).toBe('flex-start');
+  const rows = page.locator('[data-pad-wrap]').first().locator('[data-pad-port]>span');
   await expect(rows).toHaveText(['API :8000', 'Web :5173']);
   const boxes = await rows.evaluateAll(nodes => nodes.map(n => n.getBoundingClientRect().toJSON()));
   expect(boxes[1].top).toBeGreaterThanOrEqual(boxes[0].bottom);

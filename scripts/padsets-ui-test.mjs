@@ -12,7 +12,7 @@ try {
   await page.context().addCookies([{ name: 'stackpad_session', value: session, url: base }]);
   await page.goto(base);
   await expect(page.getByRole('tab', { name: '기본', exact: true })).toBeVisible();
-  await expect(page.locator('.pads>.pad, .pads>.pad-wrap')).toHaveCount(16);
+  await expect(page.locator('[data-pads]>*')).toHaveCount(16);
   await page.getByRole('button', { name: '환경 설정', exact: true }).click();
   await expect(page.getByRole('tab', { name: '일반', exact: true })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('heading', { name: '등록 추천 스캔 폴더' })).toHaveCount(0);
@@ -76,7 +76,7 @@ try {
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByRole('button', { name: '도커 API 실행', exact: true }).click();
   await expect(page.getByRole('button', { name: '도커 API 종료', exact: true })).toBeEnabled();
-  await expect(page.locator('.pad-port').filter({ hasText: ':8080' })).toBeVisible();
+  await expect(page.locator('[data-pad-port]').filter({ hasText: ':8080' })).toBeVisible();
   await page.getByRole('button', { name: '도커 API 메뉴', exact: true }).click();
   await expect(page.getByRole('menuitem', { name: '삭제', exact: true })).toBeDisabled();
   await page.getByRole('menuitem', { name: '상세', exact: true }).click();

@@ -81,6 +81,7 @@ function Logo({ small = false }) {
 }
 
 // Pad badges use one fixed palette: P/D for the environment and the Git state of the pad's folders.
+const padBadge = 'pointer-events-none inline-flex size-4 shrink-0 items-center justify-center rounded-[3px] text-[10px] leading-none font-bold max-tablet:size-3.5 max-tablet:text-[9px] max-tablet:[&>svg]:size-2.5';
 const badgeColors = {
   production: { color: '#000000', backgroundColor: '#69d39a' },
   development: { color: '#ffffff', backgroundColor: '#9aa4a8' },
@@ -187,14 +188,20 @@ function gridCoordinates(event, { context: { droppableRects, droppableContainers
   return { x: best.rect.left + best.rect.width / 2 - collisionRect.width / 2, y: best.rect.top + best.rect.height / 2 - collisionRect.height / 2 };
 }
 
+// Shared pad frame; the deck grid stretches every pad to its cell and keeps 2px below for the key shadow.
+const padFrame = 'relative flex h-[calc(100%-2px)] min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-md border border-[#c5c4b5] text-left [transition:transform_.14s_ease,filter_.2s_ease] hover:border-[#b7bba9] active:translate-y-px active:shadow-[inset_0_1px_2px_#67705822]';
+// Status text and dot colors on a pad.
+const stateTone = { starting: 'text-[#9b774d]', partial: 'text-[#9b774d]', unreachable: 'text-[#9b774d]', error: 'text-[#a1525c]', unhealthy: 'text-[#a1525c]', conflict: 'text-[#a1525c]', external: 'text-[#61869c]' };
+const stateDot = { running: 'bg-[#35d982] shadow-[0_0_4px_#35d982cc,0_0_9px_#35d98266]', starting: 'bg-[#f2c278] animate-[pad-pulse_1.5s_infinite]', partial: 'bg-[#f2c278]', error: 'bg-[#f2a0a7]', unhealthy: 'bg-[#f2a0a7]', conflict: 'bg-[#f2a0a7]', external: 'bg-[#8fc3ee] animate-[pad-pulse_2s_infinite]', unreachable: 'bg-[#6f7678]', checking: 'bg-[#6f7678]' };
+
 function EmptyPad({ slot, enabled, onRegister }) {
   const { setNodeRef, isOver, active } = useDroppable({ id: `slot-${slot}`, data: { slot }, disabled: !enabled });
-  return <button ref={setNodeRef} data-empty-slot={slot} className={`pad empty ${isOver ? 'drop-target' : active ? 'drop-ready' : ''}`} aria-label={t('패드 {0} 서비스 등록', slot + 1)} onClick={onRegister}><Plus size={20} /></button>;
+  return <button ref={setNodeRef} data-empty-slot={slot} className={`${padFrame} items-center justify-center gap-[9px] bg-[linear-gradient(115deg,#e8e6da,#e4e2d5)] p-4 text-[#6c7663] shadow-[inset_0_1px_0_#fcf9ee,0_1px_1px_#45503b20] hover:bg-[#efecdf] hover:bg-none hover:text-[#7e8c73] max-tablet:gap-2 max-tablet:px-2 max-tablet:py-2.5 short:px-2.5 short:py-1 [&>svg]:size-5 ${isOver ? 'border-2 border-[#7c9a83] bg-[#dce4d4] bg-none text-[#4b7058]' : active ? 'border-dashed border-[#93a68f]' : ''}`} aria-label={t('패드 {0} 서비스 등록', slot + 1)} onClick={onRegister}><Plus size={20} /></button>;
 }
 
 function PadMoveHandle({ pad, disabled }) {
   const { setNodeRef, listeners, attributes } = useDraggable({ id: pad.id, data: { name: pad.name }, disabled });
-  return <Tooltip content={t('끌거나 스페이스 키를 눌러 빈 패드로 옮길 수 있어요')}><button ref={setNodeRef} {...attributes} {...listeners} className="pad-move" disabled={disabled} aria-label={t('{0} 자리 이동', pad.name)}>{pad.name}</button></Tooltip>;
+  return <Tooltip content={t('끌거나 스페이스 키를 눌러 빈 패드로 옮길 수 있어요')}><button ref={setNodeRef} {...attributes} {...listeners} data-pad-move className="absolute top-[5px] left-2.5 h-[30px] w-[calc(100%-48px)] cursor-grab touch-none select-none justify-start truncate rounded-[5px] border-0 bg-transparent px-[3px] py-0 text-left text-[16px] font-medium text-ink hover:bg-[#cdd2c344] hover:text-[#354a37] focus-visible:outline-focus focus-visible:outline-offset-0 active:cursor-grabbing max-tablet:top-[3px] max-tablet:left-[7px] max-tablet:h-7 max-tablet:w-[calc(100%-42px)] max-tablet:text-[12px]" disabled={disabled} aria-label={t('{0} 자리 이동', pad.name)}>{pad.name}</button></Tooltip>;
 }
 
 function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, loading, settings, refresh, onError, connected, local, scenes = [], sceneProgress = {}, groupProgress = {}, schedules = [], onOpenSettings }) {
@@ -473,11 +480,11 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
   };
   const draggedPad = dragged && pads.find(pad => pad.id === dragged);
   return <>
-    <section className="pad-deck" aria-label={t('서비스 컨트롤 패드')}>
+    <section className="flex h-full w-full flex-col gap-3.5 max-tablet:gap-2" aria-label={t('서비스 컨트롤 패드')}>
       <UsageBar api={api} expected={settings?.usage_providers?.length || 0} />
-      <div className="padset-bar-row">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Tabs label={t('패드셋')} tabs={padsets.map(set => ({ ...set, badge: pads.filter(p => p.padset_id === set.id).length }))} value={padsetId} onChange={onPadsetChange} prefix="padsets" variant="keys" />
-        {scenes.length > 0 && <div className="scene-chips-bar" aria-label={t('흐름 목록')}>
+        {scenes.length > 0 && <div className="flex flex-wrap items-center gap-2" aria-label={t('흐름 목록')}>
           {scenes.map(sc => {
             const padIds = sc.pad_ids || [];
             const activeCount = padIds.filter(id => pads.some(p => p.id === id && p.active)).length;
@@ -486,20 +493,20 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
             const isRunning = progress || (totalCount > 0 && activeCount === totalCount);
             const isPartial = totalCount > 0 && activeCount > 0 && activeCount < totalCount;
             const pct = totalCount > 0 ? (progress ? Math.round(progress.done / progress.total * 100) : Math.round(activeCount / totalCount * 100)) : 0;
-            return <div key={sc.id} className="scene-chip-wrap" style={{ '--scene-color': sc.color, '--scene-progress': `${pct}%` }}>
+            return <div key={sc.id} className="relative inline-flex items-center overflow-hidden rounded-full border border-[#bdc8af] bg-[#e0e6d6] pr-1 after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-(--scene-progress) after:bg-(--scene-color) after:transition-[width] after:duration-300 after:content-['']" style={{ '--scene-color': sc.color, '--scene-progress': `${pct}%` }}>
               <Tooltip content={t("클릭하면 '{0}' 흐름을 시작합니다. 정지와 설정은 옆 메뉴에 있어요.", sc.name)}><button
                 type="button"
-                className={`scene-chip ${isRunning ? 'running' : ''} ${isPartial ? 'partial' : ''} ${progress ? 'in-progress' : ''}`}
+                className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border-0 py-1 pr-2 pl-2.5 text-[12px] ${isRunning ? 'bg-[#d1dcc6]' : 'bg-transparent'}`}
                 onClick={() => triggerScene(sc, 'start')}
                 onContextMenu={e => { e.preventDefault(); openSceneMenu(e, sc); }}
               >
-                <span className="scene-chip-dot" />
-                <span className="scene-chip-name">{sc.name}</span>
-                {totalCount > 0 && <span className="scene-chip-ratio">{progress ? `${progress.done}/${progress.total}` : `${activeCount}/${totalCount}`}</span>}
+                <span className={`size-2 shrink-0 rounded-full bg-(--scene-color) ${progress ? 'animate-[pulse-dot_1s_infinite_alternate]' : ''}`} />
+                <span className="font-medium whitespace-nowrap">{sc.name}</span>
+                {totalCount > 0 && <span className="text-[10px] tabular-nums text-[#4f5c48]">{progress ? `${progress.done}/${progress.total}` : `${activeCount}/${totalCount}`}</span>}
               </button></Tooltip>
               <button
                 type="button"
-                className="scene-chip-menu-btn"
+                className="inline-flex size-[18px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 opacity-60 hover:bg-[#b7c6aa40] hover:opacity-100"
                 aria-label={t('{0} 흐름 메뉴', sc.name)}
                 aria-haspopup="menu"
                 aria-expanded={sceneMenu?.scene.id === sc.id}
@@ -512,9 +519,9 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
         </div>}
       </div>
       <DndContext sensors={sensors} accessibility={{ announcements: dragAnnouncements, screenReaderInstructions: { draggable: t('스페이스 키로 패드를 들고 방향키로 빈 패드를 고른 뒤 스페이스 키로 놓습니다. ESC 키로 취소합니다.') } }} onDragStart={({ active }) => setDragged(active.id)} onDragEnd={dragEnd} onDragCancel={() => setDragged(null)}>
-      <div className="pads" role="tabpanel" id="padsets-panel" aria-labelledby={`padsets-tab-${padsetId}`}>{Array.from({ length: 16 }, (_, slot) => {
+      <div data-pads className="grid min-h-0 flex-1 grid-cols-4 grid-rows-4 gap-[15px] rounded-[7px] border border-[#bfc2b6] bg-[#d1d3c9] p-[15px] shadow-[inset_0_1px_3px_#46503d1c,0_1px_0_#fffff4] max-tablet:gap-2 max-tablet:p-2 short:gap-[7px] short:p-1.5" role="tabpanel" id="padsets-panel" aria-labelledby={`padsets-tab-${padsetId}`}>{Array.from({ length: 16 }, (_, slot) => {
         const service = pads.find(s => s.padset_id === padsetId && s.slot === slot);
-        if (loading) return <div key={slot} className="pad skeleton" />;
+        if (loading) return <div key={slot} className={`${padFrame} skeleton`} />;
         if (!service) return <EmptyPad key={slot} slot={slot} enabled={connected} onRegister={() => { if (Date.now() >= suppressClick.current) setPadEditor({ slot }); }} />;
         const pending = busy.has(service.id) || service.busy || service.members?.some(s => busy.has(s.id));
         const tags = (service.isGroup ? service.members : [service]).filter(s => s.kind === 'remote' || s.kind === 'docker' || s.port);
@@ -535,31 +542,30 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
           progressPct = Math.round(((done + (phase === 'waiting' ? 0.5 : 0)) / total) * 100);
         }
         const errorLine = (service.isGroup ? service.members : [service]).find(s => s.error_line)?.error_line;
-        const cpuVal = Math.min(1, Math.max(0, (service.cpu || 0) / 100));
         const gitStates = (service.isGroup ? service.members : [service]).map(s => s.git_state);
         const gitDirty = gitStates.includes('dirty');
         const gitState = gitDirty ? 'dirty' : gitStates.includes('clean') ? 'clean' : 'unknown';
         const gitLabel = gitDirty ? t('Git 변경 내역 있음') : gitStates.includes('clean') ? t('Git 변경 내역 없음') : t('Git 상태 확인 정보 없음');
-        return <div key={slot} className={`pad-wrap ${selected === service.id ? 'chosen' : ''} ${dragged === service.id ? 'dragging' : ''}`} style={{ '--pad-color': service.color, '--cpu': cpuVal }}>
-          <button className={`pad assigned ${service.status}`} style={{ '--cpu': cpuVal }} disabled={pending || !connected} onClick={() => toggle(service)} aria-label={`${service.name} ${service.active ? t('종료') : t('실행')}`} aria-pressed={!!service.active}>
-            <span className="pad-top">{pending ? <LoaderCircle className="spin" size={14} /> : <Power size={14} />}</span>
-            <span className="pad-port">{tags.length ? tags.map(s => <span key={s.id}>{s.name}{s.kind === 'remote' ? ` @${s.remote.host}` : s.kind === 'docker' ? ` ${s.container_ports?.length ? s.container_ports.map(port => `:${port}`).join(', ') : t(':포트 없음')}` : s.port ? ` :${s.port}` : t(' :포트 없음')}</span>) : t('명령 실행')}</span>
-            <span className="pad-footer">
-              <span className="pad-state"><i /><span>{stateText}</span></span>
-              <span className="pad-indicators">
-                <span className="pad-badge pad-git" style={badgeColors[gitState]} role="img" aria-label={gitLabel}><GitBranch size={11} strokeWidth={2.5} aria-hidden="true" /></span>
-                <span className="pad-badge pad-environment" style={badgeColors[service.environment === 'production' ? 'production' : 'development']} role="img" aria-label={service.environment === 'production' ? t('운영용') : t('개발용')}>{service.environment === 'production' ? 'P' : 'D'}</span>
+        const lit = service.status === 'running' || service.status === 'starting';
+        return <div key={slot} data-pad-wrap className={`relative min-h-0 min-w-0 rounded-md bg-[#a9ac9f] ${lit ? 'shadow-[0_0_0_1px_color-mix(in_srgb,var(--pad-color)_45%,transparent),0_2px_12px_color-mix(in_srgb,var(--pad-color)_50%,transparent)]' : 'shadow-[0_1px_2px_#3e493a25]'} ${selected === service.id ? "after:pointer-events-none after:absolute after:-inset-[3px] after:rounded-lg after:border after:border-[#829b83] after:content-['']" : ''} ${dragged === service.id ? 'opacity-50' : ''}`} style={{ '--pad-color': service.color }}>
+          <button data-pad-status={service.status} className={`${padFrame} items-start justify-normal gap-0 bg-[linear-gradient(115deg,#eeeadd,#e9e5d7)] px-4 pt-10 pb-4 text-ink shadow-[inset_0_1px_0_#fcf9ee,inset_0_-1px_0_#d2cebd,0_1px_1px_#45503b20] hover:bg-[linear-gradient(115deg,#f2eee2,#ede9dc)] max-tablet:px-2 max-tablet:pt-[35px] max-tablet:pb-2.5 short:px-2.5 short:pt-6 short:pb-1`} disabled={pending || !connected} onClick={() => toggle(service)} aria-label={`${service.name} ${service.active ? t('종료') : t('실행')}`} aria-pressed={!!service.active}>
+            <span data-pad-port className="mt-[5px] flex min-h-0 w-full flex-col gap-[3px] overflow-auto font-[Consolas,monospace] text-[10px] text-muted max-tablet:mt-1 short:mt-px short:shrink-0 short:gap-px short:text-[9px]">{tags.length ? tags.map(s => <span key={s.id} className="block min-w-0 shrink-0 truncate">{s.name}{s.kind === 'remote' ? ` @${s.remote.host}` : s.kind === 'docker' ? ` ${s.container_ports?.length ? s.container_ports.map(port => `:${port}`).join(', ') : t(':포트 없음')}` : s.port ? ` :${s.port}` : t(' :포트 없음')}</span>) : t('명령 실행')}</span>
+            <span className="absolute inset-x-1.5 bottom-1.5 flex min-w-0 items-center justify-between gap-1.5 max-tablet:flex-wrap-reverse max-tablet:gap-y-[3px] short:shrink-0">
+              <span data-pad-state className={`inline-flex min-w-0 shrink items-center gap-[5px] overflow-hidden whitespace-nowrap text-[10px] leading-[1.4] max-tablet:shrink-0 max-tablet:gap-1 max-tablet:text-[9px] short:text-[9px] ${stateTone[service.status] || 'text-[#5a6553]'}`}><i className={`size-1 shrink-0 rounded-full ${stateDot[service.status] || 'bg-[#a8ae9e]'}`} /><span className="block translate-y-[2px] truncate leading-[1.4]">{stateText}</span></span>
+              <span className="inline-flex shrink-0 items-center gap-1 max-tablet:ml-auto max-tablet:gap-[3px]">
+                <span data-badge="git" className={padBadge} style={badgeColors[gitState]} role="img" aria-label={gitLabel}><GitBranch size={11} strokeWidth={2.5} aria-hidden="true" /></span>
+                <span data-badge="environment" className={padBadge} style={badgeColors[service.environment === 'production' ? 'production' : 'development']} role="img" aria-label={service.environment === 'production' ? t('운영용') : t('개발용')}>{service.environment === 'production' ? 'P' : 'D'}</span>
               </span>
             </span>
-            {progressPct !== null && <div className="pad-progress-bar" style={{ width: `${progressPct}%` }} />}
-          </button>{errorLine && <Tooltip content={errorLine}><button type="button" className="pad-error-badge" aria-label={t('{0} 오류 로그 보기: {1}', service.name, errorLine)} onClick={() => { setSelected(service.id); setTargetError(errorLine); }}>{errorLine}</button></Tooltip>}<PadMoveHandle pad={service} disabled={!connected || pending} /><Tooltip content={t('상세, 설정, 삭제')}><button className="pad-detail" onClick={event => openPadMenu(event, service)} aria-label={t('{0} 메뉴', service.name)} aria-haspopup="menu" aria-expanded={padMenu?.id === service.id}><SlidersHorizontal size={13} /></button></Tooltip>
+            {progressPct !== null && <div className="absolute bottom-0 left-0 z-[2] h-[3px] rounded-b-[7px] bg-(--pad-color) transition-[width] duration-200" style={{ width: `${progressPct}%` }} />}
+          </button>{errorLine && <Tooltip content={errorLine}><button type="button" className="absolute inset-x-2 bottom-7 z-[2] block truncate rounded border border-[#d7aaad] bg-[#efdedd] px-1.5 py-0.5 text-left text-[10px] leading-[1.5] text-[#9d4852] hover:border-[rgba(239,68,68,0.5)] hover:bg-[rgba(239,68,68,0.25)] max-tablet:bottom-11" aria-label={t('{0} 오류 로그 보기: {1}', service.name, errorLine)} onClick={() => { setSelected(service.id); setTargetError(errorLine); }}>{errorLine}</button></Tooltip>}<PadMoveHandle pad={service} disabled={!connected || pending} /><Tooltip content={t('상세, 설정, 삭제')}><button className="absolute top-[3px] right-[3px] size-8 rounded-[3px] border-0 bg-transparent text-[#636b5a] hover:bg-[#d2d5c866] hover:text-[#55654b] [&>svg]:size-3.5 max-tablet:top-px max-tablet:right-px max-tablet:size-[30px] short:top-px short:h-[22px]" onClick={event => openPadMenu(event, service)} aria-label={t('{0} 메뉴', service.name)} aria-haspopup="menu" aria-expanded={padMenu?.id === service.id}><SlidersHorizontal size={13} /></button></Tooltip>
         </div>;
       })}</div>
-      <DragOverlay dropAnimation={null}>{draggedPad && <div className="pad-drag-ghost" style={{ '--pad-color': draggedPad.color }}>{draggedPad.name}</div>}</DragOverlay>
+      <DragOverlay dropAnimation={null}>{draggedPad && <div className="flex h-full cursor-grabbing items-center truncate rounded border border-l-[3px] border-[#93a68f] border-l-(--pad-color) bg-raised px-2.5 text-[14px] font-semibold text-ink-strong shadow-[0_10px_24px_#34442b33]" style={{ '--pad-color': draggedPad.color }}>{draggedPad.name}</div>}</DragOverlay>
       </DndContext>
     </section>
-    {menuPad && <div className="pad-menu-layer" onPointerDown={() => setPadMenu(null)} onContextMenu={event => { event.preventDefault(); setPadMenu(null); }}>
-      <div ref={menuRef} className="pad-menu" role="menu" aria-label={t('{0} 메뉴', menuPad.name)} style={padMenu.style} onPointerDown={event => event.stopPropagation()} onKeyDown={menuKeys}>
+    {menuPad && <div className="fixed inset-0 z-[900]" onPointerDown={() => setPadMenu(null)} onContextMenu={event => { event.preventDefault(); setPadMenu(null); }}>
+      <div ref={menuRef} className="popover-menu" role="menu" aria-label={t('{0} 메뉴', menuPad.name)} style={padMenu.style} onPointerDown={event => event.stopPropagation()} onKeyDown={menuKeys}>
         <button role="menuitem" autoFocus onClick={() => { setPadMenu(null); setSelected(menuPad.id); setComponentId(null); }}><Info size={14} />{t('상세')}</button>
         <button role="menuitem" disabled={busy.has(menuPad.id)} onClick={() => { setPadMenu(null); setPadEditor({ id: menuPad.id, slot: menuPad.slot }); }}><Settings2 size={14} />{t('설정')}</button>
         {(() => {
@@ -570,8 +576,8 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
         {settings?.tools?.vscode !== false && (menuPad.isGroup ? menuPad.members : [menuPad]).some(s => !s.kind || s.kind === 'local') && <button role="menuitem" disabled={!connected} onClick={() => openInCode(menuPad)}><Code size={14} />{t('VSCode로 열기')}</button>}
       </div>
     </div>}
-    {sceneMenu && <div className="pad-menu-layer" onPointerDown={() => setSceneMenu(null)} onContextMenu={event => { event.preventDefault(); setSceneMenu(null); }}>
-      <div className="pad-menu" role="menu" aria-label={t('{0} 메뉴', sceneMenu.scene.name)} style={sceneMenu.style} onPointerDown={event => event.stopPropagation()} onKeyDown={menuKeys}>
+    {sceneMenu && <div className="fixed inset-0 z-[900]" onPointerDown={() => setSceneMenu(null)} onContextMenu={event => { event.preventDefault(); setSceneMenu(null); }}>
+      <div className="popover-menu" role="menu" aria-label={t('{0} 메뉴', sceneMenu.scene.name)} style={sceneMenu.style} onPointerDown={event => event.stopPropagation()} onKeyDown={menuKeys}>
         <button role="menuitem" autoFocus onClick={() => triggerScene(sceneMenu.scene, 'start')}><Play size={14} />{t('흐름 시작')}</button>
         <button role="menuitem" onClick={() => triggerScene(sceneMenu.scene, 'stop')}><Square size={14} />{t('흐름 정지')}</button>
         <button role="menuitem" onClick={() => { setSceneMenu(null); onOpenSettings?.('scenes'); }}><Gear size={14} />{t('흐름 설정')}</button>
@@ -929,17 +935,17 @@ function App() {
   async function logout() { try { await disconnectWidget(api); await api('/logout', { method: 'POST' }); setServices([]); setSettings(null); setLoading(true); checkAuth(); } catch (e) { onError(e.message); } }
   if (!auth) return <div className="flex h-dvh flex-col items-center justify-center gap-5 bg-canvas text-[13px] text-[#515d47]"><Logo /><p>{authError || t('관리 엔진과 연결하고 있어요.')}</p>{authError && <button className="secondary" onClick={checkAuth}><RefreshCw size={16} />{t('다시 연결')}</button>}</div>;
   if (!auth.authenticated) return isNative ? <PairPhone api={api} logo={<Logo />} onPaired={checkAuth} /> : <SignIn auth={auth} api={api} logo={<Logo />} onLogin={checkAuth} />;
-  return <div className="app-shell">
-    <header className="toolbar" aria-label={t('공통 도구')}>
-      <h1 className="toolbar-brand">StackPad</h1>
-      {!connected && !loading && <div className="engine-status offline" role="status"><i aria-hidden="true" /><span>{t('관리 엔진 연결이 끊겼어요. 다시 연결하는 중입니다.')}</span><button type="button" className="secondary" onClick={refresh}><RefreshCw size={14} />{t('다시 연결')}</button></div>}
-      <div className="toolbar-actions">
+  return <div data-app-shell className="flex h-dvh flex-col overflow-hidden bg-[linear-gradient(115deg,#f2f1e9,#eae9df)] p-4 shadow-[inset_0_1px_0_#fffff5,inset_0_-1px_0_#b8b9ae] max-tablet:p-2.5 short:p-2">
+    <header className="flex h-[54px] shrink-0 items-center gap-4 px-2 max-tablet:h-[52px] max-tablet:gap-2.5 max-tablet:px-[3px]" aria-label={t('공통 도구')}>
+      <h1 data-toolbar-brand className="m-0 flex items-center gap-[9px] font-sans text-[25px] font-bold tracking-[-1px] whitespace-nowrap text-[#555c51] max-tablet:gap-[7px] max-tablet:text-[22px] max-tablet:font-black max-tablet:[font-family:'Arial_Black','sans-serif-black',sans-serif] max-tablet:[font-synthesis:weight] max-tablet:[-webkit-text-stroke:.25px_currentColor] [.native-app_&]:font-black [.native-app_&]:[font-family:'Arial_Black','sans-serif-black',sans-serif] [.native-app_&]:[font-synthesis:weight] [.native-app_&]:[-webkit-text-stroke:.25px_currentColor]">StackPad</h1>
+      {!connected && !loading && <div data-engine-offline className="flex min-w-0 items-center gap-2 rounded border border-warn-line bg-warn-soft py-1 pr-1 pl-2.5 text-[12px] text-warn-ink" role="status"><i aria-hidden="true" className="size-[7px] shrink-0 rounded-full bg-[#c08a3e] animate-[pad-pulse_1.5s_infinite]" /><span className="min-w-0 truncate max-tablet:hidden">{t('관리 엔진 연결이 끊겼어요. 다시 연결하는 중입니다.')}</span><button type="button" className="secondary min-h-8 shrink-0 px-2.5 py-0 text-[12px]" onClick={refresh}><RefreshCw size={14} />{t('다시 연결')}</button></div>}
+      <div className="ml-auto flex items-center gap-2.5 max-tablet:gap-1.5">
         <Tooltip content={t('등록 추천')}><button className="tool-button" disabled={!connected} onClick={() => setPanel('recommend')} aria-label={t('등록 추천')}><ScanSearch size={17} /></button></Tooltip>
         <Tooltip content={t('서비스 등록')}><button className="tool-button" disabled={!connected} onClick={() => { const slot = Array.from({ length: 16 }, (_, i) => i).find(i => !services.some(s => s.padset_id === padsetId && s.slot === i)); if (slot === undefined) onError(t('빈 패드를 확보해 주세요.')); else setRegistrationSlot(slot); }} aria-label={t('서비스 등록')}><Plus size={17} /></button></Tooltip>
         <Tooltip content={t('환경 설정')}><button className="tool-button" onClick={() => { setSettingsCategory('general'); setPanel('settings'); }} aria-label={t('환경 설정')}><Gear size={17} /></button></Tooltip>
       </div>
     </header>
-    <main aria-label={t('서비스 패드')}><Deck {...{ padsets, padsetId, onPadsetChange, services, groups, links, loading, settings, refresh, onError, connected, scenes, sceneProgress, groupProgress, schedules }} onOpenSettings={cat => { setSettingsCategory(cat || 'general'); setPanel('settings'); }} local={auth.local} /></main>
+    <main className="min-h-0 flex-1 overflow-hidden pt-3" aria-label={t('서비스 패드')}><Deck {...{ padsets, padsetId, onPadsetChange, services, groups, links, loading, settings, refresh, onError, connected, scenes, sceneProgress, groupProgress, schedules }} onOpenSettings={cat => { setSettingsCategory(cat || 'general'); setPanel('settings'); }} local={auth.local} /></main>
     {registrationSlot !== null && <PadForm {...{ padsets, padsetId, schedules }} defaultCwd={settings?.recommend_roots?.[0] || ''} tools={settings?.tools} slot={registrationSlot} preset={preset} local={auth.local} {...{ services, api, colors, colorNames, onError }} onClose={() => { setRegistrationSlot(null); setPreset(null); }} onSaved={refresh} />}
     <Modal isOpen={!!panel} onClose={closePanel} title={panel === 'settings' ? t('환경 설정') : t('등록 추천')} size="lg" storageKey="common-settings">
       {panel === 'settings' ? <Settings {...{ auth, settings, padsets, services, groups, scenes, schedules, initialCategory: settingsCategory, refresh, onError, onNotice }} onDirtyChange={dirty => { settingsDirty.current = dirty; }} onLogout={() => { setPanel(null); logout(); }} /> : panel === 'recommend' ? <Recommendations onError={onError} onRegister={candidate => { const slot = Array.from({ length: 16 }, (_, i) => i).find(i => !services.some(s => s.padset_id === padsetId && s.slot === i)); if (slot === undefined) { onError(t('빈 패드를 확보해 주세요.')); return; } setPanel(null); setPreset(candidate); setRegistrationSlot(slot); }} /> : null}

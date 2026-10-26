@@ -53,7 +53,7 @@ try {
   await page.getByRole('button', { name: '테스트 API 실행', exact: true }).click();
   await expect(page.getByRole('button', { name: '테스트 API 종료', exact: true })).toBeEnabled({ timeout: 15000 });
   await request(`/services/${ids[1]}/start`);
-  await expect(page.locator('.pad.running')).toHaveCount(2, { timeout: 15000 });
+  await expect(page.locator('[data-pad-status=running]')).toHaveCount(2, { timeout: 15000 });
   await page.getByRole('button', { name: '테스트 API 메뉴', exact: true }).click(); await page.getByRole('menuitem', { name: '상세' }).click();
   await expect(page.locator('.log-panel pre')).toContainText('Serving HTTP', { timeout: 10000 });
   await page.keyboard.press('Escape');
@@ -82,7 +82,7 @@ try {
   await page.getByRole('button', { name: '테스트 API 메뉴', exact: true }).click(); await page.getByRole('menuitem', { name: '상세' }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.keyboard.press('Escape');
-  await expect(page.locator('.pad.running')).toHaveCount(2);
+  await expect(page.locator('[data-pad-status=running]')).toHaveCount(2);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
   if (overflow) throw new Error('Mobile page has horizontal overflow');
   await page.screenshot({ path: path.join(screenshots, 'deck-mobile.png'), fullPage: true });

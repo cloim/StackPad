@@ -63,25 +63,25 @@ try {
   await expect(page.getByRole('button', { name: 'API Server 종료' })).toBeVisible();
 
   // 1. Verify --cpu property on running pad
-  const runningPadWrap = page.locator('.pad-wrap').first();
+  const runningPadWrap = page.locator('[data-pad-wrap]').first();
   const cpuVal = await runningPadWrap.evaluate(el => el.style.getPropertyValue('--cpu'));
   expect(Number(cpuVal)).toBeCloseTo(0.45, 2);
 
   // 2. Check LED ring pseudo-elements via getComputedStyle
-  const hasRunningAfter = await runningPadWrap.locator('.pad.running').evaluate(el => {
+  const hasRunningAfter = await runningPadWrap.locator('[data-pad-status=running]').evaluate(el => {
     const style = window.getComputedStyle(el, '::after');
     return style.content !== 'none' && style.position === 'absolute';
   });
   expect(hasRunningAfter).toBe(true);
 
-  const startingPad = page.locator('.pad.starting');
+  const startingPad = page.locator('[data-pad-status=starting]');
   const hasStartingAfter = await startingPad.evaluate(el => {
     const style = window.getComputedStyle(el, '::after');
     return style.content !== 'none';
   });
   expect(hasStartingAfter).toBe(true);
 
-  const errorPad = page.locator('.pad.error');
+  const errorPad = page.locator('[data-pad-status=error]');
   const hasErrorAfter = await errorPad.evaluate(el => {
     const style = window.getComputedStyle(el, '::after');
     return style.content !== 'none';

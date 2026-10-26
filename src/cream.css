@@ -1,49 +1,5 @@
 /* 확정된 크림 MPC 시안. 동작과 사용량 영역의 치수는 기존 화면을 따른다. */
-.app-shell{padding:16px;background:linear-gradient(115deg,#f2f1e9,#eae9df);box-shadow:inset 0 1px 0 #fffff5,inset 0 -1px 0 #b8b9ae}
-.app-shell>.toolbar{height:54px;padding:0 8px;background:transparent;border:0;gap:16px}
-.toolbar-brand{margin:0;color:#555c51;font-family:Deck,'Malgun Gothic',sans-serif;font-size:25px;font-weight:700;letter-spacing:-1px}
-.toolbar-actions{gap:10px}
-.app-shell>main{padding:12px 0 0}
-.app-shell .pad-deck{gap:14px}
-.padset-bar-row{margin-bottom:0}
-.app-shell .pads{flex:1;min-height:0;height:auto;padding:15px;gap:15px;border:1px solid #bfc2b6;border-radius:7px;background:#d1d3c9;box-shadow:inset 0 1px 3px #46503d1c,0 1px 0 #fffff4}
-.app-shell .pad-wrap{border-radius:6px;background:#a9ac9f;box-shadow:0 1px 2px #3e493a25}
-.app-shell .pad-wrap:has(>.pad.running),.app-shell .pad-wrap:has(>.pad.starting){box-shadow:0 0 0 1px color-mix(in srgb,var(--pad-color) 45%,transparent),0 2px 12px color-mix(in srgb,var(--pad-color) 50%,transparent)}
 /* 패드 아래 2px는 키캡 그림자 깊이라서 의도적으로 비대칭이다. */
-.app-shell .pad,.app-shell .pad.running{height:calc(100% - 2px);border:1px solid #c5c4b5;border-radius:6px;background:linear-gradient(115deg,#eeeadd,#e9e5d7);color:#444740;box-shadow:inset 0 1px 0 #fcf9ee,inset 0 -1px 0 #d2cebd,0 1px 1px #45503b20;transition:transform .14s ease,filter .2s ease}
-.app-shell .pad:hover,.app-shell .pad.running:hover{background:linear-gradient(115deg,#f2eee2,#ede9dc);border-color:#b7bba9}
-.app-shell .pad:active{transform:translateY(1px);box-shadow:inset 0 1px 2px #67705822}
-.app-shell .pad:after{content:none;display:none;animation:none}
-.app-shell .pad.assigned:before{top:auto;bottom:-2px;left:8px;right:8px;width:auto;height:2px;border-radius:1px;opacity:0}
-.app-shell .pad.running:before,.app-shell .pad.starting:before{opacity:.85;background:var(--pad-color);box-shadow:0 2px 8px color-mix(in srgb,var(--pad-color) 65%,transparent)}
-.app-shell .pad.empty{background:linear-gradient(115deg,#e8e6da,#e4e2d5);border:1px solid #c5c4b5;color:#6c7663;box-shadow:inset 0 1px 0 #fcf9ee,0 1px 1px #45503b20}
-.app-shell .pad.empty:hover{background:#efecdf;color:#7e8c73}
-.app-shell .pad.empty.drop-target{border:2px solid #7c9a83;background:#dce4d4;color:#4b7058}
-.app-shell .pad.skeleton{background:linear-gradient(100deg,#e0e2d6 30%,#f1f0e6 50%,#e0e2d6 70%);background-size:200% 100%}
-.app-shell .pad-move{font-weight:500;color:#444740;font-size:16px}
-.app-shell .pad-move:hover{background:#cdd2c344;color:#354a37}
-.app-shell .pad-detail{color:#636b5a;border-radius:3px}
-.app-shell .pad-detail:hover{background:#d2d5c866;color:#55654b}
-.app-shell .pad-port{color:#5d6656}
-.app-shell .pad-footer{position:absolute;left:6px;right:6px;bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0}
-.app-shell .pad-footer .pad-state{display:inline-flex;align-items:center;line-height:1.4}
-.app-shell .pad-badge{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:16px;height:16px;padding:0;border:0;border-radius:3px;font-size:10px;font-weight:700;line-height:1;pointer-events:none}
-.app-shell .pad-indicators{display:inline-flex;align-items:center;gap:4px;flex-shrink:0}
-.app-shell .pad-footer .pad-state{min-width:0;margin:0;padding:0;overflow:hidden}
-.app-shell .pad-state,.app-shell .pad.running .pad-state{color:#5a6553}
-.app-shell .pad-state>span{display:block;line-height:1.4;transform:translateY(2px)}
-.app-shell .pad-state i{width:4px;height:4px;flex-shrink:0;background:#a8ae9e}
-.app-shell .pad.running .pad-state i{background:#35d982;box-shadow:0 0 4px #35d982cc,0 0 9px #35d98266}
-.app-shell .pad.starting .pad-state,.app-shell .pad.partial .pad-state,.app-shell .pad.unreachable .pad-state{color:#9b774d}
-.app-shell .pad.error .pad-state,.app-shell .pad.unhealthy .pad-state,.app-shell .pad.conflict .pad-state{color:#a1525c}
-.app-shell .pad.external .pad-state{color:#61869c}
-.app-shell .pad-wrap.chosen:after{border-color:#829b83;border-radius:8px}
-.pad-menu{background:#f3f1e7;border-color:#c0c5b4;box-shadow:0 10px 28px #49563d24}
-.pad-menu button{color:#444e40}
-.pad-menu button svg{color:#7b8773}
-.pad-menu button:hover:not(:disabled),.pad-menu button:focus-visible{background:#dfe5d6;color:#344c37}
-.pad-menu .menu-delete,.pad-menu .menu-delete svg{color:#a8555f}
-.pad-menu .menu-delete:hover:not(:disabled){background:#eedddd;color:#97404c}
 :root .modal-overlay{background:#424a394d}
 :root .modal-panel{background:#efeee5;color:#444740;border-color:#bfc4b3;box-shadow:0 22px 65px #34442b33}
 :root .modal-header,:root .modal-footer{border-color:#c7cbbd}
@@ -52,9 +8,6 @@
 :root .modal-close{color:#7a8672}
 :root .modal-close:hover{color:#3f563c;background:#dce2d2}
 :root .modal-header.is-draggable:focus-visible{outline-color:#658472}
-.scene-chip-wrap{background:#e0e6d6;border-color:#bdc8af}
-.scene-chip-menu-btn:hover{background:#b7c6aa40}
-.scene-chip.running{background:#d1dcc6}
 .lcd,.command-output{background:#dfe6d6;border-color:#bbc7ad;color:#4e6842}
 .lcd-head,.lcd-bottom{color:#6e8063}
 .lcd-value{color:#52724c}
@@ -62,8 +15,6 @@
 .log-head{background:#e3e7db;border-color:#c1c9b5;color:#516445}
 .log-container{background:#e0e5d8;color:#46583b}
 .log-line:hover{background:#cfdbc2}
-.pad-error-badge{color:#9d4852;background:#efdedd;border-color:#d7aaad}
-.native-app .toolbar-brand{font-family:'Arial Black','sans-serif-black',sans-serif;font-weight:900;font-synthesis:weight;-webkit-text-stroke:.25px currentColor}
 /* 서비스 상세: 어두운 기본 테마의 밝은 글자를 크림 배경에 맞게 진하게 한다. */
 :root .modal-body dt{color:#6b7564}
 :root .modal-body dd{color:#3a4535}
@@ -87,40 +38,16 @@
 .service-detail-scroll-thumb:active{cursor:grabbing;background:#566348}
 /* 로그 검색란과 오류만 버튼의 높이를 맞춘다. 전역 입력란 높이(40px)보다 우선하도록 선택자를 좁힌다. */
 .log-panel .log-toolbar .log-search-input-wrap input,.log-panel .log-toolbar .filter-btn{height:32px;min-height:32px!important;box-sizing:border-box}
-@media(max-width:650px){
-.app-shell{padding:10px}
-.app-shell>.toolbar{height:52px;padding:0 3px;gap:10px}
-.toolbar-brand{font-family:'Arial Black','sans-serif-black',sans-serif;font-size:22px;font-weight:900;font-synthesis:weight;-webkit-text-stroke:.25px currentColor}
-.toolbar-actions{gap:6px}
-.app-shell .pad-deck{gap:8px}
-.app-shell .pads{padding:8px;gap:8px}
-.app-shell .pad-move{font-size:12px}
-}
 @media(max-width:767px){
 .modal-panel.service-detail-modal{height:calc(100dvh - 24px)!important}
 }
-@media(max-height:560px){
-.app-shell{padding:8px}
-.app-shell .pads{padding:6px;gap:7px}
-}
 /* 알림, 툴팁, 필드 오류: 레이아웃을 밀지 않고 포털 위에 겹쳐 그린다. 모달(1000번대)보다 위에 둔다. */
 /* 엔진 연결 끊김: 패드가 비활성인 이유를 툴바에서 알린다. */
-.app-shell .engine-status.offline{display:flex;align-items:center;gap:8px;min-width:0;padding:4px 4px 4px 10px;border:1px solid #d7c19f;border-radius:4px;background:#f6ecd9;color:#7a5a2e;font-size:12px}
-.app-shell .engine-status.offline>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.app-shell .engine-status.offline i{width:7px;height:7px;flex-shrink:0;background:#c08a3e}
-.app-shell .engine-status.offline .secondary{min-height:var(--control-h-sm);padding:0 10px;font-size:12px;flex-shrink:0}
 /* 패드 이동: 놓을 수 있는 빈 패드를 미리 보여 주고, 끄는 패드는 이름표로 따라온다. */
-.app-shell .pad.empty.drop-ready{border-style:dashed;border-color:#93a68f}
-.pad-drag-ghost{display:flex;align-items:center;height:100%;padding:0 10px;border:1px solid #93a68f;border-left:3px solid var(--pad-color);border-radius:4px;background:#fbfaf3;color:#3a4535;font-size:14px;font-weight:600;box-shadow:0 10px 24px #34442b33;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:grabbing}
-.app-shell .pad-move:focus-visible{outline:2px solid #658472;outline-offset:0}
-.app-shell .pad-wrap>.pad-error-badge{position:absolute;left:8px;right:8px;bottom:28px;z-index:2;width:auto;margin:0;font:inherit;font-size:10px;line-height:1.5}
-.pad-menu button:disabled{opacity:.6}
-.pad-menu .menu-hint{margin-left:auto;padding-left:10px;font-size:11px;color:#5d6656}
 /* 같은 행의 컨트롤은 한 높이를 쓴다. */
 .log-panel .log-toolbar .search-nav button{width:var(--control-h-sm);height:var(--control-h-sm);min-height:var(--control-h-sm)!important}
 .log-search-input-wrap .clear-btn{width:24px;height:24px;min-height:24px!important}
 /* 읽어야 하는 보조 텍스트와 경계를 밝은 배경에서도 구분되게 한다. */
-.scene-chip-ratio{opacity:1;color:#4f5c48}
 .log-line-num{opacity:.7}
 .log-placeholder{opacity:1;color:#5c6654}
 /* 서비스 상세 지표: 지표 전환은 보이는 버튼으로, 그래프 값은 hover 툴팁으로 확인한다. */
@@ -137,22 +64,10 @@
 @media(forced-colors:active){
 .service-detail-scroll-track{opacity:1}
 }
-@media(max-width:650px){
-.app-shell .engine-status.offline>span{display:none}
-}
 /* 좁은 패드에서는 상태 글자가 줄어들고 배지는 잘리지 않는다. */
-.app-shell .pad-footer .pad-state{flex-shrink:1}
-.app-shell .pad-footer .pad-state>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .log-head{gap:8px}
 .log-head .panel-title h2,.filter-btn{white-space:nowrap}
 @media(max-width:650px){
-.app-shell .pad-footer{flex-wrap:wrap-reverse;row-gap:3px}
-.app-shell .pad-footer .pad-state{flex-shrink:0}
-.app-shell .pad-indicators{margin-left:auto}
-.app-shell .pad-wrap>.pad-error-badge{bottom:44px}
-.app-shell .pad-badge{width:14px;height:14px;font-size:9px}
-.app-shell .pad-badge svg{width:10px;height:10px}
-.app-shell .pad-indicators{gap:3px}
 .log-head{flex-wrap:wrap}
 .log-toolbar{width:100%;margin-left:0}
 .log-search-input-wrap{flex:1;min-width:0}
