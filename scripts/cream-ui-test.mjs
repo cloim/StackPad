@@ -36,9 +36,9 @@ try {
   await expect(page.getByRole('heading',{name:'StackPad',exact:true})).toBeVisible();
   await expect(page.getByRole('heading',{name:'StackPad',exact:true})).toHaveCSS('font-weight','700');
   await expect(page.locator('[data-window]')).toHaveCount(6);
-  await expect(page.locator('[data-pad-status=running] [data-pad-state] i').first()).toHaveCSS('background-color','rgb(53, 217, 130)');
-  expect(await page.locator('[data-pad-status=running] [data-pad-state] i').first().evaluate(el=>getComputedStyle(el).boxShadow)).toContain('9px');
-  await expect(page.locator('[data-pad-status=stopped] [data-pad-state] i').first()).toHaveCSS('background-color','rgb(168, 174, 158)');
+  await expect(page.locator('[data-pad-status=running] [data-pad-state]').first()).toHaveCSS('background-color','rgb(53, 217, 130)');
+  await expect(page.locator('[data-pad-state] i')).toHaveCount(0);
+  await expect(page.locator('[data-pad-status=stopped] [data-pad-state]').first()).toHaveCSS('background-color','rgb(168, 174, 158)');
   await expect(page.locator('[data-window="five_hour"] [data-usage-segment]')).toHaveCount(15);
   await expect(page.locator('[data-window="weekly"] [data-usage-segment]')).toHaveCount(21);
   await expect(page.locator('[data-window]').first()).toHaveAttribute('aria-valuenow', '42');
