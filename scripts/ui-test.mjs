@@ -55,7 +55,7 @@ try {
   await request(`/services/${ids[1]}/start`);
   await expect(page.locator('[data-pad-status=running]')).toHaveCount(2, { timeout: 15000 });
   await page.getByRole('button', { name: '테스트 API 메뉴', exact: true }).click(); await page.getByRole('menuitem', { name: '상세' }).click();
-  await expect(page.locator('.log-panel pre')).toContainText('Serving HTTP', { timeout: 10000 });
+  await expect(page.locator('[data-log-container]')).toContainText('Serving HTTP', { timeout: 10000 });
   await page.keyboard.press('Escape');
   await page.screenshot({ path: path.join(screenshots, 'deck-desktop.png'), fullPage: true });
   await page.getByRole('button', { name: '환경 설정', exact: true }).click();

@@ -99,6 +99,7 @@
   .secondary:hover { background: var(--color-hover); }
   .danger { background: var(--color-danger); border-color: #aa636a; color: #fff9f3; }
   .optional { color: #5c6654; font-size: 11px; line-height: 1.7; }
+  span.optional { margin-left: 3px; }
   .wide { width: 100%; }
   .spin { animation: spin 1s linear infinite; }
   .small-btn { height: 32px; min-height: 32px; padding: 0 10px; font-size: 12px; }

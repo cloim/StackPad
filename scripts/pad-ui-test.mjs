@@ -53,9 +53,9 @@ try {
   const detail = page.getByRole('dialog');
   await expect(detail.getByRole('tab')).toHaveText(['API', 'Web']);
   await expect(detail.locator('dt')).toHaveText(['타입', '러닝타임', '메모리', 'PID', '포트']);
-  await expect(detail.locator('.log-container')).toContainText('api 로그');
+  await expect(detail.locator('[data-log-container]')).toContainText('api 로그');
   await detail.getByRole('tab', { name: 'Web', exact: true }).click();
-  await expect(detail.locator('.log-container')).toContainText('web 로그');
+  await expect(detail.locator('[data-log-container]')).toContainText('web 로그');
   await detail.getByRole('button', { name: 'Web 재시작' }).click();
   expect(restarted).toBe('web');
   await expect(detail.locator('.detail-name,.log-live,.delete-button')).toHaveCount(0);

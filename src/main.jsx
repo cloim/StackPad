@@ -18,10 +18,8 @@ import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, useDraggable, u
 import { SignIn } from './components/SignIn.jsx';
 import { appVersion, connectWidget, disconnectWidget, getAlertStatus, isNative, loadServer, nativeHeaders, serverOrigin, setAlertStatus } from './native.js';
 import { PairPhone } from './components/PairPhone.jsx';
-import './components/Modal/modal.css';
 import './theme.css';
-import './styles.css';
-import './cream.css';
+import './components/Modal/modal.css';
 import { LOCALES, locale, setLocale, t } from './i18n.js';
 import { connectEvents } from './events.js';
 
@@ -156,12 +154,12 @@ function DetailScroll({ children, role, id, ariaLabel, ariaLabelledBy }) {
     if (travel > 0 && maxScroll > 0) element.scrollTop = drag.startScrollTop + (event.clientY - drag.startY) * maxScroll / travel;
   };
 
-  return <div className="service-detail-scroll-shell">
-    <div ref={scrollRef} className="service-detail-scroll-content" role={role} id={id} aria-label={ariaLabel} aria-labelledby={ariaLabelledBy} tabIndex={0} onScroll={onScroll}>
-      <div className="service-detail-scroll-inner">{children}</div>
+  return <div className="group relative -mr-3.5 min-h-0 flex-1 overflow-hidden">
+    <div ref={scrollRef} className="absolute inset-0 overflow-auto overscroll-contain pr-[22px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role={role} id={id} aria-label={ariaLabel} aria-labelledby={ariaLabelledBy} tabIndex={0} onScroll={onScroll}>
+      <div className="min-h-full">{children}</div>
     </div>
-    {thumb && <div ref={trackRef} className={`service-detail-scroll-track ${scrolling ? 'active' : ''}`} aria-hidden="true" onPointerDown={jumpToTrack}>
-      <span className="service-detail-scroll-thumb" style={{ height: `${thumb.height}px`, transform: `translateY(${thumb.top}px)` }} onPointerDown={startThumbDrag} onPointerMove={moveThumbDrag} onPointerUp={() => { dragRef.current = null; }} onPointerCancel={() => { dragRef.current = null; }} />
+    {thumb && <div ref={trackRef} className={`absolute top-0.5 right-px bottom-0.5 z-[2] w-3 cursor-pointer touch-none rounded-lg border border-[#bec5b2] bg-[#e0e2d8] transition-opacity duration-200 group-focus-within:opacity-100 group-hover:opacity-100 forced-colors:opacity-100 ${scrolling ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true" onPointerDown={jumpToTrack}>
+      <span className="absolute inset-x-0.5 top-0 min-h-8 cursor-grab touch-none rounded-md bg-[#7d896f] hover:bg-[#657353] active:cursor-grabbing active:bg-[#566348]" style={{ height: `${thumb.height}px`, transform: `translateY(${thumb.top}px)` }} onPointerDown={startThumbDrag} onPointerMove={moveThumbDrag} onPointerUp={() => { dragRef.current = null; }} onPointerCancel={() => { dragRef.current = null; }} />
     </div>}
   </div>;
 }
@@ -583,10 +581,10 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
         <button role="menuitem" onClick={() => { setSceneMenu(null); onOpenSettings?.('scenes'); }}><Gear size={14} />{t('흐름 설정')}</button>
       </div>
     </div>}
-    <Modal isOpen={!!current} onClose={() => { setSelected(null); setTargetError(null); }} title={current?.name || t('서비스 상세')} storageKey="service-detail" size="lg" className="service-detail-modal">{current && <>
+    <Modal isOpen={!!current} onClose={() => { setSelected(null); setTargetError(null); }} title={current?.name || t('서비스 상세')} storageKey="service-detail" size="lg" className="modal-tall [&_.modal-body]:flex [&_.modal-body]:flex-col [&_.modal-body]:gap-3 [&_.modal-body]:overflow-hidden">{current && <>
       {detailServices.length > 1 && <Tabs label={t('등록된 서비스')} tabs={detailServices.map(service => ({ id: service.id, name: service.name, badge: groupProgress?.[current.id]?.current_id === service.id ? t('진행 중') : undefined }))} value={logId} onChange={setComponentId} prefix="service-detail" />}
       {logService && <DetailScroll role={detailServices.length > 1 ? 'tabpanel' : 'region'} id="service-detail-panel" ariaLabel={detailServices.length > 1 ? undefined : t('서비스 상세')} ariaLabelledBy={detailServices.length > 1 ? `service-detail-tab-${logId}` : undefined}>
-        <dl>
+        <dl className="[&_dd]:text-[#3a4535] [&_dt]:text-[#6b7564]">
           <div><dt>{t('타입')}</dt><dd>{logService.kind === 'docker' ? t('도커') : logService.kind === 'remote' ? t('원격 서버') : t('로컬 프로세스')}</dd></div>
           <div><dt>{t('러닝타임')}</dt><dd>{logService.active ? timeLabel(logService.uptime || 0) : labels[logService.status]}</dd></div>
           <div><dt>{t('메모리')}</dt><dd>{logService.memory == null ? t('확인 정보 없음') : `${logService.memory} MB`}</dd></div>
@@ -601,29 +599,29 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
           const currentVal = list.length > 0 ? list[list.length - 1] : 0;
           const maxVal = list.length > 0 ? Math.max(...list) : 0;
           return (
-            <div className="lcd">
-              <div className="lcd-head">
-                <div className="kind-switch lcd-metric" role="radiogroup" aria-label={t('사용량 지표')}>
+            <div className="mt-[17px] rounded-[5px] border border-[#bbc7ad] bg-[#dfe6d6] p-3.5 text-[#4e6842] shadow-[inset_0_3px_8px_#0006,0_1px_0_#4c514e] max-tablet:mt-3.5 max-tablet:p-2.5">
+              <div className="flex items-center justify-between gap-[5px] font-[Consolas,monospace] text-[9px] tracking-[.7px] text-[#6e8063] max-tablet:text-[7px] [&>span]:truncate">
+                <div className="kind-switch gap-0.5 p-0.5 [&_button]:px-2.5 [&_button]:py-[3px] [&_button]:text-[11px] [&_button]:tracking-normal" role="radiogroup" aria-label={t('사용량 지표')}>
                   <button type="button" role="radio" aria-checked={isCpu} onClick={() => setHistoryMetric('cpu')}>CPU</button>
                   <button type="button" role="radio" aria-checked={!isCpu} onClick={() => setHistoryMetric('memory')}>{t('메모리')}</button>
                 </div>
                 <span>{t('최대: {0}', isCpu ? `${maxVal}%` : `${maxVal} MB`)}</span>
               </div>
-              <div className="lcd-value">
+              <div data-lcd-value className="mt-3.5 mb-[13px] flex items-baseline gap-2.5 font-[Consolas,monospace] text-[40px] text-[#52724c] [text-shadow:0_0_10px_#a9d6bb20] max-tablet:my-[11px] max-tablet:gap-1.5 max-tablet:text-[29px] [&>span]:font-['Malgun_Gothic',sans-serif] [&>span]:text-[10px] [&>span]:text-[#90ae9c] max-tablet:[&>span]:text-[8px]">
                 {currentVal}
                 <span>{isCpu ? '%' : 'MB'}</span>
               </div>
               <HistoryChart values={list} interval={history.interval || 10} metric={historyMetric} />
-              <div className="lcd-bottom">
+              <div className="flex justify-between border-t border-[#35473d] pt-2.5 font-mono text-[9px] text-[#6e8063] max-tablet:gap-1 max-tablet:text-[7px]">
                 <span>{t('{0}분 전', Math.round(((list.length - 1) * (history.interval || 10)) / 60))}</span>
                 <span>{t('지금')}</span>
               </div>
             </div>
           );
         })()}
-        {(logService.error_line || logService.error || logService.message) && <p className="detail-message">{logService.error_line || logService.error || logService.message}</p>}
-        {logService.last?.output && <pre className="command-output" aria-label={t('마지막 명령 출력')}>{logService.last.output}</pre>}
-        <div className="detail-buttons"><button className="secondary" disabled={!connected || busy.has(current.id) || busy.has(logId) || current.busy || logService.busy} onClick={() => restart(logService)} aria-label={t('{0} 재시작', logService.name)}><RefreshCw size={13} />{t('재시작')}</button></div>
+        {(logService.error_line || logService.error || logService.message) && <p className="mt-[15px] text-[10px] leading-[1.7] text-[#5c6654] wrap-anywhere max-tablet:text-[9px]">{logService.error_line || logService.error || logService.message}</p>}
+        {logService.last?.output && <pre className="mt-3 h-auto max-h-[120px] rounded-md border border-[#bbc7ad] bg-[#dfe6d6] text-[10px] whitespace-pre-wrap text-[#4e6842] wrap-anywhere" aria-label={t('마지막 명령 출력')}>{logService.last.output}</pre>}
+        <div className="mt-[17px] flex gap-2 max-tablet:mt-[13px]"><button className="secondary min-h-8 flex-1 p-1.5 text-[10px] max-tablet:min-h-9 max-tablet:text-[12px]" disabled={!connected || busy.has(current.id) || busy.has(logId) || current.busy || logService.busy} onClick={() => restart(logService)} aria-label={t('{0} 재시작', logService.name)}><RefreshCw size={13} />{t('재시작')}</button></div>
         <LogViewer rawLogs={logs} serviceName={logService?.name} loading={logsLoading} targetErrorLine={targetError} />
       </DetailScroll>}
     </>}</Modal>

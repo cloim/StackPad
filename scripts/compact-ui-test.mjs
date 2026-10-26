@@ -82,7 +82,7 @@ try {
   await page.screenshot({ path: '.jobs/compact-mobile.png' });
   await page.getByRole('button', { name: 'Blog 백엔드 메뉴', exact: true }).click(); await page.getByRole('menuitem', { name: '상세' }).click();
   await expect(page.getByRole('dialog', { name: 'Blog 백엔드', exact: true })).toBeVisible();
-  await expect(page.locator('.log-container')).toContainText('서비스 실행 로그');
+  await expect(page.locator('[data-log-container]')).toContainText('서비스 실행 로그');
   await page.screenshot({ path: '.jobs/compact-detail-mobile.png' });
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '패드 6 서비스 등록', exact: true }).click();

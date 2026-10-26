@@ -71,7 +71,7 @@ try {
   const dialog = page.getByRole('dialog');
   await expect(dialog).toContainText('호스트');
   await expect(dialog).toContainText('시작 성공');
-  await expect(dialog.locator('.log-panel pre')).toContainText('line 2 한글', { timeout: 10000 });
+  await expect(dialog.locator('[data-log-container]')).toContainText('line 2 한글', { timeout: 10000 });
   await expect(dialog).toContainText('실행 로그');
   await page.screenshot({ path: path.join(shots, 'remote-detail-pc.png') });
   await page.keyboard.press('Escape');

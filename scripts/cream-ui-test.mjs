@@ -73,7 +73,7 @@ try {
       await page.getByRole('button',{name:'API 서버 메뉴',exact:true}).click();
       await page.getByRole('menuitem',{name:'상세',exact:true}).click();
       await expect(page.getByRole('dialog')).toHaveCSS('background-color','rgb(239, 238, 229)');
-      await expect(page.getByRole('dialog').locator('.log-container')).toContainText('서비스 실행 로그');
+      await expect(page.getByRole('dialog').locator('[data-log-container]')).toContainText('서비스 실행 로그');
       await page.keyboard.press('Escape');
       await page.getByRole('button',{name:'환경 설정',exact:true}).click();
       await expect(page.getByRole('dialog')).toHaveCSS('background-color','rgb(239, 238, 229)');

@@ -104,7 +104,7 @@ try {
   // 2. 패드 상세 열어서 로그 요청 시작 확인
   await page.getByRole('button', { name: 'SSE 테스트 서비스 메뉴', exact: true }).click();
   await page.getByRole('menuitem', { name: '상세' }).click();
-  await expect(page.locator('.log-container')).toContainText('Log entry 1');
+  await expect(page.locator('[data-log-container]')).toContainText('Log entry 1');
   const initialLogCount = logRequests;
   expect(initialLogCount).toBeGreaterThanOrEqual(1);
 

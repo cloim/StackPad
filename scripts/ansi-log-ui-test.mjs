@@ -36,7 +36,7 @@ await page.route('http://stackpad.test/**', async route => {
 try {
   await page.goto('http://stackpad.test/');
   await page.getByRole('button', { name: 'ANSI 테스트 메뉴', exact: true }).click(); await page.getByRole('menuitem', { name: '상세' }).click();
-  const logs = page.locator('.log-container');
+  const logs = page.locator('[data-log-container]');
   await expect(logs).toContainText('plain 한국어');
   await expect(logs).toContainText('<script>window.logInjected=true</script>');
   const rendered = await logs.textContent();
@@ -51,7 +51,7 @@ try {
   expect(await logs.getByText('PALETTE', { exact: true }).evaluate(el => getComputedStyle(el).color)).toBe('rgb(255, 0, 0)');
   expect(await logs.getByText('RGB', { exact: true }).evaluate(el => getComputedStyle(el).color)).toBe('rgb(20, 180, 220)');
   expect(await page.evaluate(() => window.logInjected)).toBeUndefined();
-  expect(await logs.locator('.log-line-text').first().evaluate(el => getComputedStyle(el).whiteSpace)).toBe('pre');
+  expect(await logs.locator('[data-log-text]').first().evaluate(el => getComputedStyle(el).whiteSpace)).toBe('pre');
   await fs.mkdir('docs/reviews/screenshots', { recursive: true });
   await page.screenshot({ path: 'docs/reviews/screenshots/ansi-logs-desktop.png' });
   await page.setViewportSize({ width: 390, height: 844 });

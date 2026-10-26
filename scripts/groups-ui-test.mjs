@@ -72,9 +72,9 @@ try {
   await page.getByRole('button', { name: 'Shop 메뉴', exact: true }).click(); await page.getByRole('menuitem', { name: '상세' }).click();
   const detail = page.getByRole('dialog', { name: 'Shop', exact: true });
   await expect(detail.getByRole('tab')).toHaveText(['Shop 백엔드', 'Shop 프론트엔드']);
-  await expect(detail.locator('.log-container')).toContainText('Shop 백엔드 LOG');
+  await expect(detail.locator('[data-log-container]')).toContainText('Shop 백엔드 LOG');
   await detail.getByRole('tab', { name: 'Shop 프론트엔드', exact: true }).click();
-  await expect(detail.locator('.log-container')).toContainText('Shop 프론트엔드 LOG');
+  await expect(detail.locator('[data-log-container]')).toContainText('Shop 프론트엔드 LOG');
   await detail.getByRole('tab', { name: 'Shop 백엔드', exact: true }).click();
   await detail.getByRole('button', { name: 'Shop 백엔드 재시작', exact: true }).click();
   await expect.poll(() => actions.includes('restart')).toBe(true);

@@ -159,25 +159,26 @@ export function LogViewer({ rawLogs, serviceName, loading, targetErrorLine }) {
     const parts = plain.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
     return parts.map((part, i) => {
       if (part.toLowerCase() === query.toLowerCase()) {
-        return <mark key={i} className="log-search-match">{part}</mark>;
+        return <mark key={i} className="rounded-[2px] bg-[#facc15] px-0.5 text-black">{part}</mark>;
       }
       return <span key={i}>{part}</span>;
     });
   }
 
   return (
-    <section className="log-panel">
-      <div className="log-head">
-        <div className="panel-title">
+    <section className="mt-[22px] w-full overflow-hidden rounded-lg border border-[#383e41]">
+      <div className="flex items-center justify-between gap-2 border-b border-[#c1c9b5] bg-[#e3e7db] px-[19px] py-3.5 text-[#516445] max-tablet:flex-wrap max-tablet:p-3">
+        <div className="flex items-center gap-2 text-[#5d6a56] max-tablet:gap-1.5 max-tablet:[&>svg]:w-3.5">
           <Terminal size={16} />
-          <h2>{t('실행 로그')}</h2>
+          <h2 className="text-[12px] font-semibold whitespace-nowrap text-[#3f4d3b]">{t('실행 로그')}</h2>
         </div>
 
         {/* Search and Error Filter Header */}
-        <div className="log-toolbar">
-          <div className="log-search-input-wrap">
+        <div className="ml-auto flex items-center gap-2 max-tablet:ml-0 max-tablet:w-full">
+          <div className="relative flex items-center max-tablet:min-w-0 max-tablet:flex-1">
             <input
               type="text"
+              className="h-8! min-h-8 w-[170px] rounded border-[#bfc4b3] bg-[#f8f7f0] py-0.5 pr-7 pl-2 text-[11px] text-[#3a4535] placeholder:text-[#868f7e] focus:border-[#668a73] max-tablet:w-full"
               aria-label={t('로그 검색')}
               placeholder={t('로그 검색')}
               value={search}
@@ -186,7 +187,7 @@ export function LogViewer({ rawLogs, serviceName, loading, targetErrorLine }) {
             {search && (
               <button
                 type="button"
-                className="tool-button clear-btn"
+                className="tool-button absolute right-1 size-6 min-h-6 p-0.5"
                 aria-label={t('검색어 지우기')}
                 onClick={() => setSearch('')}
               >
@@ -196,13 +197,13 @@ export function LogViewer({ rawLogs, serviceName, loading, targetErrorLine }) {
           </div>
 
           {search && (
-            <div className="search-nav">
-              <span className="search-count">
+            <div className="flex items-center gap-0.5 text-[11px] opacity-80">
+              <span className="mr-1 tabular-nums">
                 {matches.length > 0 ? `${activeMatch + 1}/${matches.length}` : t('0개')}
               </span>
               <button
                 type="button"
-                className="tool-button"
+                className="tool-button size-8 min-h-8 p-0.5"
                 disabled={!matches.length}
                 onClick={prevMatch}
                 aria-label={t('이전 검색 결과')}
@@ -211,7 +212,7 @@ export function LogViewer({ rawLogs, serviceName, loading, targetErrorLine }) {
               </button>
               <button
                 type="button"
-                className="tool-button"
+                className="tool-button size-8 min-h-8 p-0.5"
                 disabled={!matches.length}
                 onClick={nextMatch}
                 aria-label={t('다음 검색 결과')}
@@ -223,7 +224,7 @@ export function LogViewer({ rawLogs, serviceName, loading, targetErrorLine }) {
 
           <Tooltip content={t('오류가 있는 줄만 보기')}><button
             type="button"
-            className={`filter-btn ${onlyErrors ? 'active' : ''}`}
+            className={`inline-flex h-8 min-h-8 cursor-pointer items-center gap-1 rounded border px-2 py-0.5 text-[11px] whitespace-nowrap ${onlyErrors ? 'border-[#c46a6a] bg-[#f2dcdc] font-semibold text-[#9a3c45]' : 'border-[#bfc4b3] bg-[#f8f7f0] text-[#4d5746]'}`}
             onClick={() => setOnlyErrors(!onlyErrors)}
             aria-pressed={onlyErrors}
           >
@@ -235,21 +236,21 @@ export function LogViewer({ rawLogs, serviceName, loading, targetErrorLine }) {
 
       <div
         ref={containerRef}
-        className="log-container"
+        data-log-container className="h-[380px] overflow-auto bg-[#e0e5d8] py-1.5 font-[ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace] text-[12px] leading-5 text-[#46583b] outline-none"
         onScroll={handleScroll}
         tabIndex={0}
         role="region"
         aria-label={t('로그 본문')}
       >
         {loading ? (
-          <p className="log-placeholder">{t('로그를 불러오는 중…')}</p>
+          <p className="m-0 p-5 text-center text-[12px] text-[#5c6654]">{t('로그를 불러오는 중…')}</p>
         ) : !serviceName ? (
-          <p className="log-placeholder">{t('서비스를 선택하면 실행 로그가 여기에 표시됩니다.')}</p>
+          <p className="m-0 p-5 text-center text-[12px] text-[#5c6654]">{t('서비스를 선택하면 실행 로그가 여기에 표시됩니다.')}</p>
         ) : !lines.length ? (
-          <p className="log-placeholder">{t('아직 기록된 로그가 없습니다. 서비스를 실행하면 여기에 표시됩니다.')}</p>
+          <p className="m-0 p-5 text-center text-[12px] text-[#5c6654]">{t('아직 기록된 로그가 없습니다. 서비스를 실행하면 여기에 표시됩니다.')}</p>
         ) : (
           <div
-            className="log-scroll-content"
+            className="relative"
             style={{ paddingTop: `${paddingTop}px`, paddingBottom: `${paddingBottom}px` }}
           >
             {visibleLines.map((item, relIdx) => {
@@ -258,11 +259,11 @@ export function LogViewer({ rawLogs, serviceName, loading, targetErrorLine }) {
               return (
                 <div
                   key={item.id}
-                  className={`log-line ${item.isErr ? 'error-line' : ''} ${isCurrentMatch ? 'current-match' : ''}`}
+                  className={`flex w-max min-w-full items-center px-2.5 whitespace-pre hover:bg-[#cfdbc2] ${item.isErr ? 'border-l-[3px] border-[#ef4444] bg-[rgba(239,68,68,0.08)]' : ''} ${isCurrentMatch ? 'bg-[rgba(249,115,22,0.2)]' : ''}`}
                   style={{ height: `${LINE_HEIGHT}px` }}
                 >
-                  <span className="log-line-num">{item.id + 1}</span>
-                  <span className="log-line-text">
+                  <span className="mr-3 w-9 shrink-0 text-right text-[10px] tabular-nums opacity-70 select-none">{item.id + 1}</span>
+                  <span data-log-text className="min-w-0 flex-none overflow-visible">
                     {highlightSearch(item.plain, item.raw)}
                   </span>
                 </div>

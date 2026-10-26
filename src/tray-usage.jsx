@@ -3,9 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { UsageProviders } from './components/UsageBar.jsx';
 import { t } from './i18n.js';
 import './theme.css';
-import './styles.css';
 import './tray-usage.css';
-import './cream.css';
 
 document.title = 'StackPad';
 

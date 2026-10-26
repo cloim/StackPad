@@ -19,7 +19,7 @@ export function HistoryChart({ values, interval = 10, metric }) {
   const unit = metric === 'cpu' ? '%' : 'MB';
   const label = metric === 'cpu' ? t('CPU 사용률') : t('메모리 사용량');
   const points = values.map((y, index) => ({ x: index, y, seconds: (values.length - 1 - index) * interval }));
-  return <div className="history-chart" role="img" aria-label={t('{0} 최근 {1}개 기록, 현재 {2}{3}', label, values.length, values.at(-1) ?? 0, unit)}>
+  return <div data-history-chart className="mt-1.5 mb-2.5 h-16" role="img" aria-label={t('{0} 최근 {1}개 기록, 현재 {2}{3}', label, values.length, values.at(-1) ?? 0, unit)}>
     <ResponsiveLine
       data={[{ id: metric, data: points }]}
       margin={{ top: 6, right: 4, bottom: 4, left: 4 }}
@@ -42,9 +42,9 @@ export function HistoryChart({ values, interval = 10, metric }) {
       theme={theme}
       sliceTooltip={({ slice }) => {
         const point = slice.points[0].data;
-        return <div className="chart-tooltip">
-          <span className="chart-tooltip-label">{ago(point.seconds)}</span>
-          <span><span className="chart-tooltip-key">{label}</span><strong>{point.y}{unit}</strong></span>
+        return <div data-chart-tooltip className="flex flex-col gap-0.5 rounded-md border border-line bg-raised px-2.5 py-1.5 text-[12px] leading-[1.4] whitespace-nowrap text-ink-strong shadow-[0_6px_18px_#34442b24]">
+          <span className="text-[11px] text-muted">{ago(point.seconds)}</span>
+          <span><span className="mr-2 text-muted">{label}</span><strong>{point.y}{unit}</strong></span>
         </div>;
       }}
     />

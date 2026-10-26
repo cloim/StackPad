@@ -1,3 +1,5 @@
+/* 공용 Modal 표준 스타일. Tailwind components 레이어에 두어 화면이 유틸리티로 덮어쓸 수 있게 한다. */
+@layer components {
 /* 오버레이가 중앙 정렬을 담당한다. 패널의 transform은 이 중앙 위치에 이동량만 얹는 방식이라
    창 크기가 바뀌어도 기준점이 함께 움직인다. z-index는 modalStack이 인라인으로 넣는다. */
 .modal-overlay {
@@ -7,7 +9,7 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: #090c0da8;
+  background: #424a394d;
   backdrop-filter: blur(4px);
   /* 스택이 인라인 z-index를 넣기 전 첫 프레임을 위한 기본값. 실제 순서는 인라인 값이 정한다. */
   z-index: 1000;
@@ -20,10 +22,10 @@
   max-height: calc(100vh - 48px);
   flex-direction: column;
   border-radius: 12px;
-  background: #282c2e;
-  color: #d9dfdf;
-  border: 1px solid #4d5458;
-  box-shadow: 0 22px 70px #0008;
+  background: #efeee5;
+  color: #444740;
+  border: 1px solid #bfc4b3;
+  box-shadow: 0 22px 65px #34442b33;
   outline: none;
   /* 드래그로 옮긴 뒤에도 오버레이 안에서 크기가 다시 계산되지 않도록 축소를 막는다. */
   flex: none;
@@ -43,7 +45,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 16px 16px 14px 20px;
-  border-bottom: 1px solid #3c4346;
+  border-bottom: 1px solid #c7cbbd;
   user-select: none;
 }
 
@@ -57,14 +59,14 @@
 }
 
 .modal-header.is-draggable:focus-visible {
-  outline: 2px solid #7580ff;
+  outline: 2px solid #658472;
   outline-offset: -2px;
 }
 
 .modal-title {
   min-width: 0;
   overflow: hidden;
-  color: #e4e8e7;
+  color: #444e40;
   font-size: 15px;
   font-weight: 900;
   text-overflow: ellipsis;
@@ -81,13 +83,13 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: #a9b5b7;
+  color: #7a8672;
   cursor: pointer;
 }
 
 .modal-close:hover {
-  background: transparent;
-  color: #f1f5f4;
+  background: #dce2d2;
+  color: #3f563c;
 }
 
 /* 본문만 스크롤한다. 헤더와 푸터는 항상 보여야 손잡이와 액션을 잃지 않는다. */
@@ -96,7 +98,7 @@
   min-height: 0;
   padding: 18px 20px;
   overflow-y: auto;
-  color: #d9dfdf;
+  color: #4d5746;
   font-size: 13px;
 }
 
@@ -107,7 +109,7 @@
   justify-content: flex-end;
   gap: 8px;
   padding: 14px 20px;
-  border-top: 1px solid #3c4346;
+  border-top: 1px solid #c7cbbd;
 }
 
 /* 드래그와 리사이즈가 진행되는 동안 문서 전체의 텍스트 선택과 커서를 고정한다. */
@@ -144,5 +146,17 @@ body.modal-gesture-active {
     max-width: 100%;
     height: auto !important;
     transform: none !important;
+  }
+}
+
+  /* 내용이 길어도 창 높이를 고정하고 본문 안에서만 스크롤하는 변형. 좁은 화면의 height:auto보다 우선한다. */
+  .modal-panel.modal-tall { height: min(720px, calc(100dvh - 48px)); }
+  @media (max-width: 767px) {
+    .modal-panel.modal-tall { height: calc(100dvh - 24px) !important; }
+  }
+
+  /* 휴대폰 폭에서는 본문 여백을 고르게 한다. */
+  @media (max-width: 650px) {
+    .modal-body { padding: 18px; }
   }
 }
