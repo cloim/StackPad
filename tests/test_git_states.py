@@ -2,6 +2,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import time
 from pathlib import Path
 from unittest.mock import patch
 
@@ -15,6 +16,7 @@ class GitStateTests(unittest.TestCase):
         self.addCleanup(self.folder.cleanup)
         self.engine = Engine(self.folder.name)
         self.addCleanup(self.engine.closed.set)
+        self.addCleanup(self.engine.git_pool.shutdown, wait=False, cancel_futures=True)
         self.repo = Path(self.folder.name) / 'repo'
         self.repo.mkdir()
         self.git('init')
@@ -27,6 +29,13 @@ class GitStateTests(unittest.TestCase):
     def state(self):
         self.engine.last_git_check = 0
         self.engine.refresh_git_states()
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            self.engine.refresh_git_states()
+            with self.engine.lock:
+                if str(self.repo) in self.engine.git_states and str(self.repo) not in self.engine.git_futures:
+                    break
+            time.sleep(0.01)
         return self.engine.snapshot()[0]['git_state']
 
     def test_untracked_staged_modified_and_clean(self):
@@ -58,7 +67,25 @@ class GitStateTests(unittest.TestCase):
         with patch('engine.subprocess.run', wraps=subprocess.run) as run:
             self.engine.refresh_git_states()
             self.engine.refresh_git_states()
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                self.engine.refresh_git_states()
+                with self.engine.lock:
+                    if str(self.repo) in self.engine.git_states and str(self.repo) not in self.engine.git_futures:
+                        break
+                time.sleep(0.01)
             self.assertEqual(run.call_count, 1)
+
+    def test_slow_git_query_does_not_block_monitor_caller(self):
+        def slow_query(*args, **kwargs):
+            time.sleep(0.2)
+            return subprocess.CompletedProcess(args[0], 0, stdout=b'', stderr=b'')
+
+        with patch('engine.subprocess.run', side_effect=slow_query):
+            started = time.monotonic()
+            self.engine.refresh_git_states()
+            self.assertLess(time.monotonic() - started, 0.1)
+            self.assertEqual(self.state(), 'clean')
 
 
 if __name__ == '__main__':

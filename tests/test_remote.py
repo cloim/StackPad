@@ -149,6 +149,65 @@ class SshRunnerTests(RemoteTestCase):
 
 
 class RemoteLifecycleTests(RemoteTestCase):
+    def test_retired_host_limit_is_pruned_after_service_edit_and_active_ssh(self):
+        service_id = self.add_remote(host='app')
+        entered, release = threading.Event(), threading.Event()
+
+        def slow_run(host, command, timeout):
+            entered.set()
+            release.wait(2)
+            return {'code': 0, 'output': '', 'error': ''}
+
+        with patch.object(remote, 'run_ssh', slow_run):
+            worker = threading.Thread(target=self.engine.ssh, args=('app', 'true', 'test'))
+            worker.start()
+            self.assertTrue(entered.wait(1))
+            self.engine.add(ServiceInput(name='Local', command='echo hi', cwd=self.folder.name, slot=0), service_id)
+            self.assertIn('app', self.engine.host_limits)
+            release.set()
+            worker.join(2)
+        self.assertFalse(worker.is_alive())
+        self.assertNotIn('app', self.engine.host_limits)
+
+    def test_completed_probe_does_not_recreate_deleted_service_cache(self):
+        service_id = self.add_remote()
+        self.engine.remote_states[service_id] = {'status': 'checking', 'in_flight': True, 'generation': 0}
+        entered, release = threading.Event(), threading.Event()
+
+        def slow_ssh(host, command, action):
+            entered.set()
+            release.wait(2)
+            return {'code': 0, 'output': '', 'error': ''}
+
+        with patch.object(self.engine, 'ssh', slow_ssh):
+            worker = threading.Thread(target=self.engine.probe, args=(service_id,))
+            worker.start()
+            self.assertTrue(entered.wait(1))
+            self.engine.delete_pad(service_id)
+            release.set()
+            worker.join(2)
+        self.assertFalse(worker.is_alive())
+        self.assertNotIn(service_id, self.engine.remote_states)
+
+    def test_completed_log_request_does_not_recreate_deleted_service_cache(self):
+        service_id = self.add_remote()
+        entered, release = threading.Event(), threading.Event()
+
+        def slow_ssh(host, command, action):
+            entered.set()
+            release.wait(2)
+            return {'code': 0, 'output': 'log', 'error': ''}
+
+        with patch.object(self.engine, 'ssh', slow_ssh):
+            worker = threading.Thread(target=self.engine.remote_tail, args=(service_id,))
+            worker.start()
+            self.assertTrue(entered.wait(1))
+            self.engine.delete_pad(service_id)
+            release.set()
+            worker.join(2)
+        self.assertFalse(worker.is_alive())
+        self.assertNotIn(service_id, self.engine.remote_logs)
+
     def test_start_status_logs_and_stop(self):
         service_id = self.add_remote()
         self.assertEqual(self.snapshot(service_id)['status'], 'checking')

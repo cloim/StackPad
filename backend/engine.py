@@ -1,5 +1,6 @@
 """Owned-process service supervisor. Windows launches are detached through WMI."""
 import base64
+from concurrent.futures import ThreadPoolExecutor
 from collections import deque
 import hashlib
 import json
@@ -193,6 +194,8 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices, SceneManager
         self.externals = {}
         self.git_states = {}
         self.last_git_check = 0
+        self.git_futures = {}
+        self.git_pool = ThreadPoolExecutor(4, thread_name_prefix='git-status')
         self.group_operations = {}
         self.restarts = {}
         self.alerts = deque(maxlen=100)
@@ -739,22 +742,40 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
             self.save()
 
     def refresh_git_states(self):
-        if time.monotonic() - self.last_git_check < 10:
-            return
+        now = time.monotonic()
         with self.lock:
             folders = {s['cwd'] for s in self.config['services'] if s.get('kind', 'local') == 'local'}
-        states = {}
-        for folder in folders:
-            try:
-                status = subprocess.run(
-                    ['git', '--no-optional-locks', '-C', folder, 'status', '--porcelain', '--untracked-files=normal'],
-                    stdin=subprocess.DEVNULL, capture_output=True, timeout=3, creationflags=0x08000000)
-                states[folder] = ('dirty' if status.stdout else 'clean') if status.returncode == 0 else None
-            except (OSError, subprocess.TimeoutExpired):
-                states[folder] = None
-        with self.lock:
-            self.git_states = states
-        self.last_git_check = time.monotonic()
+            for folder, future in list(self.git_futures.items()):
+                if folder not in folders:
+                    if future.cancel():
+                        self.git_futures.pop(folder, None)
+                    self.git_states.pop(folder, None)
+            for folder, future in list(self.git_futures.items()):
+                if future.done():
+                    if folder in folders:
+                        try:
+                            self.git_states[folder] = future.result()
+                        except Exception:
+                            self.git_states[folder] = None
+                    self.git_futures.pop(folder, None)
+            if self.closed.is_set() or now - self.last_git_check < 10:
+                return
+            self.last_git_check = now
+            for folder in folders:
+                if folder not in self.git_futures:
+                    future = self.git_pool.submit(self._query_git_state, folder)
+                    self.git_futures[folder] = future
+                    future.add_done_callback(lambda _: self.wake.set())
+
+    @staticmethod
+    def _query_git_state(folder):
+        try:
+            status = subprocess.run(
+                ['git', '--no-optional-locks', '-C', folder, 'status', '--porcelain', '--untracked-files=normal'],
+                stdin=subprocess.DEVNULL, capture_output=True, timeout=3, creationflags=0x08000000)
+            return ('dirty' if status.stdout else 'clean') if status.returncode == 0 else None
+        except (OSError, subprocess.TimeoutExpired):
+            return None
 
     def snapshot(self):
         with self.lock:
@@ -932,6 +953,7 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
         last_listeners_time = 0
         cached_ports = {}
         while not self.closed.is_set():
+            self.wake.clear()
             self.stats['ticks'] += 1
             if time.time() - last_purge > 3600:
                 last_purge = time.time()
@@ -1118,7 +1140,7 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                 busy = bool(self.group_operations) or has_restarts or (time.time() - self.last_activity < 15)
             interval = 2 if (has_owned or docker_active or busy) else 10
             self.wake.wait(interval)
-            self.wake.clear()
+        self.git_pool.shutdown(wait=False, cancel_futures=True)
 
     def service_history(self, pad_id):
         with self.lock:

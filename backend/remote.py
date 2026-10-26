@@ -178,14 +178,27 @@ class RemoteServices:
             return any(self.is_remote_service(s) for s in self.config['services'] if s['id'] in ids)
 
     def forget_remote(self, service_id):
-        self.remote_states.pop(service_id, None)
-        self.remote_logs.pop(service_id, None)
+        with self.lock:
+            self.remote_states.pop(service_id, None)
+            self.remote_logs.pop(service_id, None)
+            hosts = {s.get('remote', {}).get('host') for s in self.config['services'] if self.is_remote_service(s)}
+            for host, record in list(self.host_limits.items()):
+                if host not in hosts and record['users'] == 0:
+                    self.host_limits.pop(host, None)
 
     def ssh(self, host, command, action):
         with self.lock:
-            limit = self.host_limits.setdefault(host, threading.BoundedSemaphore(2))
-        with limit:
-            return run_ssh(host, command, TIMEOUTS[action])
+            record = self.host_limits.setdefault(host, {'semaphore': threading.BoundedSemaphore(2), 'users': 0})
+            record['users'] += 1
+        try:
+            with record['semaphore']:
+                return run_ssh(host, command, TIMEOUTS[action])
+        finally:
+            with self.lock:
+                record['users'] -= 1
+                hosts = {s.get('remote', {}).get('host') for s in self.config['services'] if self.is_remote_service(s)}
+                if host not in hosts and record['users'] == 0 and self.host_limits.get(host) is record:
+                    self.host_limits.pop(host, None)
 
     def remote_status(self, service_id):
         return self.remote_states.get(service_id, {}).get('status', 'checking')
@@ -257,9 +270,11 @@ class RemoteServices:
                     status = 'running' if result['code'] == 0 else 'stopped'
             with self.lock:
                 current = next((s for s in self.config['services'] if s['id'] == service_id), None)
+                if not current or current.get('remote') != spec:
+                    return
                 state = self.remote_states.setdefault(service_id, {})
                 # Discard results for settings or a start/stop that changed while the check ran.
-                if not current or current.get('remote') != spec or service_id in self.remote_busy or state.get('generation', 0) != generation:
+                if service_id in self.remote_busy or state.get('generation', 0) != generation:
                     return
                 pending = state.get('pending')
                 if status == 'running':
@@ -273,7 +288,9 @@ class RemoteServices:
                 state.update(status=status, message=message, checked=time.time())
         finally:
             with self.lock:
-                self.remote_states.setdefault(service_id, {})['in_flight'] = False
+                state = self.remote_states.get(service_id)
+                if state is not None:
+                    state['in_flight'] = False
 
     def watch_remote(self):
         while True:
@@ -307,7 +324,9 @@ class RemoteServices:
         if result['code'] != 0:
             text += f"\n[{system_text('로그 명령 실패')}] {summarize(result, spec['host'])}"
         with self.lock:
-            self.remote_logs[service_id] = (time.monotonic(), text)
+            current = next((s for s in self.config['services'] if s['id'] == service_id), None)
+            if current and current.get('remote') == spec:
+                self.remote_logs[service_id] = (time.monotonic(), text)
         return text
 
     def remote_snapshot(self, service):
