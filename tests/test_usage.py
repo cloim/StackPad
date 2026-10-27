@@ -31,7 +31,7 @@ class UsageTests(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(json.dumps(data), encoding='utf-8')
 
-    def response(self, request, timeout):
+    def response(self, request, timeout, context=None):
         self.assertEqual(timeout, 4)
         if 'anthropic.com' in request.full_url:
             self.assertEqual(request.get_header('Authorization'), 'Bearer test-claude')
