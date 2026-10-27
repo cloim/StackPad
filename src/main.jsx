@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Bell, Code, Folder, Gauge, GitBranch, Globe, Languages, History, Monitor, Info, LoaderCircle, MoreVertical, Play, Plus, Power, RefreshCw, ScanSearch, Settings as Gear, Settings2, SlidersHorizontal, Square, Trash2 } from 'lucide-react';
+import { Bell, Code, Folder, Workflow, Gauge, Globe, Languages, History, Monitor, Info, LoaderCircle, MoreVertical, Play, Plus, Power, RefreshCw, ScanSearch, Settings as Gear, Settings2, SlidersHorizontal, Square, Trash2 } from 'lucide-react';
 import { Modal } from './components/Modal/Modal.jsx';
 import { PadForm } from './components/PadForm.jsx';
 import { SelectControl } from './components/SelectControl.jsx';
@@ -79,14 +79,13 @@ function Logo({ small = false }) {
 }
 
 // Pad badges use one fixed palette: P/D for the environment and the Git state of the pad's folders.
-const padBadgeBase = 'pointer-events-none inline-flex h-4 items-center justify-center rounded-[3px] text-[10px] leading-none font-bold max-tablet:h-3.5 max-tablet:text-[9px]';
-const padBadge = `${padBadgeBase} w-4 shrink-0 max-tablet:w-3.5 max-tablet:[&>svg]:size-2.5`;
+const padBadge = 'inline-block size-[8px] shrink-0 rounded-[4px] bg-(--badge-color) shadow-[0_0_3px_color-mix(in_srgb,var(--badge-color)_60%,transparent)]';
 const badgeColors = {
-  production: { color: '#000000', backgroundColor: '#69d39a' },
-  development: { color: '#ffffff', backgroundColor: '#9aa4a8' },
-  clean: { color: '#000000', backgroundColor: '#69d39a' },
-  dirty: { color: '#000000', backgroundColor: '#ffb45e' },
-  unknown: { color: '#ffffff', backgroundColor: '#9aa4a8' },
+  production: { '--badge-color': '#35D982' },
+  development: { '--badge-color': '#AFB1B2' },
+  clean: { '--badge-color': '#AFB1B2' },
+  dirty: { '--badge-color': '#DDB439' },
+  unknown: { '--badge-color': '#D65A5A' },
 };
 
 function DetailScroll({ children, role, id, ariaLabel, ariaLabelledBy }) {
@@ -189,8 +188,18 @@ function gridCoordinates(event, { context: { droppableRects, droppableContainers
 
 // Shared pad frame; the deck grid stretches every pad to its cell and keeps 2px below for the key shadow.
 const padFrame = 'relative flex h-[calc(100%-2px)] min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-md border border-[#c5c4b5] text-left [transition:transform_.14s_ease,filter_.2s_ease] hover:border-[#b7bba9] active:translate-y-px active:shadow-[inset_0_1px_2px_#67705822]';
-// Status badges keep the former indicator colors as their backgrounds.
-const stateBadge = { running: 'bg-[#35d982] text-black', starting: 'bg-[#f2c278] text-black', partial: 'bg-[#f2c278] text-black', error: 'bg-[#f2a0a7] text-black', unhealthy: 'bg-[#f2a0a7] text-black', conflict: 'bg-[#f2a0a7] text-black', external: 'bg-[#8fc3ee] text-black', unreachable: 'bg-[#6f7678] text-white', checking: 'bg-[#6f7678] text-white' };
+const stateBadge = {
+  running: '#35D982',
+  external: '#35D982',
+  starting: '#D8D832',
+  checking: '#D8D832',
+  partial: '#DDB439',
+  error: '#D65A5A',
+  unhealthy: '#D65A5A',
+  conflict: '#D65A5A',
+  unreachable: '#D65A5A',
+  stopped: '#AFB1B2',
+};
 
 function EmptyPad({ slot, enabled, onRegister }) {
   const { setNodeRef, isOver, active } = useDroppable({ id: `slot-${slot}`, data: { slot }, disabled: !enabled });
@@ -202,7 +211,7 @@ function PadMoveHandle({ pad, disabled }) {
   return <Tooltip content={t('끌거나 스페이스 키를 눌러 빈 패드로 옮길 수 있어요')}><button ref={setNodeRef} {...attributes} {...listeners} data-pad-move className="absolute top-[5px] left-2.5 h-[30px] w-[calc(100%-48px)] cursor-grab touch-none select-none justify-start truncate rounded-[5px] border-0 bg-transparent px-[3px] py-0 text-left text-[16px] font-medium text-ink hover:bg-[#cdd2c344] hover:text-[#354a37] focus-visible:outline-focus focus-visible:outline-offset-0 active:cursor-grabbing max-tablet:top-[3px] max-tablet:left-[7px] max-tablet:h-7 max-tablet:w-[calc(100%-42px)] max-tablet:text-[12px]" disabled={disabled} aria-label={t('{0} 자리 이동', pad.name)}>{pad.name}</button></Tooltip>;
 }
 
-function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, loading, settings, refresh, onError, connected, local, scenes = [], sceneProgress = {}, groupProgress = {}, schedules = [], onOpenSettings }) {
+function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, loading, settings, refresh, onError, connected, local, scenes = [], sceneProgress = {}, groupProgress = {}, schedules = [], onOpenSceneManager }) {
   const [selected, setSelected] = useState(null);
   const [padEditor, setPadEditor] = useState(null);
   const [busy, setBusy] = useState(new Set());
@@ -482,7 +491,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
       <UsageBar api={api} expected={settings?.usage_providers?.length || 0} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Tabs label={t('패드셋')} tabs={padsets.map(set => ({ ...set, badge: pads.filter(p => p.padset_id === set.id).length }))} value={padsetId} onChange={onPadsetChange} prefix="padsets" variant="keys" />
-        {scenes.length > 0 && <div className="flex flex-wrap items-center gap-2" aria-label={t('흐름 목록')}>
+        <div className="flex flex-wrap items-center gap-2" aria-label={t('흐름 목록')}>
           {scenes.map(sc => {
             const padIds = sc.pad_ids || [];
             const activeCount = padIds.filter(id => pads.some(p => p.id === id && p.active)).length;
@@ -514,7 +523,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
               </button>
             </div>;
           })}
-        </div>}
+        </div>
       </div>
       <DndContext sensors={sensors} accessibility={{ announcements: dragAnnouncements, screenReaderInstructions: { draggable: t('스페이스 키로 패드를 들고 방향키로 빈 패드를 고른 뒤 스페이스 키로 놓습니다. ESC 키로 취소합니다.') } }} onDragStart={({ active }) => setDragged(active.id)} onDragEnd={dragEnd} onDragCancel={() => setDragged(null)}>
       <div data-pads className="grid min-h-0 flex-1 grid-cols-4 grid-rows-4 gap-[15px] rounded-[7px] border border-[#bfc2b6] bg-[#d1d3c9] p-[15px] shadow-[inset_0_1px_3px_#46503d1c,0_1px_0_#fffff4] max-tablet:gap-2 max-tablet:p-2 short:gap-[7px] short:p-1.5" role="tabpanel" id="padsets-panel" aria-labelledby={`padsets-tab-${padsetId}`}>{Array.from({ length: 16 }, (_, slot) => {
@@ -545,19 +554,95 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
         const gitState = gitDirty ? 'dirty' : gitStates.includes('clean') ? 'clean' : 'unknown';
         const gitLabel = gitDirty ? t('Git 변경 내역 있음') : gitStates.includes('clean') ? t('Git 변경 내역 없음') : t('Git 상태 확인 정보 없음');
         const lit = service.status === 'running' || service.status === 'starting';
-        return <div key={slot} data-pad-wrap className={`relative min-h-0 min-w-0 rounded-md bg-[#a9ac9f] ${lit ? 'shadow-[0_0_0_1px_color-mix(in_srgb,var(--pad-color)_45%,transparent),0_2px_12px_color-mix(in_srgb,var(--pad-color)_50%,transparent)]' : 'shadow-[0_1px_2px_#3e493a25]'} ${selected === service.id ? "after:pointer-events-none after:absolute after:-inset-[3px] after:rounded-lg after:border after:border-[#829b83] after:content-['']" : ''} ${dragged === service.id ? 'opacity-50' : ''}`} style={{ '--pad-color': service.color }}>
-          <button data-pad-status={service.status} className={`${padFrame} items-start justify-normal gap-0 bg-[linear-gradient(115deg,#eeeadd,#e9e5d7)] px-4 pt-10 pb-4 text-ink shadow-[inset_0_1px_0_#fcf9ee,inset_0_-1px_0_#d2cebd,0_1px_1px_#45503b20] hover:bg-[linear-gradient(115deg,#f2eee2,#ede9dc)] max-tablet:px-2 max-tablet:pt-[35px] max-tablet:pb-2.5 short:px-2.5 short:pt-6 short:pb-1`} disabled={pending || !connected} onClick={() => toggle(service)} aria-label={`${service.name} ${service.active ? t('종료') : t('실행')}`} aria-pressed={!!service.active}>
-            <span data-pad-port className="mt-[5px] flex min-h-0 w-full flex-col gap-[3px] overflow-auto font-[Consolas,monospace] text-[10px] text-muted max-tablet:mt-1 short:mt-px short:shrink-0 short:gap-px short:text-[9px]">{tags.length ? tags.map(s => <span key={s.id} className="block min-w-0 shrink-0 truncate">{s.name}{s.kind === 'remote' ? ` @${s.remote.host}` : s.kind === 'docker' ? ` ${s.container_ports?.length ? s.container_ports.map(port => `:${port}`).join(', ') : t(':포트 없음')}` : s.port ? ` :${s.port}` : t(' :포트 없음')}</span>) : t('명령 실행')}</span>
-            <span className="absolute inset-x-1.5 bottom-1.5 flex min-w-0 items-center justify-between gap-1.5 max-tablet:gap-[3px] short:shrink-0">
-              <span data-pad-state className={`${padBadgeBase} min-w-0 shrink overflow-hidden px-1 whitespace-nowrap ${stateBadge[service.status] || 'bg-[#a8ae9e] text-black'}`}><span className="block truncate">{stateText}</span></span>
-              <span className="inline-flex shrink-0 items-center gap-1 max-tablet:ml-auto max-tablet:gap-[3px]">
-                <span data-badge="git" className={padBadge} style={badgeColors[gitState]} role="img" aria-label={gitLabel}><GitBranch size={11} strokeWidth={2.5} aria-hidden="true" /></span>
-                <span data-badge="environment" className={padBadge} style={badgeColors[service.environment === 'production' ? 'production' : 'development']} role="img" aria-label={service.environment === 'production' ? t('운영용') : t('개발용')}>{service.environment === 'production' ? 'P' : 'D'}</span>
-              </span>
-            </span>
-            {progressPct !== null && <div className="absolute bottom-0 left-0 z-[2] h-[3px] rounded-b-[7px] bg-(--pad-color) transition-[width] duration-200" style={{ width: `${progressPct}%` }} />}
-          </button>{errorLine && <Tooltip content={errorLine}><button type="button" className="absolute inset-x-2 bottom-7 z-[2] block truncate rounded border border-[#d7aaad] bg-[#efdedd] px-1.5 py-0.5 text-left text-[10px] leading-[1.5] text-[#9d4852] hover:border-[rgba(239,68,68,0.5)] hover:bg-[rgba(239,68,68,0.25)] max-tablet:bottom-11" aria-label={t('{0} 오류 로그 보기: {1}', service.name, errorLine)} onClick={() => { setSelected(service.id); setTargetError(errorLine); }}>{errorLine}</button></Tooltip>}<PadMoveHandle pad={service} disabled={!connected || pending} /><Tooltip content={t('상세, 설정, 삭제')}><button className="absolute top-[3px] right-[3px] size-8 rounded-[3px] border-0 bg-transparent text-[#636b5a] hover:bg-[#d2d5c866] hover:text-[#55654b] [&>svg]:size-3.5 max-tablet:top-px max-tablet:right-px max-tablet:size-[30px] short:top-px short:h-[22px]" onClick={event => openPadMenu(event, service)} aria-label={t('{0} 메뉴', service.name)} aria-haspopup="menu" aria-expanded={padMenu?.id === service.id}><SlidersHorizontal size={13} /></button></Tooltip>
-        </div>;
+        return (
+            <div
+                key={slot}
+                data-pad-wrap
+                className={`relative min-h-0 min-w-0 rounded-md bg-[#a9ac9f] ${lit ? "shadow-[0_0_0_1px_color-mix(in_srgb,var(--pad-color)_45%,transparent),0_2px_12px_color-mix(in_srgb,var(--pad-color)_50%,transparent)]" : "shadow-[0_1px_2px_#3e493a25]"} ${selected === service.id ? "after:pointer-events-none after:absolute after:-inset-[3px] after:rounded-lg after:border after:border-[#829b83] after:content-['']" : ""} ${dragged === service.id ? "opacity-50" : ""}`}
+                style={{ "--pad-color": service.color }}
+            >
+                <button
+                    data-pad-status={service.status}
+                    className={`${padFrame} items-start justify-normal gap-0 bg-[linear-gradient(115deg,#eeeadd,#e9e5d7)] px-4 pt-10 pb-4 text-ink shadow-[inset_0_1px_0_#fcf9ee,inset_0_-1px_0_#d2cebd,0_1px_1px_#45503b20] hover:bg-[linear-gradient(115deg,#f2eee2,#ede9dc)] max-tablet:px-2 max-tablet:pt-[35px] max-tablet:pb-2.5 short:px-2.5 short:pt-6 short:pb-1`}
+                    disabled={pending || !connected}
+                    onClick={() => toggle(service)}
+                    aria-label={`${service.name} ${service.active ? t("종료") : t("실행")}`}
+                    aria-pressed={!!service.active}
+                >
+                    <span
+                        data-pad-port
+                        className="mt-[5px] flex min-h-0 w-full flex-col gap-[3px] overflow-auto font-[Consolas,monospace] text-[10px] text-muted max-tablet:mt-1 short:mt-px short:shrink-0 short:gap-px short:text-[9px]"
+                    >
+                        {tags.length
+                            ? tags.map((s) => (
+                                  <span key={s.id} className="block min-w-0 shrink-0 truncate">
+                                      {s.name}
+                                      {s.kind === "remote"
+                                          ? ` @${s.remote.host}`
+                                          : s.kind === "docker"
+                                            ? ` ${s.container_ports?.length ? s.container_ports.map((port) => `:${port}`).join(", ") : t(":포트 없음")}`
+                                            : s.port
+                                              ? ` :${s.port}`
+                                              : t(" :포트 없음")}
+                                  </span>
+                              ))
+                            : t("명령 실행")}
+                    </span>
+                    <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1.5">
+                        <Tooltip content={stateText} side="top">
+                            <span data-pad-state className={padBadge} style={{ '--badge-color': stateBadge[service.status] || '#AFB1B2' }} role="img" aria-label={stateText} />
+                        </Tooltip>
+                        <Tooltip content={service.environment === "production" ? t("운영용") : t("개발용")} side="top">
+                            <span
+                            data-badge="environment"
+                            className={padBadge}
+                            style={badgeColors[service.environment === "production" ? "production" : "development"]}
+                            role="img"
+                            aria-label={service.environment === "production" ? t("운영용") : t("개발용")}
+                            />
+                        </Tooltip>
+                        {service.environment !== "production" && gitState !== 'clean' && (
+                            <Tooltip content={gitLabel} side="top">
+                                <span data-badge="git" className={padBadge} style={badgeColors[gitState]} role="img" aria-label={gitLabel} />
+                            </Tooltip>
+                        )}
+                    </span>
+                    {progressPct !== null && (
+                        <div
+                            className="absolute bottom-0 left-0 z-[2] h-[3px] rounded-b-[7px] bg-(--pad-color) transition-[width] duration-200"
+                            style={{ width: `${progressPct}%` }}
+                        />
+                    )}
+                </button>
+                {errorLine && (
+                    <Tooltip content={errorLine}>
+                        <button
+                            type="button"
+                            className="absolute inset-x-2 bottom-7 z-[2] block truncate rounded border border-[#d7aaad] bg-[#efdedd] px-1.5 py-0.5 text-left text-[10px] leading-[1.5] text-[#9d4852] hover:border-[rgba(239,68,68,0.5)] hover:bg-[rgba(239,68,68,0.25)] max-tablet:bottom-11"
+                            aria-label={t("{0} 오류 로그 보기: {1}", service.name, errorLine)}
+                            onClick={() => {
+                                setSelected(service.id);
+                                setTargetError(errorLine);
+                            }}
+                        >
+                            {errorLine}
+                        </button>
+                    </Tooltip>
+                )}
+                <PadMoveHandle pad={service} disabled={!connected || pending} />
+                <Tooltip content={t("상세, 설정, 삭제")}>
+                    <button
+                        className="absolute top-[3px] right-[3px] size-8 rounded-[3px] border-0 bg-transparent text-[#636b5a] hover:bg-[#d2d5c866] hover:text-[#55654b] [&>svg]:size-3.5 max-tablet:top-px max-tablet:right-px max-tablet:size-[30px] short:top-px short:h-[22px]"
+                        onClick={(event) => openPadMenu(event, service)}
+                        aria-label={t("{0} 메뉴", service.name)}
+                        aria-haspopup="menu"
+                        aria-expanded={padMenu?.id === service.id}
+                    >
+                        <SlidersHorizontal size={13} />
+                    </button>
+                </Tooltip>
+            </div>
+        );
       })}</div>
       <DragOverlay dropAnimation={null}>{draggedPad && <div className="flex h-full cursor-grabbing items-center truncate rounded border border-l-[3px] border-[#93a68f] border-l-(--pad-color) bg-raised px-2.5 text-[14px] font-semibold text-ink-strong shadow-[0_10px_24px_#34442b33]" style={{ '--pad-color': draggedPad.color }}>{draggedPad.name}</div>}</DragOverlay>
       </DndContext>
@@ -578,7 +663,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
       <div className="popover-menu" role="menu" aria-label={t('{0} 메뉴', sceneMenu.scene.name)} style={sceneMenu.style} onPointerDown={event => event.stopPropagation()} onKeyDown={menuKeys}>
         <button role="menuitem" autoFocus onClick={() => triggerScene(sceneMenu.scene, 'start')}><Play size={14} />{t('흐름 시작')}</button>
         <button role="menuitem" onClick={() => triggerScene(sceneMenu.scene, 'stop')}><Square size={14} />{t('흐름 정지')}</button>
-        <button role="menuitem" onClick={() => { setSceneMenu(null); onOpenSettings?.('scenes'); }}><Gear size={14} />{t('흐름 설정')}</button>
+        <button role="menuitem" onClick={() => { setSceneMenu(null); onOpenSceneManager(); }}><Gear size={14} />{t('흐름 설정')}</button>
       </div>
     </div>}
     <Modal isOpen={!!current} onClose={() => { setSelected(null); setTargetError(null); }} title={current?.name || t('서비스 상세')} storageKey="service-detail" size="lg" className="modal-tall [&_.modal-body]:flex [&_.modal-body]:flex-col [&_.modal-body]:gap-3 [&_.modal-body]:overflow-hidden">{current && <>
@@ -625,7 +710,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
         <LogViewer rawLogs={logs} serviceName={logService?.name} loading={logsLoading} targetErrorLine={targetError} />
       </DetailScroll>}
     </>}</Modal>
-    {padEditor && <PadForm pad={editingPad} slot={padEditor.slot} defaultCwd={settings?.recommend_roots?.[0] || ''} tools={settings?.tools} {...{ padsets, padsetId, services, api, colors, colorNames, local, onError }} onClose={() => setPadEditor(null)} onSaved={async () => { await refresh(); setSelected(null); }} />}
+    {padEditor && <PadForm pad={editingPad} slot={padEditor.slot} defaultCwd={settings?.recommend_roots?.[0] || ''} tools={settings?.tools} {...{ padsets, padsetId, services, groups, scenes, schedules, api, colors, colorNames, local, onError }} onClose={() => setPadEditor(null)} onSaved={async () => { await refresh(); setSelected(null); }} />}
     <ConfirmModal isOpen={!!takeover} title={t('외부 실행 넘겨받기')} danger={false} confirmLabel={t('종료 후 다시 실행')} message={t('{0} 서버가 StackPad 밖에서 실행 중입니다. 외부에서 실행한 서버를 종료하고 StackPad에서 다시 실행할까요?', takeover?.name)} onCancel={() => setTakeover(null)} onConfirm={() => { const pad = takeover; setTakeover(null); toggle(pad, { takeover: true }); }} />
     <ConfirmModal isOpen={!!stopping} title={t('운영 서비스 종료')} confirmLabel={t('종료')} message={t('{0}은 운영용 패드입니다. 종료하면 이 서비스를 쓰는 사용자의 접속이 끊어집니다. 종료할까요?', stopping?.name)} onCancel={() => setStopping(null)} onConfirm={() => { const pad = stopping; setStopping(null); toggle(pad, { stopConfirmed: true }); }} />
     <ConfirmModal isOpen={!!deleting} title={t('패드 삭제')} confirmLabel={t('삭제')} message={deleting ? t('{0} 패드 등록을 삭제할까요? 실행 로그 파일은 보관됩니다.', deleting.name) + ((deleting.isGroup ? deleting.members : [deleting]).some(s => s.kind === 'docker') ? t(' 도커 컨테이너는 그대로 유지됩니다.') : '') + ((deleting.isGroup ? deleting.members : [deleting]).some(s => s.kind === 'remote') ? t(' 원격 서버에서 실행 중인 서비스는 그대로 유지됩니다.') : '') : ''} onCancel={() => setDeleting(null)} onConfirm={remove} />
@@ -752,7 +837,7 @@ function Settings({ auth, settings, padsets, services, groups, scenes = [], sche
     } catch (e) { onError(e.message); } finally { setBusy(false); }
   }
   return <>
-    <Tabs label={t('환경 설정 카테고리')} tabs={[{ id: 'general', name: t('일반') }, { id: 'scenes', name: t('흐름 및 예약') }, { id: 'recommend', name: t('등록 추천') }, { id: 'padsets', name: t('패드셋') }, { id: 'account', name: t('계정') }]} value={category} onChange={setCategory} prefix="settings" />
+    <Tabs label={t('환경 설정 카테고리')} tabs={[{ id: 'general', name: t('일반') }, { id: 'recommend', name: t('등록 추천') }, { id: 'padsets', name: t('패드셋') }, { id: 'account', name: t('계정') }]} value={category} onChange={setCategory} prefix="settings" />
     <div className="flex flex-col gap-2.5 pt-3" role="tabpanel" id="settings-panel" aria-labelledby={`settings-tab-${category}`}>
     {category === 'general' && <><section className="settings-card"><div className="settings-icon"><Power size={22} /></div><div><h2>{t('Windows 로그인 시 자동 실행')}</h2></div><button className={`switch ${settings?.autostart ? 'on' : ''}`} role="switch" aria-checked={!!settings?.autostart} aria-label={t('Windows 로그인 시 자동 실행')} disabled={busy || !settings} onClick={() => change(!settings.autostart)}><span /></button></section>
     <section className="settings-card"><div className="settings-icon"><Languages size={22} /></div><div><h2>{t('언어')}</h2></div><div className="ml-auto w-[130px] shrink-0"><SelectControl aria-label={t('언어')} value={locale} onChange={e => setLocale(e.target.value)}>
@@ -781,7 +866,6 @@ function Settings({ auth, settings, padsets, services, groups, scenes = [], sche
         <div><strong>{entry.name}</strong><p><code className="text-[11px] text-[#4e634b] wrap-anywhere">{entry.command}</code></p><p>{entry.cwd}</p></div>
         <div className="component-actions"><button className="secondary" disabled={busy} onClick={() => unhide(entry)} aria-label={t('{0} 다시 표시', entry.name)}>{t('다시 표시')}</button></div>
       </div>)}</div></div>}</section>}
-    {category === 'scenes' && <SceneSettings {...{ scenes, schedules, services, groups, colors, colorNames, api, refresh, onError, onNotice }} />}
     {category === 'padsets' && <PadsetSettings {...{ padsets, services, groups, api, refresh, onError }} />}
     {category === 'account' && <AccountSettings {...{ auth, api, onError }} onLogout={onLogout} />}</div>
   </>;
@@ -802,6 +886,7 @@ function App() {
   function onPadsetChange(id) { setActivePadset(id); try { localStorage.setItem('stackpad-padset', id); } catch { /* 세션 내 선택 유지 */ } }
   const [links, setLinks] = useState({});
   const [registrationSlot, setRegistrationSlot] = useState(null);
+  const [sceneManager, setSceneManager] = useState(false);
   const [preset, setPreset] = useState(null);
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -940,11 +1025,15 @@ function App() {
       <div className="ml-auto flex items-center gap-2.5 max-tablet:gap-1.5">
         <Tooltip content={t('등록 추천')}><button className="tool-button" disabled={!connected} onClick={() => setPanel('recommend')} aria-label={t('등록 추천')}><ScanSearch size={17} /></button></Tooltip>
         <Tooltip content={t('서비스 등록')}><button className="tool-button" disabled={!connected} onClick={() => { const slot = Array.from({ length: 16 }, (_, i) => i).find(i => !services.some(s => s.padset_id === padsetId && s.slot === i)); if (slot === undefined) onError(t('빈 패드를 확보해 주세요.')); else setRegistrationSlot(slot); }} aria-label={t('서비스 등록')}><Plus size={17} /></button></Tooltip>
+        <Tooltip content={t('흐름 관리')}><button className="tool-button" disabled={!connected} onClick={() => setSceneManager(true)} aria-label={t('흐름 관리')}><Workflow size={17} /></button></Tooltip>
         <Tooltip content={t('환경 설정')}><button className="tool-button" onClick={() => { setSettingsCategory('general'); setPanel('settings'); }} aria-label={t('환경 설정')}><Gear size={17} /></button></Tooltip>
       </div>
     </header>
-    <main className="min-h-0 flex-1 overflow-hidden pt-3" aria-label={t('서비스 패드')}><Deck {...{ padsets, padsetId, onPadsetChange, services, groups, links, loading, settings, refresh, onError, connected, scenes, sceneProgress, groupProgress, schedules }} onOpenSettings={cat => { setSettingsCategory(cat || 'general'); setPanel('settings'); }} local={auth.local} /></main>
-    {registrationSlot !== null && <PadForm {...{ padsets, padsetId, schedules }} defaultCwd={settings?.recommend_roots?.[0] || ''} tools={settings?.tools} slot={registrationSlot} preset={preset} local={auth.local} {...{ services, api, colors, colorNames, onError }} onClose={() => { setRegistrationSlot(null); setPreset(null); }} onSaved={refresh} />}
+    <main className="min-h-0 flex-1 overflow-hidden pt-3" aria-label={t('서비스 패드')}><Deck {...{ padsets, padsetId, onPadsetChange, services, groups, links, loading, settings, refresh, onError, connected, scenes, sceneProgress, groupProgress, schedules }} onOpenSceneManager={() => setSceneManager(true)} local={auth.local} /></main>
+    <Modal isOpen={sceneManager} onClose={() => setSceneManager(false)} title={t('흐름 관리')} size="lg" storageKey="scene-manager">
+      {sceneManager && <SceneSettings {...{ scenes, services, groups, colors, colorNames, api, refresh, onError }} />}
+    </Modal>
+    {registrationSlot !== null && <PadForm {...{ padsets, padsetId, schedules, scenes, groups }} defaultCwd={settings?.recommend_roots?.[0] || ''} tools={settings?.tools} slot={registrationSlot} preset={preset} local={auth.local} {...{ services, api, colors, colorNames, onError }} onClose={() => { setRegistrationSlot(null); setPreset(null); }} onSaved={refresh} />}
     <Modal isOpen={!!panel} onClose={closePanel} title={panel === 'settings' ? t('환경 설정') : t('등록 추천')} size="lg" storageKey="common-settings">
       {panel === 'settings' ? <Settings {...{ auth, settings, padsets, services, groups, scenes, schedules, initialCategory: settingsCategory, refresh, onError, onNotice }} onDirtyChange={dirty => { settingsDirty.current = dirty; }} onLogout={() => { setPanel(null); logout(); }} /> : panel === 'recommend' ? <Recommendations onError={onError} onRegister={candidate => { const slot = Array.from({ length: 16 }, (_, i) => i).find(i => !services.some(s => s.padset_id === padsetId && s.slot === i)); if (slot === undefined) { onError(t('빈 패드를 확보해 주세요.')); return; } setPanel(null); setPreset(candidate); setRegistrationSlot(slot); }} /> : null}
     </Modal>

@@ -38,7 +38,7 @@ try {
   await expect(page.locator('[data-window]')).toHaveCount(6);
   await expect(page.locator('[data-pad-status=running] [data-pad-state]').first()).toHaveCSS('background-color','rgb(53, 217, 130)');
   await expect(page.locator('[data-pad-state] i')).toHaveCount(0);
-  await expect(page.locator('[data-pad-status=stopped] [data-pad-state]').first()).toHaveCSS('background-color','rgb(168, 174, 158)');
+  await expect(page.locator('[data-pad-status=stopped] [data-pad-state]').first()).toHaveCSS('background-color','rgb(175, 177, 178)');
   await expect(page.locator('[data-window="five_hour"] [data-usage-segment]')).toHaveCount(15);
   await expect(page.locator('[data-window="weekly"] [data-usage-segment]')).toHaveCount(21);
   await expect(page.locator('[data-window]').first()).toHaveAttribute('aria-valuenow', '42');
@@ -78,10 +78,13 @@ try {
       await page.getByRole('button',{name:'환경 설정',exact:true}).click();
       await expect(page.getByRole('dialog')).toHaveCSS('background-color','rgb(239, 238, 229)');
       await page.screenshot({path:`.jobs/cream-settings-${width}.png`});
-      await page.getByRole('tab',{name:'흐름 및 예약',exact:true}).click();
-      await expect(page.getByRole('heading',{name:'흐름 관리',exact:true})).toBeVisible();
+      await page.keyboard.press('Escape');
+      await page.getByRole('button',{name:'흐름 관리',exact:true}).click();
+      await expect(page.getByRole('heading',{name:'흐름 관리',exact:true}).first()).toBeVisible();
       await expect(page.getByText('API 서버, 웹 프런트엔드').locator('xpath=ancestor::div[contains(@class,"rounded-lg")][1]')).toHaveCSS('border-color','rgb(212, 217, 204)');
       await page.screenshot({path:`.jobs/cream-flows-${width}.png`});
+      await page.keyboard.press('Escape');
+      await page.getByRole('button',{name:'환경 설정',exact:true}).click();
       await page.getByRole('tab',{name:'등록 추천',exact:true}).click();
       await expect(page.getByRole('heading',{name:/숨긴 추천/})).toHaveCSS('color','rgb(70, 82, 62)');
       await expect(page.locator('.component-row').first()).toHaveCSS('border-color','rgb(212, 217, 204)');

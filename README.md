@@ -86,6 +86,7 @@ stackpad-cli schedule add --scene DevStack --action start --time 09:00 --days mo
 - Pads, scenes, and pad sets are named by ID or by name. Slots are 0 to 15, row by row from the top left.
 - Results are JSON on standard output, errors go to standard error. Exit codes: 0 success, 1 failed, 2 wrong command, 3 engine not running.
 - Group pads and remote server pads are written as JSON with `--json FILE` or `--json -` (standard input).
+- New pads without an explicit color use the least-used palette color across all pad sets at creation time. Each group counts as one pad; ties follow palette order. `--color` and JSON colors take priority, and updates keep the existing color.
 - Commands talk to the running engine with the token it keeps in `%USERPROFILE%\.config\stackpad`, so they work only on this PC, for this Windows user, while StackPad is running (`StackPad.exe --hidden` starts it without the window).
 
 ## Phone
@@ -123,6 +124,8 @@ python scripts/build-android.py     # Android APK, needs ANDROID_HOME and JAVA_H
 ```
 
 Messages are written in Korean in the source and translated through `src/locales/en.js` (screen) and `backend/i18n.py` (engine).
+
+After changing pad schedules or flow editing, run `npm run build` followed by `node scripts/pad-automation-ui-test.mjs` from the project root before delivering the change. The test requires the installed Playwright Chromium browser and uses a mock API without starting a server or changing engine data. Exit code 0 confirms draft saving, cancellation, retries, flow management, and mobile layout; failures save `.jobs/pad-automation-fail.png`. Inspect the failure, fix it, and rerun before delivery.
 
 Pushing a tag such as `v1.2.0` builds the installer, the portable zip, the updater files and the signed APK on GitHub Actions and publishes them to Releases. Keep the version in `package.json`, `src-tauri/Cargo.toml` and `backend/main.py` in step; `tests/test_version.py` checks them.
 

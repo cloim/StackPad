@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useId, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { DockerFields } from './DockerFields.jsx';
 import { SelectControl } from './SelectControl.jsx';
@@ -7,18 +7,27 @@ import { Modal } from './Modal/Modal.jsx';
 import { ConfirmModal } from './ConfirmModal.jsx';
 import { useFieldError } from './FieldError.jsx';
 import { emptyRemote, KindSwitch, RemoteFields } from './RemoteFields.jsx';
-import { formatNextRun } from './SceneSettings.jsx';
+import { PadAutomation } from './PadAutomation.jsx';
 import { t } from '../i18n.js';
 
-export function PadForm({ pad, preset, services, slot, padsetId = 'default', padsets = [], schedules = [], api, colors, colorNames, local, defaultCwd = '', tools, onClose, onSaved, onError }) {
+export function PadForm({ pad, preset, services, slot, padsetId = 'default', padsets = [], schedules = [], scenes = [], groups = [], api, colors, colorNames, local, defaultCwd = '', tools, onClose, onSaved, onError }) {
   const initialComponents = pad?.isGroup ? pad.members : pad ? [pad] : preset ? [preset] : [{ name: '', command: '', cwd: defaultCwd, port: '', health_url: '', restart_policy: 'never', restart_max: 3 }];
   const [form, setForm] = useState({ environment: pad?.environment || 'development', name: pad?.name || preset?.name || '', color: pad?.color || colors.find(color => !services.some(s => s.color === color)) || colors[slot % colors.length], autostart: pad?.autostart || false, domain_url: pad?.domain_url || '', local_url: pad?.local_url || '', wait_ready: pad?.wait_ready || false, slot: pad?.slot ?? slot, padset_id: pad?.padset_id || padsetId, components: initialComponents.map(s => ({ ...(s.id ? { id: s.id } : {}), container: s.container || '', container_name: s.container_name || '', kind: s.kind || 'local', name: s.name, command: s.command || '', cwd: s.cwd || defaultCwd, port: s.port || '', health_url: s.health_url || '', restart_policy: s.restart_policy || 'never', restart_max: s.restart_max ?? 3, remote: s.remote || emptyRemote })) });
+  const [automation, setAutomation] = useState(() => ({ scenes, schedules: schedules.filter(s => s.target_type === 'scene' || s.target_id === pad?.id) }));
+  const initialAutomation = useRef(automation);
+  const automationSaved = useRef({ scenes: new Map(scenes.map(s => [s.id, s])), schedules: new Map(automation.schedules.map(s => [s.id, s])), ids: new Map() });
+  const savedPad = useRef(null);
+  const localPadId = useId();
+  const draftPadId = pad?.id || localPadId;
+  const automationPad = { id: draftPadId, name: form.name || t('새 패드') };
+  const groupedIds = new Set(groups.flatMap(g => g.member_ids));
+  const allPads = [...services.filter(s => !groupedIds.has(s.id) && s.id !== draftPadId), ...groups.filter(g => g.id !== draftPadId), automationPad];
   const [tab, setTab] = useState('general');
   const [pending, setPending] = useState(false);
   const [discarding, setDiscarding] = useState(false);
   const initialForm = useRef(form);
   const fieldError = useFieldError();
-  const close = () => { if (pending) return; if (form !== initialForm.current) setDiscarding(true); else onClose(); };
+  const close = () => { if (pending) return; if (form !== initialForm.current || automation !== initialAutomation.current) setDiscarding(true); else onClose(); };
   const running = (pad?.isGroup ? pad.members : pad ? [pad] : []).some(s => s.active || s.pid || s.external_pid || s.status === 'restarting');
   // Remote commands run with this PC's SSH keys, so only this PC may change them.
   const remoteLocked = !local && initialComponents.some(s => s.kind === 'remote');
@@ -56,15 +65,43 @@ export function PadForm({ pad, preset, services, slot, padsetId = 'default', pad
         const base = { ...(c.id ? { id: c.id } : {}), kind: c.kind, name: form.components.length === 1 ? form.name : c.name };
         return c.kind === 'docker' ? { ...base, container: c.container } : c.kind === 'remote' ? { ...base, remote: c.remote } : { ...base, command: c.command, cwd: c.cwd, port: c.port ? Number(c.port) : null, health_url: c.health_url, restart_policy: c.restart_policy || 'never', restart_max: Number(c.restart_max ?? 3) };
       });
-      const result = await api(`/pads${pad ? `/${pad.id}` : ''}`, { method: pad ? 'PUT' : 'POST', body: JSON.stringify({ ...form, autostart: allRemote ? false : form.autostart, components }) });
+      const payload = JSON.stringify({ ...form, autostart: allRemote ? false : form.autostart, components });
+      const padId = pad?.id || savedPad.current?.id;
+      const result = savedPad.current?.payload === payload ? savedPad.current : await api(`/pads${padId ? `/${padId}` : ''}`, { method: padId ? 'PUT' : 'POST', body: payload });
+      savedPad.current = { id: result.id, payload };
+      // Track each successful operation so a retry does not duplicate new schedules.
+      for (const scene of automation.scenes) {
+        if (JSON.stringify(scene) === JSON.stringify(automationSaved.current.scenes.get(scene.id))) continue;
+        await api(`/scenes/${scene.id}`, { method: 'PUT', body: JSON.stringify({ name: scene.name, color: scene.color, pad_ids: scene.pad_ids.map(id => id === draftPadId ? result.id : id) }) });
+        automationSaved.current.scenes.set(scene.id, scene);
+      }
+      for (const [id] of automationSaved.current.schedules) {
+        if (automation.schedules.some(s => s.id === id)) continue;
+        await api(`/schedules/${automationSaved.current.ids.get(id) || id}`, { method: 'DELETE' });
+        automationSaved.current.schedules.delete(id);
+      }
+      for (const schedule of automation.schedules) {
+        if (JSON.stringify(schedule) === JSON.stringify(automationSaved.current.schedules.get(schedule.id))) continue;
+        const existing = automationSaved.current.schedules.has(schedule.id);
+        const id = automationSaved.current.ids.get(schedule.id) || schedule.id;
+        const { id: draftId, ...values } = schedule;
+        const saved = await api(`/schedules${existing ? `/${id}` : ''}`, { method: existing ? 'PUT' : 'POST', body: JSON.stringify({ ...values, target_id: values.target_type === 'pad' ? result.id : values.target_id }) });
+        automationSaved.current.ids.set(draftId, saved.id);
+        automationSaved.current.schedules.set(draftId, schedule);
+      }
       await onSaved(result.id, form.padset_id); onClose();
-    } catch (error) { onError(error.message); }
+    } catch (error) {
+      if (savedPad.current) {
+        await onSaved(savedPad.current.id, form.padset_id);
+        onError(t('패드는 저장됐지만 예약 또는 흐름 반영이 완료되지 않았어요. 저장을 다시 눌러 주세요: {0}', error.message));
+      } else onError(error.message);
+    }
     finally { setPending(false); }
   }
   return <Modal isOpen onClose={close} closeOnOverlayClick={false} title={pad ? t('패드 설정') : t('서비스 등록')} storageKey="pad-editor" size="lg">
     <form className="flex flex-col gap-[18px] [&_button:disabled]:cursor-default" onSubmit={save} noValidate>
       {readOnly && <p className="rounded-md border border-warn-line bg-warn-soft px-3 py-2.5 text-[12px] leading-[1.6] text-[#6e5129]" role="note">{remoteLocked ? t('원격 서버 서비스는 StackPad가 실행 중인 PC에서만 바꿀 수 있어요.') : t('실행 중인 패드는 실행 방식과 명령을 바꿀 수 없어요. 패드를 종료한 뒤 다시 열어 주세요.')}</p>}
-      <Tabs label={t('패드 설정 카테고리')} tabs={[{ id: 'general', name: t('일반') }, { id: 'services', name: t('서비스') }]} value={tab} onChange={setTab} prefix="pad-editor" />
+      <Tabs label={t('패드 설정 카테고리')} tabs={[{ id: 'general', name: t('일반') }, { id: 'services', name: t('서비스') }, { id: 'schedules', name: t('예약') }, { id: 'scenes', name: t('흐름') }]} value={tab} onChange={setTab} prefix="pad-editor" />
       <div role="tabpanel" id="pad-editor-panel" aria-labelledby={`pad-editor-tab-${tab}`}>
       <div data-pad-general className="flex flex-col gap-[18px]" hidden={tab !== 'general'}>
         <div className="grid grid-cols-2 items-start gap-4 max-tablet:gap-3 [&>label]:min-w-0"><label>{t('패드셋')}<SelectControl aria-label={t('패드셋')} value={form.padset_id} disabled={pending} onChange={e => {
@@ -82,18 +119,7 @@ export function PadForm({ pad, preset, services, slot, padsetId = 'default', pad
         <fieldset className="color-field" disabled={pending}><legend>{t('패드 색상')}</legend><div className="colors">{colors.map((color, index) => <button type="button" key={color} className={form.color === color ? 'selected' : ''} style={{ '--color': color }} onClick={() => set('color', color)} aria-label={colorNames[index]} aria-pressed={form.color === color} />)}</div></fieldset>
         {allRemote ? <p className="optional">{t('원격 서버 서비스는 서버에서 관리하므로 자동 실행 대상에서 제외됩니다.')}</p> : <label className="flex-row items-center gap-2.5 text-[12px] [&>input]:size-4 [&>input]:accent-[#8b715b]"><input type="checkbox" disabled={pending} checked={common.autostart} onChange={e => set('autostart', e.target.checked)} /><span>{t('관리 엔진 시작 시 패드 자동 실행')}{someRemote ? t(' (원격 서버 서비스 제외)') : ''}</span></label>}
         {displayed.length > 1 && <label className="flex-row items-center gap-2.5 text-[12px] [&>input]:size-4 [&>input]:accent-[#8b715b]"><input type="checkbox" disabled={pending} checked={common.wait_ready} onChange={e => set('wait_ready', e.target.checked)} /><span>{t('앞 서비스가 정상 응답한 뒤 다음 서비스 실행')}</span></label>}
-        {pad?.id && (() => {
-          const padSchedules = schedules.filter(s => s.target_type === 'pad' && s.target_id === pad.id);
-          if (!padSchedules.length) return null;
-          return <div className="mt-3 rounded-lg border border-[#c9cebf] bg-[rgba(255,255,255,0.04)] px-3 py-2.5">
-            <span className="mb-1 block text-[12px] font-semibold text-[#59774c]">{t('예약 실행')}</span>
-            <ul className="m-0 list-disc pl-[18px] text-[12px] [&>li]:my-0.5">
-              {padSchedules.map(s => <li key={s.id}>
-                <span>{s.action === 'start' ? t('시작') : t('정지')}</span> {s.time} ({formatNextRun(s)})
-              </li>)}
-            </ul>
-          </div>;
-        })()}
+
       </div>
       <div hidden={tab !== 'services'}><div className="flex flex-col gap-4">{displayed.map((component, index) => {
         const current = component;
@@ -114,7 +140,9 @@ export function PadForm({ pad, preset, services, slot, padsetId = 'default', pad
         </section>;
       })}</div>
       {!readOnly && <button className="secondary mt-4 self-start" type="button" disabled={pending || form.components.length >= 16} onClick={() => set('components', [...form.components.map((c, i) => i === 0 && form.components.length === 1 && !c.name ? { ...c, name: form.name } : c), { kind: 'local', name: '', command: '', cwd: form.components.find(c => c.kind !== 'remote')?.cwd || defaultCwd, port: '', health_url: '', restart_policy: 'never', restart_max: 3, remote: emptyRemote }])}><Plus size={16} />{t('서비스 추가')}</button>}
-      </div></div>
+      </div>
+      <PadAutomation {...{ tab, colors, colorNames, pending, allPads }} value={automation} onChange={setAutomation} pad={automationPad} />
+      </div>
       <div className="form-actions"><button type="button" className="secondary" disabled={pending} onClick={close}>{t('취소')}</button><button className="primary" disabled={pending}>{t('저장')}</button></div>
     </form>
     {fieldError.popover}

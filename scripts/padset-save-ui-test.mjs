@@ -73,9 +73,8 @@ try {
   expect(moved.autostart).toBe(true);
   await page.getByRole('tab', { name: '이동 대상', exact: true }).click();
   const wrap = page.locator('[data-pad-wrap]').filter({ has: page.getByRole('button', { name: '실행 중 마지막 패드 메뉴', exact: true }) });
-  await expect(wrap.locator('[data-badge=environment]')).toHaveText('P');
-  await expect(wrap.locator('[data-badge=environment]')).toHaveCSS('background-color', 'rgb(105, 211, 154)');
-  await expect(wrap.locator('[data-badge=environment]')).toHaveCSS('color', 'rgb(0, 0, 0)');
+  await expect(wrap.locator('[data-badge=environment]')).toHaveText('');
+  await expect(wrap.locator('[data-badge=environment]')).toHaveCSS('background-color', 'rgb(53, 217, 130)');
   await fs.mkdir('.jobs/live-settings-ui', { recursive: true });
   await page.screenshot({ path: '.jobs/live-settings-ui/desktop.png' });
   await page.addInitScript(() => { window.open = url => { window.lastOpenedUrl = url; }; });
@@ -90,7 +89,7 @@ try {
     const menu = await wrap.getByRole('button', { name: '실행 중 마지막 패드 메뉴', exact: true }).boundingBox();
     const box = await wrap.boundingBox();
     expect(badge.y).toBeGreaterThanOrEqual(menu.y + menu.height);
-    expect(badge.x).toBeGreaterThan(box.x + box.width / 2);
+    expect(badge.x).toBeLessThan(box.x + box.width / 2);
     expect(badge.y + badge.height).toBeLessThanOrEqual(box.y + box.height);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: `.jobs/live-settings-ui/${viewport.width}.png` });
@@ -101,13 +100,13 @@ try {
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByRole('dialog', { name: '패드 설정', exact: true })).toHaveCount(0);
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(wrap.locator('[data-badge=environment]')).toHaveText('D');
+  await expect(wrap.locator('[data-badge=environment]')).toHaveText('');
   await expect(wrap.locator('[data-badge=environment]')).toHaveAttribute('aria-label', '개발용');
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     const badge = await wrap.locator('[data-badge=environment]').boundingBox();
     const box = await wrap.boundingBox();
-    expect(badge.x).toBeGreaterThan(box.x + box.width / 2);
+    expect(badge.x).toBeLessThan(box.x + box.width / 2);
     expect(badge.y + badge.height).toBeLessThanOrEqual(box.y + box.height);
     await page.screenshot({ path: `.jobs/live-settings-ui/dev-${width}.png` });
   }
@@ -122,7 +121,7 @@ try {
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.reload();
-  await expect(wrap.locator('[data-badge=environment]')).toHaveText('P');
+  await expect(wrap.locator('[data-badge=environment]')).toHaveText('');
   await page.getByRole('button', { name: '실행 중 마지막 패드 메뉴', exact: true }).click();
   await expect(page.getByRole('menuitem', { name: '브라우저에서 열기', exact: true })).toHaveCount(1);
   await page.getByRole('menuitem', { name: '브라우저에서 열기', exact: true }).click();

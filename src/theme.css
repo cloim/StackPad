@@ -132,7 +132,8 @@
   .settings-card h2 { font-size: 12px; color: var(--color-heading); }
   .settings-card p { margin-top: 4px; font-size: 11px; line-height: 1.55; color: #5c6654; }
   .settings-card :is(.settings-card, .component-row, .usage-switch, .path-code) { border-color: #d4d9cc; }
-  .settings-icon { display: flex; width: 32px; height: 32px; flex-shrink: 0; padding: 12px; border-radius: 9px; background: #d8dfce; color: #718567; }
+  .settings-icon { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0; border-radius: 9px; background: #d8dfce; color: #718567; }
+  .settings-icon > svg { flex-shrink: 0; }
   .section-heading { display: flex; align-items: center; gap: 9px; }
   .section-heading > svg { color: #b0babb; }
   .path-code { padding: 9px; border: 1px solid #c2cbb6; border-radius: 6px; background: #e2e7d8; color: #5c704f; font-size: 11px; overflow-wrap: anywhere; white-space: normal; }
@@ -173,7 +174,6 @@
     .tool-button { width: 34px; height: 34px; }
     .component-row { flex-wrap: wrap; padding: 12px; }
     .component-row > div:first-child { flex-basis: 100%; }
-    .settings-icon { padding: 9px; }
   }
   @media (max-width: 480px) {
     .settings-card { padding: 10px; }

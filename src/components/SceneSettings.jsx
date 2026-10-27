@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, Calendar, Clock, Film, GripVertical, Play, Plus, Power, Square, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Film, Plus, Trash2 } from 'lucide-react';
 import { SelectControl } from './SelectControl.jsx';
 import { Modal } from './Modal/Modal.jsx';
 import { ConfirmModal } from './ConfirmModal.jsx';
@@ -41,11 +41,10 @@ export function formatNextRun(schedule) {
   return t('{0}월 {1}일({2}) {3}:{4}', next.getMonth() + 1, next.getDate(), dayNames[(next.getDay() + 6) % 7], String(next.getHours()).padStart(2, '0'), String(next.getMinutes()).padStart(2, '0'));
 }
 
-export function SceneSettings({ scenes = [], schedules = [], services = [], groups = [], colors = [], colorNames = [], api, refresh, onError, onNotice }) {
+export function SceneSettings({ scenes = [], services = [], groups = [], colors = [], colorNames = [], api, refresh, onError, onNotice = () => {} }) {
   const [sceneModal, setSceneModal] = useState(null); // null | { isNew: true } | scene
-  const [scheduleModal, setScheduleModal] = useState(null); // null | { isNew: true } | schedule
   const [busy, setBusy] = useState(false);
-  const [deleting, setDeleting] = useState(null); // null | { scene } | { schedule, name }
+  const [deleting, setDeleting] = useState(null);
 
   // Grouped members are not standalone pads
   const groupedIds = new Set(groups.flatMap(g => g.member_ids));
@@ -59,10 +58,11 @@ export function SceneSettings({ scenes = [], schedules = [], services = [], grou
   async function saveScene(sceneData) {
     setBusy(true);
     try {
-      if (sceneData.id) {
-        await api(`/scenes/${sceneData.id}`, { method: 'PUT', body: JSON.stringify(sceneData) });
+      const { id, ...values } = sceneData;
+      if (id) {
+        await api(`/scenes/${sceneData.id}`, { method: 'PUT', body: JSON.stringify(values) });
       } else {
-        await api('/scenes', { method: 'POST', body: JSON.stringify(sceneData) });
+        await api('/scenes', { method: 'POST', body: JSON.stringify(values) });
       }
       await refresh();
       setSceneModal(null);
@@ -87,50 +87,6 @@ export function SceneSettings({ scenes = [], schedules = [], services = [], grou
     }
   }
 
-  // Schedule save / delete / toggle
-  async function saveSchedule(scheduleData) {
-    setBusy(true);
-    try {
-      if (scheduleData.id) {
-        await api(`/schedules/${scheduleData.id}`, { method: 'PUT', body: JSON.stringify(scheduleData) });
-      } else {
-        await api('/schedules', { method: 'POST', body: JSON.stringify(scheduleData) });
-      }
-      await refresh();
-      setScheduleModal(null);
-      onNotice(t('예약을 저장했습니다.'));
-    } catch (e) {
-      onError(e.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function deleteSchedule(schedule) {
-    setBusy(true);
-    try {
-      await api(`/schedules/${schedule.id}`, { method: 'DELETE' });
-      await refresh();
-      onNotice(t('예약을 삭제했습니다.'));
-    } catch (e) {
-      onError(e.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function toggleSchedule(schedule, enabled) {
-    setBusy(true);
-    try {
-      await api(`/schedules/${schedule.id}`, { method: 'PUT', body: JSON.stringify({ ...schedule, enabled }) });
-      await refresh();
-    } catch (e) {
-      onError(e.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <div className="flex min-w-0 flex-col gap-3.5">
       {/* 1. Scenes Section */}
@@ -143,7 +99,7 @@ export function SceneSettings({ scenes = [], schedules = [], services = [], grou
               <p>{t('여러 패드를 지정한 순서대로 실행하거나 역순으로 정지하는 흐름을 구성합니다.')}</p>
             </div>
           </div>
-          <button className="secondary min-h-8 px-[11px] py-1.5 text-[12px]" disabled={busy} onClick={() => setSceneModal({ name: '', color: colors[0] || '#10b981', pad_ids: [] })}>
+          <button type="button" className="secondary min-h-8 px-[11px] py-1.5 text-[12px]" disabled={busy} onClick={() => setSceneModal({ name: '', color: colors[0] || '#10b981', pad_ids: [] })}>
             <Plus size={15} />{t('흐름 추가')}
           </button>
         </div>
@@ -164,10 +120,10 @@ export function SceneSettings({ scenes = [], schedules = [], services = [], grou
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
-                    <button className="secondary small-btn" disabled={busy} aria-label={t('{0} 흐름 편집', scene.name)} onClick={() => setSceneModal({ ...scene, pad_ids: [...(scene.pad_ids || [])] })}>
+                    <button type="button" className="secondary small-btn" disabled={busy} aria-label={t('{0} 흐름 편집', scene.name)} onClick={() => setSceneModal({ ...scene, pad_ids: [...(scene.pad_ids || [])] })}>
                       {t('편집')}
                     </button>
-                    <button className="delete-button size-8" disabled={busy} aria-label={t('{0} 흐름 삭제', scene.name)} onClick={() => setDeleting({ scene })}>
+                    <button type="button" className="delete-button size-8" disabled={busy} aria-label={t('{0} 흐름 삭제', scene.name)} onClick={() => setDeleting(scene)}>
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -178,91 +134,7 @@ export function SceneSettings({ scenes = [], schedules = [], services = [], grou
         </div>
       </section>
 
-      {/* 2. Schedules Section */}
-      <section className="settings-card vertical">
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <div className="section-heading mr-auto min-w-[220px] flex-1">
-            <Calendar size={22} />
-            <div>
-              <h2>{t('예약 관리')}</h2>
-              <p>{t('지정한 시각과 요일에 흐름이나 패드를 자동으로 시작하거나 정지합니다.')}</p>
-            </div>
-          </div>
-          <button className="secondary min-h-8 px-[11px] py-1.5 text-[12px]" disabled={busy || (scenes.length === 0 && allPads.length === 0)} onClick={() => setScheduleModal({
-            target_type: scenes.length > 0 ? 'scene' : 'pad',
-            target_id: scenes[0]?.id || allPads[0]?.id || '',
-            action: 'start',
-            time: '09:00',
-            days: [0, 1, 2, 3, 4],
-            enabled: true
-          })}>
-            <Plus size={15} />{t('예약 추가')}
-          </button>
-        </div>
-
-        <div className="mt-2.5 flex flex-col gap-2">
-          {schedules.length === 0 ? (
-            <p>{t('등록된 예약이 없습니다. 새 일정을 추가해 보세요.')}</p>
-          ) : (
-            schedules.map(sch => {
-              const targetName = sch.target_type === 'scene'
-                ? scenes.find(s => s.id === sch.target_id)?.name || sch.target_id
-                : padMap.get(sch.target_id)?.name || sch.target_id;
-              const daysText = (sch.days || []).length === 7
-                ? t('매일')
-                : (sch.days || []).length === 5 && [0, 1, 2, 3, 4].every(d => sch.days.includes(d))
-                ? t('평일')
-                : (sch.days || []).map(d => dayNames[d]).join(', ');
-              const nextRun = formatNextRun(sch);
-
-              return (
-                <div className={`flex items-center justify-between gap-3 rounded-lg border border-[#d4d9cc] bg-[rgba(127,127,127,0.06)] px-3 py-2.5 ${!sch.enabled ? 'opacity-60' : ''}`} key={sch.id}>
-                  <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                    <div className="flex min-w-0 flex-wrap items-center gap-2">
-                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${sch.target_type === 'scene' ? 'bg-[#d5e2cf] text-[#557c4d]' : 'bg-[#d7e1e4] text-[#5e8396]'}`}>
-                        {sch.target_type === 'scene' ? t('흐름') : t('패드')}
-                      </span>
-                      <strong>{targetName}</strong>
-                      <span className={`text-[11px] font-semibold ${sch.action === 'start' ? 'text-ok' : 'text-[#a95c61]'}`}>
-                        {sch.action === 'start' ? t('시작') : t('정지')}
-                      </span>
-                    </div>
-                    <div className="mt-1 flex items-center gap-1.5 text-[11px] leading-[1.7] text-[#5c6654]">
-                      <Clock size={13} />
-                      <span>{sch.time}</span>
-                      <span className="opacity-40">|</span>
-                      <span>{daysText}</span>
-                      <span className="opacity-40">|</span>
-                      <span className="text-[#597e4c]">{nextRun}</span>
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <button
-                      type="button"
-                      className={`switch ${sch.enabled ? 'on' : ''}`}
-                      role="switch"
-                      aria-checked={sch.enabled}
-                      aria-label={t('{0} 예약 활성화', targetName)}
-                      disabled={busy}
-                      onClick={() => toggleSchedule(sch, !sch.enabled)}
-                    >
-                      <span />
-                    </button>
-                    <button className="secondary small-btn" disabled={busy} aria-label={t('{0} 예약 편집', targetName)} onClick={() => setScheduleModal({ ...sch, days: [...(sch.days || [])] })}>
-                      {t('편집')}
-                    </button>
-                    <button className="delete-button size-8" disabled={busy} aria-label={t('{0} 예약 삭제', targetName)} onClick={() => setDeleting({ schedule: sch, name: targetName })}>
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </section>
-
-      <ConfirmModal isOpen={!!deleting} title={deleting?.scene ? t('흐름 삭제') : t('예약 삭제')} confirmLabel={t('삭제')} message={deleting?.scene ? t("'{0}' 흐름을 삭제할까요?", deleting.scene.name) : t("'{0}' 예약을 삭제할까요?", deleting?.name)} onCancel={() => setDeleting(null)} onConfirm={() => { const target = deleting; setDeleting(null); if (target.scene) deleteScene(target.scene); else deleteSchedule(target.schedule); }} />
+      <ConfirmModal isOpen={!!deleting} title={t('흐름 삭제')} confirmLabel={t('삭제')} message={t("'{0}' 흐름을 삭제할까요?", deleting?.name)} onCancel={() => setDeleting(null)} onConfirm={() => { const scene = deleting; setDeleting(null); deleteScene(scene); }} />
 
       {/* Scene Edit Modal */}
       {sceneModal && (
@@ -277,22 +149,11 @@ export function SceneSettings({ scenes = [], schedules = [], services = [], grou
         />
       )}
 
-      {/* Schedule Edit Modal */}
-      {scheduleModal && (
-        <ScheduleEditModal
-          schedule={scheduleModal}
-          scenes={scenes}
-          allPads={allPads}
-          busy={busy}
-          onClose={() => setScheduleModal(null)}
-          onSave={saveSchedule}
-        />
-      )}
     </div>
   );
 }
 
-function SceneEditModal({ scene, allPads, colors, colorNames, busy, onClose, onSave }) {
+export function SceneEditModal({ scene, allPads, colors, colorNames, busy, onClose, onSave }) {
   const [name, setName] = useState(scene.name || '');
   const [color, setColor] = useState(scene.color || colors[0] || '#10b981');
   const [selectedIds, setSelectedIds] = useState(scene.pad_ids || []);
@@ -327,6 +188,7 @@ function SceneEditModal({ scene, allPads, colors, colorNames, busy, onClose, onS
 
   function handleSubmit(e) {
     e.preventDefault();
+    e.stopPropagation();
     if (!fieldError.validate(e.currentTarget)) return;
     onSave({
       ...(scene.id ? { id: scene.id } : {}),
@@ -424,7 +286,7 @@ function SceneEditModal({ scene, allPads, colors, colorNames, busy, onClose, onS
   );
 }
 
-function ScheduleEditModal({ schedule, scenes, allPads, busy, onClose, onSave }) {
+export function ScheduleEditModal({ schedule, scenes, allPads, busy, onClose, onSave, sceneOnly = false }) {
   const [targetType, setTargetType] = useState(schedule.target_type || (scenes.length > 0 ? 'scene' : 'pad'));
   const [targetId, setTargetId] = useState(schedule.target_id || (targetType === 'scene' ? scenes[0]?.id : allPads[0]?.id) || '');
   const [action, setAction] = useState(schedule.action || 'start');
@@ -453,6 +315,7 @@ function ScheduleEditModal({ schedule, scenes, allPads, busy, onClose, onSave })
 
   function handleSubmit(e) {
     e.preventDefault();
+    e.stopPropagation();
     if (!fieldError.validate(e.currentTarget)) return;
     onSave({
       ...(schedule.id ? { id: schedule.id } : {}),
@@ -471,6 +334,7 @@ function ScheduleEditModal({ schedule, scenes, allPads, busy, onClose, onSave })
         <label>
           <span>{t('대상 종류')}</span>
           <SelectControl
+            aria-label={t('대상 종류')}
             value={targetType}
             onChange={e => {
               const nextType = e.target.value;
@@ -479,13 +343,13 @@ function ScheduleEditModal({ schedule, scenes, allPads, busy, onClose, onSave })
             }}
           >
             {scenes.length > 0 && <option value="scene">{t('흐름')}</option>}
-            <option value="pad">{t('패드')}</option>
+            {!sceneOnly && <option value="pad">{t('패드')}</option>}
           </SelectControl>
         </label>
 
         <label>
           <span>{t('실행 대상')}</span>
-          <SelectControl required value={targetId} onChange={e => setTargetId(e.target.value)}>
+          <SelectControl aria-label={t('실행 대상')} required value={targetId} onChange={e => setTargetId(e.target.value)}>
             {targetType === 'scene'
               ? scenes.map(s => <option value={s.id} key={s.id}>{s.name}</option>)
               : allPads.map(p => <option value={p.id} key={p.id}>{p.name}</option>)}

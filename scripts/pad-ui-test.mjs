@@ -7,7 +7,7 @@ const page = await browser.newPage({ locale: 'ko-KR', viewport: { width: 1280, h
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 const base = { kind: 'local', padset_id: 'default', command: 'node server.js', cwd: 'C:/Users/me/projects', health_url: '', color: '#97f7da', active: false, status: 'stopped', uptime: 120, memory: 42, autostart: false };
-let services = [{ ...base, id: 'api', name: 'API', slot: 0, port: 8000 }, { ...base, id: 'web', name: 'Web', slot: 0, port: 5173 }, { ...base, id: 'single', name: '단독', slot: 1, port: 9000 }, { ...base, id: 'docker', kind: 'docker', name: '컨테이너', container: 'a'.repeat(64), container_ports: ['8080'], slot: 2 }];
+let services = [{ ...base, id: 'api', name: 'API', slot: 0, port: 8000 }, { ...base, id: 'web', name: 'Web', slot: 0, port: 5173 }, { ...base, id: 'single', environment: 'production', git_state: 'dirty', name: '단독', slot: 1, port: 9000 }, { ...base, id: 'docker', kind: 'docker', name: '컨테이너', container: 'a'.repeat(64), container_ports: ['8080'], slot: 2 }];
 const groups = [{ ...base, id: 'group', name: '통합 패드', member_ids: ['api', 'web'], slot: 0 }];
 let deleted = 0;
 let restarted = '';
@@ -47,6 +47,8 @@ try {
   expect(await page.locator('[data-pad-move]').first().evaluate(node => getComputedStyle(node).justifyContent)).toBe('flex-start');
   const rows = page.locator('[data-pad-wrap]').first().locator('[data-pad-port]>span');
   await expect(rows).toHaveText(['API :8000', 'Web :5173']);
+  await expect(page.locator('[data-pad-wrap]').filter({ has: page.getByRole('button', { name: '단독 메뉴', exact: true }) }).locator('[data-badge=git]')).toHaveCount(0);
+  await expect(page.locator('[data-pad-wrap]').filter({ has: page.getByRole('button', { name: '통합 패드 메뉴', exact: true }) }).locator('[data-badge=git]')).toHaveCount(1);
   const boxes = await rows.evaluateAll(nodes => nodes.map(n => n.getBoundingClientRect().toJSON()));
   expect(boxes[1].top).toBeGreaterThanOrEqual(boxes[0].bottom);
   await page.getByRole('button', { name: '통합 패드 메뉴', exact: true }).click();
@@ -83,7 +85,7 @@ try {
   await expect.poll(() => deleted).toBe(1);
   await page.getByRole('button', { name: '서비스 등록', exact: true }).click();
   const form = page.getByRole('dialog');
-  await expect(form.getByRole('tab')).toHaveText(['일반', '서비스']);
+  await expect(form.getByRole('tab')).toHaveText(['일반', '서비스', '예약', '흐름']);
   const selectBox = await form.getByLabel('패드셋', { exact: true }).boundingBox();
   const nameBox = await form.getByLabel('패드 이름', { exact: true }).boundingBox();
   expect(selectBox.height).toBe(nameBox.height);
