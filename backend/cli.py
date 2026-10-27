@@ -4,6 +4,7 @@ Commands call the same engine methods as the screen, so every rule the screen fo
 """
 import argparse
 import json
+from collections import Counter
 from pathlib import Path
 
 from pydantic import ValidationError
@@ -427,8 +428,16 @@ def run_pad(engine, args, context):
             raise ValueError('--name으로 패드 이름을 입력해 주세요.')
         if not body.get('components'):
             raise ValueError('--command, --container 또는 --json으로 구성을 입력해 주세요.')
-        body.setdefault('slot', first_free_slot(engine, body['padset_id']))
-        return pad_result(engine, mutate(engine, body))
+        with engine.lock:
+            body.setdefault('slot', first_free_slot(engine, body['padset_id']))
+            if 'color' not in body:
+                groups = engine.config.get('groups', [])
+                grouped = {sid for group in groups for sid in group['member_ids']}
+                pads = [*groups, *(s for s in engine.config['services'] if s['id'] not in grouped)]
+                counts = Counter(pad.get('color') for pad in pads)
+                body['color'] = min(PAD_COLORS, key=lambda value: counts[value])
+            pad_id = mutate(engine, body)
+        return pad_result(engine, pad_id)
     pad = find_pad(engine, args.pad)
     if args.action == 'show':
         return {**public(pad, detail=True), 'input': pad_input(engine, pad)}

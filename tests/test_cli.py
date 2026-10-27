@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'backend'))
 from main import create_app, VERSION
+from groups import PAD_COLORS
 
 
 class CommandLineApiTests(unittest.TestCase):
@@ -77,6 +78,30 @@ class CommandLineApiTests(unittest.TestCase):
         self.assertEqual((missing['exit_code'], missing['error']), (1, 'Pad set not found: 없음'))
         self.ok('padset', 'delete', '업무')
         self.assertNotIn('업무', [s['name'] for s in self.engine.config['padsets']])
+
+    def test_add_chooses_current_least_used_color_and_update_preserves_it(self):
+        first = self.ok('pad', 'add', '--name', 'First', '--command', 'node first.js')['pad']
+        second = self.ok('pad', 'add', '--name', 'Second', '--command', 'node second.js')['pad']
+        self.assertEqual((first['color'], second['color']), PAD_COLORS[:2])
+        self.ok('pad', 'delete', first['id'])
+        replacement = self.ok('pad', 'add', '--name', 'Replacement', '--command', 'node app.js')['pad']
+        self.assertEqual(replacement['color'], PAD_COLORS[0])
+        updated = self.ok('pad', 'update', second['id'], '--name', 'Renamed')['pad']
+        self.assertEqual(updated['color'], PAD_COLORS[1])
+
+    def test_color_counts_groups_once_across_padsets_after_palette_is_used(self):
+        group = {'name': 'Group', 'color': PAD_COLORS[0], 'components': [
+            {'kind': 'local', 'name': name, 'command': 'node app.js', 'cwd': str(self.work)}
+            for name in ('API', 'Web', 'Worker')]}
+        self.ok('pad', 'add', '--json', '-', stdin=json.dumps(group))
+        for index, value in enumerate(PAD_COLORS[1:], 1):
+            self.ok('pad', 'add', '--name', f'Pad {index}', '--command', 'node app.js', '--color', value)
+        self.ok('padset', 'add', 'Next')
+        first = self.ok('pad', 'add', '--name', 'Next 1', '--command', 'node app.js', '--padset', 'Next')['pad']
+        second = self.ok('pad', 'add', '--name', 'Next 2', '--command', 'node app.js', '--padset', 'Next')['pad']
+        self.assertEqual((first['color'], second['color']), PAD_COLORS[:2])
+        explicit = self.ok('pad', 'add', '--name', 'Explicit', '--command', 'node app.js', '--padset', 'Next', '--color', PAD_COLORS[0])['pad']
+        self.assertEqual(explicit['color'], PAD_COLORS[0])
 
     def test_single_pad_lifecycle(self):
         self.ok('padset', 'add', '업무')
