@@ -744,7 +744,11 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
     def refresh_git_states(self):
         now = time.monotonic()
         with self.lock:
-            folders = {s['cwd'] for s in self.config['services'] if s.get('kind', 'local') == 'local'}
+            folders = {s['cwd'] for s in self.config['services']
+                       if s.get('kind', 'local') == 'local'
+                       and (self.member_group(s['id']) or s).get('environment', 'development') == 'development'}
+            for folder in self.git_states.keys() - folders:
+                self.git_states.pop(folder, None)
             for folder, future in list(self.git_futures.items()):
                 if folder not in folders:
                     if future.cancel():
@@ -800,7 +804,7 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                     status = 'error'
                 else:
                     status = 'stopped'
-                result.append({**{k: v for k, v in service.items() if k != 'runtime'}, **sample, 'git_state': self.git_states.get(service['cwd']), 'status': status, 'pid': process.pid if process else None, 'external_pid': found['pid'] if found else None, 'active': bool(process), 'uptime': int(time.time() - process.create_time()) if process else 0})
+                result.append({**{k: v for k, v in service.items() if k != 'runtime'}, **sample, 'git_state': self.git_states.get(service['cwd']) if (self.member_group(service['id']) or service).get('environment', 'development') == 'development' else None, 'status': status, 'pid': process.pid if process else None, 'external_pid': found['pid'] if found else None, 'active': bool(process), 'uptime': int(time.time() - process.create_time()) if process else 0})
             return result
 
     def logs_offset(self, service_id, file=None, offset=None):

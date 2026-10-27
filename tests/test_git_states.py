@@ -76,6 +76,35 @@ class GitStateTests(unittest.TestCase):
                 time.sleep(0.01)
             self.assertEqual(run.call_count, 1)
 
+    def test_production_skips_queries_and_clears_cached_state(self):
+        self.assertEqual(self.state(), 'clean')
+        self.engine.config['services'][0]['environment'] = 'production'
+        self.engine.last_git_check = 0
+        with patch.object(self.engine, '_query_git_state') as query:
+            self.engine.refresh_git_states()
+            query.assert_not_called()
+        self.assertEqual(self.engine.git_states, {})
+        self.assertIsNone(self.engine.snapshot()[0]['git_state'])
+
+    def test_group_environment_overrides_members_and_shared_cache(self):
+        first = self.engine.config['services'][0]
+        second = self.engine.add(ServiceInput(name='Second', command='echo test', cwd=str(self.repo), slot=1))
+        self.engine.config['groups'] = [{'id': 'group', 'environment': 'production', 'member_ids': [first['id']]}]
+        self.assertIsNone(self.engine.snapshot()[0]['git_state'])
+        self.state()
+        self.assertEqual(self.engine.git_states[str(self.repo)], 'clean')
+        self.assertIsNone(self.engine.snapshot()[0]['git_state'])
+        self.assertEqual(self.engine.snapshot()[1]['git_state'], 'clean')
+        self.engine.config['groups'][0]['member_ids'].append(second)
+        self.engine.last_git_check = 0
+        with patch.object(self.engine, '_query_git_state') as query:
+            self.engine.refresh_git_states()
+            query.assert_not_called()
+        self.assertEqual(self.engine.git_states, {})
+        self.engine.config['groups'][0]['environment'] = 'development'
+        first['environment'] = 'production'
+        self.assertEqual(self.state(), 'clean')
+
     def test_slow_git_query_does_not_block_monitor_caller(self):
         def slow_query(*args, **kwargs):
             time.sleep(0.2)
