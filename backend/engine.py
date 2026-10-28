@@ -11,6 +11,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import uuid
@@ -774,10 +775,15 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
     @staticmethod
     def _query_git_state(folder):
         try:
-            status = subprocess.run(
-                ['git', '--no-optional-locks', '-C', folder, 'status', '--porcelain', '--untracked-files=normal'],
-                stdin=subprocess.DEVNULL, capture_output=True, timeout=3, creationflags=0x08000000)
-            return ('dirty' if status.stdout else 'clean') if status.returncode == 0 else None
+            # A descendant can retain a pipe handle after Git exits. File output
+            # keeps timeout cleanup from waiting forever for pipe reader threads.
+            with tempfile.TemporaryFile() as output:
+                status = subprocess.run(
+                    ['git', '--no-optional-locks', '-C', folder, 'status', '--porcelain', '--untracked-files=normal'],
+                    stdin=subprocess.DEVNULL, stdout=output, stderr=subprocess.DEVNULL,
+                    timeout=3, creationflags=0x08000000)
+                output.seek(0)
+                return ('dirty' if output.read(1) else 'clean') if status.returncode == 0 else None
         except (OSError, subprocess.TimeoutExpired):
             return None
 

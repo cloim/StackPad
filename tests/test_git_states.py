@@ -116,6 +116,22 @@ class GitStateTests(unittest.TestCase):
             self.assertLess(time.monotonic() - started, 0.1)
             self.assertEqual(self.state(), 'clean')
 
+    def test_timeout_does_not_wait_for_descendant_output_handle(self):
+        run = subprocess.run
+        child = "import time; time.sleep(2)"
+        parent = ("import subprocess, sys, time; "
+                  f"subprocess.Popen([sys.executable, '-c', {child!r}], "
+                  "stdout=sys.stdout, stderr=sys.stderr); time.sleep(5)")
+
+        def inherited_output(*args, **kwargs):
+            kwargs['timeout'] = 0.2
+            return run([sys.executable, '-c', parent], **kwargs)
+
+        with patch('engine.subprocess.run', side_effect=inherited_output):
+            started = time.monotonic()
+            self.assertIsNone(Engine._query_git_state(str(self.repo)))
+            self.assertLess(time.monotonic() - started, 1)
+
 
 if __name__ == '__main__':
     unittest.main()
