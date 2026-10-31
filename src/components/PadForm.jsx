@@ -28,7 +28,8 @@ export function PadForm({ pad, preset, services, slot, padsetId = 'default', pad
   const initialForm = useRef(form);
   const fieldError = useFieldError();
   const close = () => { if (pending) return; if (form !== initialForm.current || automation !== initialAutomation.current) setDiscarding(true); else onClose(); };
-  const running = (pad?.isGroup ? pad.members : pad ? [pad] : []).some(s => s.active || s.pid || s.external_pid || s.status === 'restarting');
+  // A port conflict belongs to an unrelated program, so the pad stays editable (e.g. to change its port).
+  const running = (pad?.isGroup ? pad.members : pad ? [pad] : []).some(s => s.active || s.pid || (s.external_pid && s.status !== 'conflict') || s.status === 'restarting');
   // Remote commands run with this PC's SSH keys, so only this PC may change them.
   const remoteLocked = !local && initialComponents.some(s => s.kind === 'remote');
   const readOnly = running || remoteLocked;
