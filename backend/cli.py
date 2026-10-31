@@ -218,7 +218,7 @@ def group_status(members):
     """Same rules as the pad screen, so a group reads the same here and there."""
     active = [s for s in members if s.get('active')]
     statuses = [s.get('status') for s in members]
-    if not active and 'conflict' in statuses:
+    if 'conflict' in statuses:
         return 'conflict'
     if not active and 'external' in statuses:
         return 'external'

@@ -235,7 +235,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
   const pads = [...services.filter(s => !groupedIds.has(s.id)), ...groups.map(group => {
     const members = group.member_ids.map(id => services.find(s => s.id === id)).filter(Boolean);
     const active = members.filter(s => s.active);
-    const idle = active.length === 0 && (members.some(s => s.status === 'conflict') ? 'conflict' : members.some(s => s.status === 'external') ? 'external' : null);
+    const idle = members.some(s => s.status === 'conflict') ? 'conflict' : active.length === 0 && members.some(s => s.status === 'external') ? 'external' : null;
     const failed = members.some(s => s.status === 'error') ? 'error' : 'unreachable';
     const status = idle ? idle : members.some(s => ['unhealthy', 'error', 'unreachable'].includes(s.status)) ? (active.length ? 'unhealthy' : failed) : active.length === 0 ? (members.some(s => s.status === 'checking') ? 'checking' : 'stopped') : active.length < members.length ? 'partial' : members.some(s => s.status === 'starting') ? 'starting' : 'running';
     const cpu = members.reduce((sum, s) => sum + (s.cpu || 0), 0);

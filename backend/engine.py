@@ -1000,10 +1000,10 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                 services = [dict(s) for s in self.config['services'] if s.get('kind', 'local') == 'local']
                 containers = [dict(s) for s in self.config['services'] if s.get('kind') == 'docker']
                 owned = self.owned_pids()
-            has_stopped_port = any(s.get('port') and not self.owned(s) for s in services)
+            has_port = any(s.get('port') for s in services)
             actively_viewed = (self.events.subscribers > 0) or (time.time() - self.last_services_poll < 10)
             now = time.time()
-            if has_stopped_port and (actively_viewed or now - last_listeners_time >= 10):
+            if has_port and (actively_viewed or now - last_listeners_time >= 10):
                 try:
                     ports = self.listeners()
                     self.stats['listener_calls'] += 1
@@ -1022,7 +1022,9 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                 if not process:
                     found = self.external(service, ports, owned)
                     with self.lock:
-                        if found:
+                        # A stopped pad is only stopped while an unrelated program holds its port; the conflict
+                        # matters once this pad runs, and start refuses the busy port on its own.
+                        if found and found['kind'] == 'external':
                             self.externals[service['id']] = found
                         else:
                             self.externals.pop(service['id'], None)
@@ -1102,7 +1104,10 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                     age = time.time() - process.create_time()
                     with self.lock:
                         current = next((s for s in self.config['services'] if s['id'] == service['id']), None)
-                    sample_status = 'running' if ready else ('starting' if age < 20 else 'unhealthy')
+                    # Another program holds the port while this pad runs, so the probe may answer for that program.
+                    listening = ports.get(service.get('port')) or set()
+                    conflict = bool(listening) and not listening & {p.pid for p in processes}
+                    sample_status = 'conflict' if conflict else 'running' if ready else ('starting' if age < 20 else 'unhealthy')
                     if sample_status == 'unhealthy' and service['id'] not in self._last_unhealthy:
                         self._last_unhealthy.add(service['id'])
                         err_line = self.last_error_line(service['id'])

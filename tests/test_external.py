@@ -96,15 +96,38 @@ class ExternalLaunch(unittest.TestCase):
         owned = self.engine.owned(self.engine.service(service_id))
         self.assertIn(running['pid'], {owned.pid})
 
-    def test_unrelated_listener_is_conflict_and_preserved(self):
+    def test_unrelated_listener_keeps_stopped_pad_stopped_and_preserved(self):
         port = free_port()
         service_id = self.add(port)
         launcher = self.spawn(port, self.other)
-        self.wait_status('conflict')
-        result = self.client.post(f'/api/services/{service_id}/start?takeover=true')
-        self.assertGreaterEqual(result.status_code, 400)
+        # Give the monitor time to see the listener; a stopped pad stays stopped and editable.
+        time.sleep(3)
+        current = self.wait_status('stopped')
+        self.assertIsNone(current['external_pid'])
+        self.assertNotIn(service_id, self.engine.externals)
+        component = dict(id=service_id, kind='local', name='외부 실행', command=f'"{sys.executable}" -u -m http.server {port} --bind 127.0.0.2', cwd=str(self.project), port=port, health_url='')
+        result = self.client.put(f'/api/pads/{service_id}', json={'name': '외부 실행', 'slot': 0, 'color': '#22c55e', 'components': [component]})
+        self.assertEqual(result.status_code, 200, result.text)
+        self.assertIn('127.0.0.2', self.engine.service(service_id)['command'])
+        for query in ('', '?takeover=true'):
+            result = self.client.post(f'/api/services/{service_id}/start{query}')
+            self.assertGreaterEqual(result.status_code, 400)
         self.assertIsNone(launcher.poll())
         self.assertTrue(port_open(port))
+
+    def test_running_pad_without_its_port_is_conflict(self):
+        port = free_port()
+        # The pad runs but never binds its port, as when another program took it after start.
+        values = dict(name='충돌', command=f'"{sys.executable}" -c "import time; time.sleep(60)"', cwd=str(self.project), port=port, health_url=f'http://127.0.0.1:{port}/', color='#22c55e', autostart=False, slot=0)
+        result = self.client.post('/api/services', json=values)
+        self.assertEqual(result.status_code, 200, result.text)
+        service_id = result.json()['id']
+        self.ids.append(service_id)
+        self.assertEqual(self.client.post(f'/api/services/{service_id}/start').status_code, 200)
+        self.spawn(port, self.other)
+        current = self.wait_status('conflict')
+        self.assertTrue(current['active'])
+        self.assertTrue(current['pid'])
 
     def test_group_start_takes_over_member(self):
         port = free_port()

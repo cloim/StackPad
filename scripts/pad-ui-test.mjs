@@ -101,15 +101,16 @@ try {
   await form.getByRole('button', { name: '저장', exact: true }).click();
   await expect.poll(() => saved?.name).toBe('신규');
   expect(saved.components[0].command).toBe('node server.js');
-  // A port held by an unrelated program is not this pad running, so its settings stay editable.
-  services[1].status = 'conflict'; services[1].external_pid = 4321;
+  // A port conflict only happens to a running member, so the whole pad reads as a conflict and stays locked.
+  Object.assign(services[1], { active: true, pid: 4321, status: 'conflict' });
   await expect(page.locator('[data-pad-wrap]').filter({ has: page.getByRole('button', { name: '통합 패드 메뉴', exact: true }) }).locator('[data-pad-state]')).toHaveAttribute('aria-label', '포트 충돌');
   await page.getByRole('button', { name: '통합 패드 메뉴', exact: true }).click();
   await page.getByRole('menuitem', { name: '설정', exact: true }).click();
   await form.getByRole('tab', { name: '서비스', exact: true }).click();
-  await expect(form.getByRole('textbox', { name: '실행 명령', exact: true }).nth(1)).toBeEditable();
+  await expect(form.getByRole('textbox', { name: '실행 명령', exact: true }).nth(1)).toHaveAttribute('readonly', '');
   await page.keyboard.press('Escape');
-  services[1].status = 'stopped'; services[1].external_pid = null;
+  Object.assign(services[1], { active: false, pid: null, status: 'stopped' });
+  await expect(page.locator('[data-pad-wrap]').filter({ has: page.getByRole('button', { name: '통합 패드 메뉴', exact: true }) }).locator('[data-pad-state]')).toHaveAttribute('aria-label', '중지됨');
   await page.getByRole('button', { name: '통합 패드 메뉴', exact: true }).click();
   await page.getByRole('menuitem', { name: '설정', exact: true }).click();
   await expect(form.getByText('표시된 순서대로 실행하고 역순으로 종료합니다. 색상은 패드 전체에 적용합니다.')).toHaveCount(0);
