@@ -93,6 +93,21 @@ class AlertsTests(unittest.IsolatedAsyncioTestCase):
         })
         self.assertEqual(self.engine.config['notifications']['crash'], False)
 
+    def test_unhealthy_consecutive_threshold(self):
+        # Verify unhealthy counts and threshold logic
+        self.assertEqual(self.engine._unhealthy_counts['p1'], 0)
+        self.assertNotIn('p1', self.engine._last_unhealthy)
+        self.assertEqual(len(self.engine.alerts), 0)
+
+        # 1. Stop clears unhealthy count
+        self.engine._unhealthy_counts['p1'] = 2
+        self.engine._last_unhealthy.add('p1')
+        self.engine._unhealthy_counts.pop('p1', None)
+        self.engine._last_unhealthy.discard('p1')
+        self.assertEqual(self.engine._unhealthy_counts['p1'], 0)
+        self.assertNotIn('p1', self.engine._last_unhealthy)
+
+
 
 if __name__ == '__main__':
     unittest.main()

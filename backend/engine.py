@@ -1,7 +1,7 @@
 """Owned-process service supervisor. Windows launches are detached through WMI."""
 import base64
 from concurrent.futures import ThreadPoolExecutor
-from collections import deque
+from collections import defaultdict, deque
 import hashlib
 import json
 import logging
@@ -202,6 +202,7 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices, SceneManager
         self.alerts = deque(maxlen=100)
         self._alert_counter = 0
         self._last_unhealthy = set()
+        self._unhealthy_counts = defaultdict(int)
         self.group_progress = {}
         self.scene_progress = {}
         self.scene_threads = {}
@@ -592,6 +593,8 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices, SceneManager
                 raise ValueError('서비스를 중지한 다음 삭제해 주세요.')
             self.config['services'].remove(service)
             self.samples.pop(service_id, None)
+            self._unhealthy_counts.pop(service_id, None)
+            self._last_unhealthy.discard(service_id)
             self.history.pop(service_id, None)
             self.forget_remote(service_id)
             self.clean_scenes_for_pad(service_id)
@@ -625,7 +628,7 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices, SceneManager
         try:
             if service.get('health_url'):
                 opener = opener or build_opener(ProxyHandler({}))
-                with opener.open(Request(service['health_url']), timeout=1) as response:
+                with opener.open(Request(service['health_url']), timeout=3) as response:
                     return 200 <= response.status < 400
             return port_open(service['port'])
         except Exception:
@@ -694,6 +697,8 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                 return
             service.update(runtime={'pid': process.pid, 'created': created, 'log_source': str(log)}, error='')
             self.samples[service_id] = {'status': 'starting'}
+            self._unhealthy_counts.pop(service_id, None)
+            self._last_unhealthy.discard(service_id)
             self.save()
 
     def stop_all_local(self):
@@ -740,6 +745,8 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
             self.sync_service_log(service_id)
             service.update(runtime=None, error='')
             self.samples.pop(service_id, None)
+            self._unhealthy_counts.pop(service_id, None)
+            self._last_unhealthy.discard(service_id)
             self.save()
 
     def refresh_git_states(self):
@@ -1074,6 +1081,8 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                                     kind = 'crashed'
                                     error_msg = '프로세스가 종료되었습니다. 로그를 확인해 주세요.'
                                 current.update(runtime=None, error=error_msg)
+                                self._unhealthy_counts.pop(service['id'], None)
+                                self._last_unhealthy.discard(service['id'])
                                 self.samples[service['id']] = {
                                     'status': 'error',
                                     'message': error_msg,
@@ -1107,18 +1116,32 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                     # Another program holds the port while this pad runs, so the probe may answer for that program.
                     listening = ports.get(service.get('port')) or set()
                     conflict = bool(listening) and not listening & {p.pid for p in processes}
-                    sample_status = 'conflict' if conflict else 'running' if ready else ('starting' if age < 20 else 'unhealthy')
-                    if sample_status == 'unhealthy' and service['id'] not in self._last_unhealthy:
-                        self._last_unhealthy.add(service['id'])
-                        err_line = self.last_error_line(service['id'])
-                        self.record_alert(
-                            service['id'],
-                            service['name'],
-                            'unhealthy',
-                            with_error_line('응답 이상이 감지되었습니다.', err_line)
-                        )
-                    elif sample_status == 'running':
+                    if conflict:
+                        sample_status = 'conflict'
+                        self._unhealthy_counts[service['id']] = 0
+                    elif ready:
+                        sample_status = 'running'
+                        self._unhealthy_counts[service['id']] = 0
                         self._last_unhealthy.discard(service['id'])
+                    elif age < 60:
+                        sample_status = 'starting'
+                        self._unhealthy_counts[service['id']] = 0
+                    else:
+                        self._unhealthy_counts[service['id']] += 1
+                        if self._unhealthy_counts[service['id']] >= 3:
+                            sample_status = 'unhealthy'
+                            if service['id'] not in self._last_unhealthy:
+                                self._last_unhealthy.add(service['id'])
+                                err_line = self.last_error_line(service['id'])
+                                self.record_alert(
+                                    service['id'],
+                                    service['name'],
+                                    'unhealthy',
+                                    with_error_line('응답 이상이 감지되었습니다.', err_line)
+                                )
+                        else:
+                            previous_status = self.samples.get(service['id'], {}).get('status', 'running')
+                            sample_status = previous_status if previous_status in ('running', 'starting') else 'running'
                     with self.lock:
                         current = next((s for s in self.config['services'] if s['id'] == service['id']), None)
                         if current and current.get('runtime') == service.get('runtime'):

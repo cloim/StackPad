@@ -18,6 +18,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--release-dir', default=str(root / 'release/StackPad'))
 parser.add_argument('--installer', action='store_true', help='also build the NSIS installer and updater artifacts')
 args = parser.parse_args()
+if args.installer and 'TAURI_SIGNING_PRIVATE_KEY' not in os.environ:
+    key_path = Path.home() / '.config' / 'backups' / 'stackpad-keys' / 'updater.key'
+    if key_path.exists():
+        os.environ['TAURI_SIGNING_PRIVATE_KEY'] = str(key_path)
 npm = 'npm.cmd' if os.name == 'nt' else 'npm'
 
 
