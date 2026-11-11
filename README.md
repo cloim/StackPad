@@ -99,6 +99,8 @@ stackpad-cli schedule add --scene DevStack --action start --time 09:00 --days mo
 
 StackPad can show the 5-hour and weekly limits of the AI CLIs signed in on the PC: Claude Code, Codex and Antigravity. It is off by default; turn on each CLI in **Settings > General**. StackPad only reads the credentials those CLIs already saved and calls their unofficial usage endpoints, so the numbers may disappear if those services change.
 
+Each CLI normally reads its credentials from its folder under your user folder (`~/.claude`, `~/.codex`, `~/.gemini/antigravity-cli`). To point one CLI at a different config folder, add `usage_dirs` to `config.json` in the storage folder, for example `"usage_dirs": { "codex": "~/.codex-work" }` (keys: `claude`, `codex`, `antigravity`). The value is the CLI folder itself, which holds `auth.json` for Codex, `.credentials.json` for Claude or `usage-snapshot.json` for Antigravity. `%VAR%` and `~` are expanded. If the `STACKPAD_USAGE_HOME` environment variable is set, it wins: StackPad then uses the default subfolders under that home and ignores `usage_dirs`. Edit `config.json` while StackPad is closed; otherwise StackPad overwrites your change on its next save.
+
 ## Remote servers
 
 Remote pads run your commands over SSH with your own keys (`~/.ssh/config` aliases work). Nothing is installed on the server. Connect once from a terminal to save the host key, and allow commands that need `sudo` without a password in the server's sudoers file. Remote pads can only be added or changed from the PC itself.

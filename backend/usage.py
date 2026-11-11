@@ -49,10 +49,14 @@ def _home(home):
     return Path(home or os.environ.get('STACKPAD_USAGE_HOME') or Path.home())
 
 
-def _fetch(provider, name, home, filename, read_token, url, headers, map_response):
+def _dir(home, folder, default):
+    return Path(folder) if folder else _home(home) / default
+
+
+def _fetch(provider, name, directory, filename, read_token, url, headers, map_response):
     result = _result(provider, name)
     try:
-        credentials = json.loads((_home(home) / filename).read_text(encoding='utf-8'))
+        credentials = json.loads((directory / filename).read_text(encoding='utf-8'))
         token, extra_headers, expires_at, plan = read_token(credentials)
         if not token or (expires_at is not None and float(expires_at) <= time.time() * 1000):
             return _result(provider, name, 'login_required', 'CLI 사용 시 갱신' if token else 'CLI 로그인 필요')
@@ -78,7 +82,7 @@ def _fetch(provider, name, home, filename, read_token, url, headers, map_respons
     return result
 
 
-def collect_claude_usage(home=None):
+def collect_claude_usage(home=None, folder=None):
     def credentials(data):
         oauth = data.get('claudeAiOauth', {})
         return oauth.get('accessToken'), {}, oauth.get('expiresAt'), oauth.get('subscriptionType')
@@ -87,11 +91,11 @@ def collect_claude_usage(home=None):
         return plan, [_window(key, label, data[source]['utilization'], data[source].get('resets_at'))
                       for source, key, label in [('five_hour', 'five_hour', '5h'), ('seven_day', 'weekly', 'w')]]
 
-    return _fetch('claude', 'Claude', home, '.claude/.credentials.json', credentials,
+    return _fetch('claude', 'Claude', _dir(home, folder, '.claude'), '.credentials.json', credentials,
                   'https://api.anthropic.com/api/oauth/usage', {'anthropic-beta': 'oauth-2025-04-20'}, windows)
 
 
-def collect_codex_usage(home=None):
+def collect_codex_usage(home=None, folder=None):
     def credentials(data):
         tokens = data.get('tokens', {})
         account_id = tokens.get('account_id')
@@ -108,14 +112,14 @@ def collect_codex_usage(home=None):
             result.append(_window(key, label, window['used_percent'], window.get('reset_at')))
         return data.get('plan_type'), result
 
-    return _fetch('codex', 'Codex', home, '.codex/auth.json', credentials,
+    return _fetch('codex', 'Codex', _dir(home, folder, '.codex'), 'auth.json', credentials,
                   'https://chatgpt.com/backend-api/wham/usage', {'User-Agent': 'codex-cli'}, windows)
 
 
-def collect_antigravity_usage(home=None):
+def collect_antigravity_usage(home=None, folder=None):
     providers = [_result('antigravity-gemini', 'AG Gemini'), _result('antigravity-3p', 'AG Claude/GPT')]
     try:
-        snapshot = json.loads((_home(home) / '.gemini/antigravity-cli/usage-snapshot.json').read_text(encoding='utf-8'))
+        snapshot = json.loads((_dir(home, folder, '.gemini/antigravity-cli') / 'usage-snapshot.json').read_text(encoding='utf-8'))
         captured_at = _utc(snapshot['captured_at'])
         elapsed = datetime.now(timezone.utc).timestamp() - datetime.fromisoformat(captured_at).timestamp()
         quota = snapshot['quota']
@@ -161,13 +165,32 @@ def _keep_last_good(home, provider):
 COLLECTORS = {'claude': collect_claude_usage, 'codex': collect_codex_usage, 'antigravity': collect_antigravity_usage}
 
 
-def collect_usage(home=None, refresh=False, enabled=None):
+DEFAULT_DIRS = {'claude': '.claude', 'codex': '.codex', 'antigravity': '.gemini/antigravity-cli'}
+
+
+def _dirs_for(home, dirs):
+    """CLI config folder per CLI: home argument or STACKPAD_USAGE_HOME (default subfolders) > dirs[cli] > user home subfolder.
+    Invalid entries are ignored."""
+    override = home or os.environ.get('STACKPAD_USAGE_HOME')
+    configured = {}
+    if not override and isinstance(dirs, dict):
+        for name, value in dirs.items():
+            if name in COLLECTORS and isinstance(value, str) and value.strip():
+                try:
+                    configured[name] = Path(os.path.expanduser(os.path.expandvars(value.strip()))).resolve()
+                except (OSError, ValueError, RuntimeError):
+                    pass
+    base = Path(override).resolve() if override else Path.home().resolve()
+    return {name: configured.get(name, base / DEFAULT_DIRS[name]) for name in COLLECTORS}
+
+
+def collect_usage(home=None, refresh=False, enabled=None, dirs=None):
     """Return isolated snapshots of the enabled CLIs; concurrent requests share one collection."""
-    home = _home(home).resolve()
+    resolved = _dirs_for(home, dirs)
     names = tuple(name for name in COLLECTORS if enabled is None or name in enabled)
     if not names:
         return []
-    key = (home, names)
+    key = (tuple((name, resolved[name]) for name in COLLECTORS), names)
     # perf_counter: Windows monotonic ticks every 15 ms, which made a refresh look like a concurrent request.
     requested_at = time.perf_counter()
     with _cache_lock:
@@ -175,7 +198,8 @@ def collect_usage(home=None, refresh=False, enabled=None):
         if cached and ((not refresh and requested_at - cached[0] < CACHE_SECONDS) or (refresh and requested_at - cached[0] < MIN_REFRESH_INTERVAL) or cached[0] >= requested_at):
             return copy.deepcopy(cached[1])
         with ThreadPoolExecutor(max_workers=3) as pool:
-            results = list(pool.map(lambda name: COLLECTORS[name](home), names))
-            providers = [_keep_last_good(home, provider) for result in results for provider in (result if isinstance(result, list) else [result])]
+            results = list(pool.map(lambda name: COLLECTORS[name](folder=resolved[name]), names))
+        providers = [_keep_last_good(resolved[name], provider)
+                     for name, result in zip(names, results) for provider in (result if isinstance(result, list) else [result])]
         _cache[key] = (time.perf_counter(), providers)
         return copy.deepcopy(providers)

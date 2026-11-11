@@ -99,7 +99,7 @@ class UsageTests(unittest.TestCase):
             usage.collect_usage(self.home, refresh=True)
             self.assertEqual(mock.call_count, 2)
             # Refresh after throttle interval fetches fresh results.
-            key = (self.home.resolve(), tuple(usage.COLLECTORS))
+            key = (tuple((name, path) for name, path in usage._dirs_for(self.home, None).items()), tuple(usage.COLLECTORS))
             stamp, providers = usage._cache[key]
             usage._cache[key] = (stamp - 11, providers)
             usage.collect_usage(self.home, refresh=True)
@@ -147,6 +147,74 @@ class UsageTests(unittest.TestCase):
                 results = list(pool.map(lambda _: usage.collect_usage(), range(8)))
             self.assertEqual(mock.call_count, 2)
             self.assertTrue(all(result[0]['status'] == 'ok' for result in results))
+
+    def make_home(self, name, claude=None, codex=None):
+        home = self.home / name
+        for rel, data in (('.claude/.credentials.json', {'claudeAiOauth': {'accessToken': claude, 'expiresAt': (time.time() + 3600) * 1000}} if claude else None),
+                          ('.codex/auth.json', {'tokens': {'access_token': codex, 'account_id': 'test-account'}} if codex else None)):
+            if data:
+                (home / rel).parent.mkdir(parents=True, exist_ok=True)
+                (home / rel).write_text(json.dumps(data), encoding='utf-8')
+        return home
+
+    def tokens_seen(self):
+        seen = {}
+
+        def respond(request, timeout, context=None):
+            seen['claude' if 'anthropic.com' in request.full_url else 'codex'] = request.get_header('Authorization')
+            data = {'five_hour': {'utilization': 1}, 'seven_day': {'utilization': 2}} if 'anthropic.com' in request.full_url else {'rate_limit': {}}
+            return io.BytesIO(json.dumps(data).encode())
+        return seen, respond
+
+    def test_dirs_per_cli_and_priority(self):
+        default = self.make_home('default', claude='claude-default', codex='codex-default')
+        codex_home = self.make_home('codexhome', codex='codex-custom')
+        seen, respond = self.tokens_seen()
+        with patch.object(usage.Path, 'home', return_value=default), patch.dict('os.environ', {}, clear=False) as env,                 patch.object(usage, 'urlopen', side_effect=respond):
+            env.pop('STACKPAD_USAGE_HOME', None)
+            usage.collect_usage(dirs={'codex': str(codex_home / '.codex')})
+            self.assertEqual(seen, {'claude': 'Bearer claude-default', 'codex': 'Bearer codex-custom'})
+            usage._cache.clear()
+            seen.clear()
+            env['STACKPAD_USAGE_HOME'] = str(default)
+            usage.collect_usage(dirs={'codex': str(codex_home / '.codex')})
+            self.assertEqual(seen['codex'], 'Bearer codex-default')
+
+    def test_dirs_invalid_values_ignored(self):
+        default = self.make_home('default', claude='claude-default', codex='codex-default')
+        seen, respond = self.tokens_seen()
+        for bad in ('text', ['codex'], None, {'unknown': str(default / '.codex')}, {'codex': 5}, {'codex': ''}, {'codex': '   '}, {'claude': None}):
+            usage._cache.clear()
+            seen.clear()
+            with patch.object(usage.Path, 'home', return_value=default), patch.dict('os.environ', {}, clear=False) as env,                     patch.object(usage, 'urlopen', side_effect=respond):
+                env.pop('STACKPAD_USAGE_HOME', None)
+                providers = usage.collect_usage(dirs=bad)
+            self.assertEqual(seen, {'claude': 'Bearer claude-default', 'codex': 'Bearer codex-default'}, bad)
+            self.assertEqual(len(providers), 4)
+
+    def test_dirs_expand_variables_and_user(self):
+        custom = self.make_home('custom', codex='codex-custom')
+        default = self.make_home('default')
+        for value, env in (('%TEST_USAGE_HOME%/.codex', {'TEST_USAGE_HOME': str(custom)}), ('$TEST_USAGE_HOME/.codex', {'TEST_USAGE_HOME': str(custom)}),
+                           ('~/custom/.codex', {'HOME': str(self.home), 'USERPROFILE': str(self.home)})):
+            usage._cache.clear()
+            seen, respond = self.tokens_seen()
+            with patch.object(usage.Path, 'home', return_value=default), patch.dict('os.environ', env),                     patch.object(usage, 'urlopen', side_effect=respond):
+                os_env = __import__('os').environ
+                os_env.pop('STACKPAD_USAGE_HOME', None)
+                usage.collect_usage(dirs={'codex': value}, enabled=['codex'])
+            self.assertEqual(seen.get('codex'), 'Bearer codex-custom', value)
+
+    def test_different_dirs_do_not_share_cache(self):
+        first = self.make_home('first', codex='codex-first')
+        second = self.make_home('second', codex='codex-second')
+        seen, respond = self.tokens_seen()
+        with patch.object(usage, 'urlopen', side_effect=respond) as mock:
+            usage.collect_usage(dirs={'codex': str(first / '.codex')}, enabled=['codex'])
+            usage.collect_usage(dirs={'codex': str(second / '.codex')}, enabled=['codex'])
+            self.assertEqual((mock.call_count, seen['codex']), (2, 'Bearer codex-second'))
+            usage.collect_usage(dirs={'codex': str(second / '.codex')}, enabled=['codex'])
+            self.assertEqual(mock.call_count, 2)
 
     def snapshot(self, age=0):
         now = datetime.now(timezone.utc)

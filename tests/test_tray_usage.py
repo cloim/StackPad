@@ -24,7 +24,7 @@ class TrayUsageTests(unittest.TestCase):
             response = self.client.get('/api/desktop/usage', headers={'X-StackPad-Control': 'tray-test-token'})
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json(), {'providers': providers, 'enabled': ['codex']})
-            collect.assert_called_once_with(refresh=False, enabled=['codex'])
+            collect.assert_called_once_with(refresh=False, enabled=['codex'], dirs=None)
             self.assertEqual(self.client.get('/api/usage').status_code, 401)
 
     def test_rejects_missing_wrong_remote_and_forwarded_credentials(self):

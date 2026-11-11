@@ -388,7 +388,7 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
     @app.get('/api/usage', dependencies=[Depends(authenticated)])
     def usage(refresh: int = 0):
         enabled = engine.config.get('usage_providers', [])
-        return {'providers': collect_usage(refresh=refresh == 1, enabled=enabled), 'enabled': enabled}
+        return {'providers': collect_usage(refresh=refresh == 1, enabled=enabled, dirs=engine.config.get('usage_dirs')), 'enabled': enabled}
 
     def desktop_control(request: Request):
         """Only StackPad.exe on this PC holds the control token."""
@@ -440,7 +440,7 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
             raise HTTPException(401, '위젯 연결을 다시 설정해 주세요.')
         enabled = engine.config.get('usage_providers', [])
         # A widget tap sends refresh=1 so it skips the 60 second cache like the app's refresh button.
-        return {'providers': collect_usage(refresh=refresh == 1, enabled=enabled), 'enabled': enabled}
+        return {'providers': collect_usage(refresh=refresh == 1, enabled=enabled, dirs=engine.config.get('usage_dirs')), 'enabled': enabled}
 
     def settings_payload(request: Request):
         return {'tools': {'vscode': bool(vscode_path()), 'docker': bool(shutil.which('docker'))}, 'autostart': engine.startup_path.exists(), 'data_dir': str(engine.data_dir),

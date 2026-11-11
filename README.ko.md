@@ -98,6 +98,8 @@ stackpad-cli schedule add --scene 개발스택 --action start --time 09:00 --day
 
 PC에 로그인된 AI CLI(Claude Code, Codex, Antigravity)의 5시간, 1주일 사용 한도를 보여 줍니다. 기본은 꺼져 있고 **환경 설정 > 일반**에서 CLI별로 켤 수 있어요. 각 CLI가 저장해 둔 자격 증명을 읽기만 하고 비공개 사용량 API를 호출하므로, 해당 서비스가 바뀌면 숫자가 보이지 않을 수 있습니다.
 
+각 CLI는 기본적으로 사용자 폴더 아래의 자기 폴더(`~/.claude`, `~/.codex`, `~/.gemini/antigravity-cli`)에서 자격 증명을 읽어요. 특정 CLI만 다른 설정 폴더를 쓰려면 저장 폴더의 `config.json`에 `usage_dirs`를 추가해 주세요. 예: `"usage_dirs": { "codex": "~/.codex-work" }` (키는 `claude`, `codex`, `antigravity`). 값은 CLI 폴더 자체이며, Codex는 `auth.json`, Claude는 `.credentials.json`, Antigravity는 `usage-snapshot.json`이 그 안에 있어야 합니다. `%VAR%`와 `~`는 확장됩니다. `STACKPAD_USAGE_HOME` 환경변수가 있으면 그 값이 우선하며, 이때는 해당 홈 아래 기본 하위 폴더를 쓰고 `usage_dirs`는 무시합니다. StackPad를 종료한 상태에서 `config.json`을 수정해야 변경이 유지돼요.
+
 ## 원격 서버
 
 원격 패드는 내 SSH 키로 명령을 실행합니다(`~/.ssh/config` 별칭 사용 가능). 서버에는 아무것도 설치하지 않아요. 처음 쓰는 호스트는 터미널에서 한 번 접속해 호스트 키를 저장하고, `sudo`가 필요한 명령은 서버의 sudoers에서 비밀번호 없이 허용해 주세요. 원격 패드는 PC 화면에서만 추가하고 변경할 수 있습니다.
