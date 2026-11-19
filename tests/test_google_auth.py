@@ -52,6 +52,9 @@ class GoogleAuthTests(unittest.TestCase):
         self.addCleanup(self.folder.cleanup)
         self.data = Path(self.folder.name)
         self.app = create_app(self.data, self.data)
+        # Pairing checks the real tailscale serve entry; tests must not touch this PC's tailnet.
+        self.restore = patch('main.tailscale.restore', return_value=False).start()
+        self.addCleanup(patch.stopall)
         self.google = self.app.state.google
         self.google._keys = FakeKeys()
         self.token = FakeTokenEndpoint(self.google)
@@ -192,6 +195,16 @@ class GoogleAuthTests(unittest.TestCase):
         self.assertEqual(phone.get('/api/services').status_code, 401)
         with patch('main.collect_usage', return_value=[]):
             self.assertEqual(phone.get('/api/widget/usage', headers={'Authorization': 'Bearer ' + widget['token']}).status_code, 401)
+
+    def test_pairing_restores_serve_before_showing_a_code(self):
+        sign_in(self.app, self.local)
+        self.google.save_external_url(EXTERNAL)
+        self.assertEqual(self.local.post('/api/pairing').status_code, 200)
+        self.restore.assert_called_with(48731, EXTERNAL)
+        self.restore.side_effect = RuntimeError('저장된 외부 주소의 포트를 다른 Tailscale 서비스가 쓰고 있습니다.')
+        refused = self.local.post('/api/pairing')
+        self.assertEqual(refused.status_code, 409)
+        self.assertIn('포트', refused.json()['detail'])
 
     def test_pairing_code_expires(self):
         sign_in(self.app, self.local)

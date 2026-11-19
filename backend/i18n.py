@@ -161,6 +161,9 @@ EN = {
     'Tailscale에 로그인하고 연결해 주세요.': 'Sign in to Tailscale and connect.',
     '비어 있는 Tailscale HTTPS 포트를 찾지 못했습니다.': 'No free Tailscale HTTPS port was found.',
     'Tailscale 명령을 실행하지 못했습니다.': 'Could not run the Tailscale command.',
+    'Tailscale이 응답하지 않습니다.': 'Tailscale is not responding.',
+    'Tailscale 주소가 바뀌었습니다. 외부 주소를 다시 연결해 주세요.': 'The Tailscale address has changed. Connect the remote address again.',
+    '저장된 외부 주소의 포트를 다른 Tailscale 서비스가 쓰고 있습니다.': 'Another Tailscale service is using the port of the saved remote address.',
     # Usage and widgets
     'CLI 로그인 필요': 'Sign in to the CLI',
     'CLI 사용 시 갱신': 'Updates when you use the CLI',

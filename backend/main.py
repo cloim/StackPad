@@ -41,10 +41,11 @@ from i18n import request_lang, translate, translate_payload
 
 
 # Keep in step with package.json; tests/test_version.py checks it.
-VERSION = '1.1.42'
+VERSION = '1.1.43'
+TAILSCALE_CHECK_SECONDS = 60
 
 
-def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_token=None):
+def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_token=None, engine_port=None):
     engine = Engine(data_dir, desktop_exe)
     sessions = SessionStore(data_dir)
     google = GoogleAuth(engine)
@@ -76,9 +77,26 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
                             service['error'] = str(error)
                             engine.save()
         threading.Thread(target=boot, daemon=True).start()
+        if engine_port:
+            threading.Thread(target=watch_tailscale, daemon=True).start()
         yield
         engine.closed.set()
         engine.wake.set()
+
+    def watch_tailscale():
+        """Reinstalling or resetting Tailscale drops serve entries, which cuts paired phones off from the saved address."""
+        reported = None
+        while True:
+            try:
+                if tailscale.restore(engine_port, google.external_url):
+                    logging.warning('Restored tailscale serve for %s', google.external_url)
+                reported = None
+            except Exception as error:
+                if str(error) != reported:
+                    logging.warning('Tailscale serve check failed: %s', error)
+                    reported = str(error)
+            if engine.closed.wait(TAILSCALE_CHECK_SECONDS):
+                return
 
     app = FastAPI(title='StackPad', lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.engine = engine
@@ -355,9 +373,14 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
         return {'url': url}
 
     @app.post('/api/pairing', dependencies=[Depends(local_only)])
-    def create_pairing(session=Depends(authenticated)):
+    def create_pairing(request: Request, session=Depends(authenticated)):
         if not google.external_url:
             raise HTTPException(409, '먼저 Tailscale로 외부 주소를 연결해 주세요.')
+        # A QR code is only worth showing when the phone can reach the address inside it.
+        try:
+            tailscale.restore(engine_port or request.url.port or 80, google.external_url)
+        except RuntimeError as problem:
+            raise HTTPException(409, str(problem)) from None
         code, ttl = google.create_pairing(session['email'])
         return {'url': google.external_url, 'code': code, 'expires_in': ttl,
                 'link': 'stackpad://pair?' + urlencode({'server': google.external_url, 'code': code})}
@@ -927,4 +950,4 @@ if __name__ == '__main__':
     # The desktop app reads this token to shut the engine down from the tray.
     control_token = secrets.token_urlsafe(32)
     (bootstrap / 'control-token').write_text(control_token, 'utf-8')
-    uvicorn.run(create_app(args.data_dir, web, args.desktop_exe, bootstrap / 'storage-location.json', control_token), host='127.0.0.1', port=args.port, proxy_headers=True, forwarded_allow_ips='127.0.0.1', log_level='info')
+    uvicorn.run(create_app(args.data_dir, web, args.desktop_exe, bootstrap / 'storage-location.json', control_token, args.port), host='127.0.0.1', port=args.port, proxy_headers=True, forwarded_allow_ips='127.0.0.1', log_level='info')
