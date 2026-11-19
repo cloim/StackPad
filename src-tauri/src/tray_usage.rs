@@ -59,16 +59,18 @@ fn present(window: &WebviewWindow, icon: Area, data: &Value) -> tauri::Result<()
 
 fn publish(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("tray-usage") {
-        let data = app.state::<Popup>().data.lock().unwrap().clone();
+        let Some(popup) = app.try_state::<Popup>() else { return; };
+        let data = popup.data.lock().unwrap().clone();
         let _ = window.eval(format!("window.__STACKPAD_USAGE__={data};window.dispatchEvent(new Event('stackpad-usage'));"));
     }
 }
 
 pub fn update(app: &AppHandle, mut data: Value, update_available: bool) {
+    let Some(popup) = app.try_state::<Popup>() else { return; };
     data["update_available"] = json!(update_available);
-    *app.state::<Popup>().data.lock().unwrap() = data.clone();
+    *popup.data.lock().unwrap() = data.clone();
     if let Some(window) = app.get_webview_window("tray-usage") {
-        let icon = *app.state::<Popup>().icon.lock().unwrap();
+        let icon = *popup.icon.lock().unwrap();
         if let Some(icon) = icon.filter(|_| window.is_visible().unwrap_or(false)) {
             let _ = present(&window, icon, &data);
         }
@@ -77,14 +79,17 @@ pub fn update(app: &AppHandle, mut data: Value, update_available: bool) {
 }
 
 pub fn hover(app: &AppHandle, rect: Rect) {
+    let Some(popup) = app.try_state::<Popup>() else { return; };
     // Tray events always supply physical coordinates, including on scaled displays.
     let position = rect.position.to_physical::<f64>(1.0);
     let size = rect.size.to_physical::<f64>(1.0);
-    *app.state::<Popup>().icon.lock().unwrap() = Some(Area { x: position.x, y: position.y, width: size.width, height: size.height });
+    *popup.icon.lock().unwrap() = Some(Area { x: position.x, y: position.y, width: size.width, height: size.height });
 }
 
 pub fn dismiss(app: &AppHandle) {
-    app.state::<Popup>().suppressed.store(true, Ordering::SeqCst);
+    if let Some(popup) = app.try_state::<Popup>() {
+        popup.suppressed.store(true, Ordering::SeqCst);
+    }
     if let Some(window) = app.get_webview_window("tray-usage") { let _ = window.hide(); }
 }
 

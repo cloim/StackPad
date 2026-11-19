@@ -88,7 +88,7 @@ struct Updates {
 }
 
 fn refresh_popup(app: &AppHandle) {
-    let state = app.state::<Updates>();
+    let Some(state) = app.try_state::<Updates>() else { return; };
     let data = state.usage.lock().unwrap().clone();
     tray_usage::update(app, data, state.pending.lock().unwrap().is_some());
 }
@@ -115,7 +115,7 @@ fn open_in_browser(url: &str) {
 // The Tailscale address can be connected or changed in settings at any time, so the menu item follows the engine.
 fn refresh_tailnet(app: &AppHandle) {
     let url = desktop_get("/api/desktop/info").and_then(|info| info["external_url"].as_str().map(str::to_string));
-    let state = app.state::<Updates>();
+    let Some(state) = app.try_state::<Updates>() else { return; };
     let label = match &url {
         Some(url) => text(&format!("{url}/ 열기"), &format!("Open {url}/")),
         None => text("Tailscale 주소 열기 (연결 전)", "Open Tailscale address (not connected)"),
@@ -128,7 +128,9 @@ fn refresh_tailnet(app: &AppHandle) {
 fn watch_usage(app: AppHandle) {
     thread::spawn(move || loop {
         let data = desktop_get("/api/desktop/usage");
-        *app.state::<Updates>().usage.lock().unwrap() = data.unwrap_or_else(|| json!({"error": true, "providers": []}));
+        if let Some(state) = app.try_state::<Updates>() {
+            *state.usage.lock().unwrap() = data.unwrap_or_else(|| json!({"error": true, "providers": []}));
+        }
         refresh_popup(&app);
         refresh_tailnet(&app);
         thread::sleep(Duration::from_secs(60));
@@ -225,7 +227,7 @@ fn should_check_update(has_pending: bool, is_checking: bool, last_check: Option<
 }
 
 fn request_update_check(app: &AppHandle) {
-    let state = app.state::<Updates>();
+    let Some(state) = app.try_state::<Updates>() else { return; };
     let has_pending = state.pending.lock().unwrap().is_some();
     let is_checking = state.checking.load(Ordering::SeqCst);
     let now = Instant::now();
@@ -246,18 +248,23 @@ fn request_update_check(app: &AppHandle) {
         let updater = match app.updater() {
             Ok(u) => u,
             Err(_) => {
-                app.state::<Updates>().checking.store(false, Ordering::SeqCst);
+                if let Some(state) = app.try_state::<Updates>() {
+                    state.checking.store(false, Ordering::SeqCst);
+                }
                 return;
             }
         };
         if let Ok(Some(update)) = updater.check().await {
-            let state = app.state::<Updates>();
-            let _ = state.item.set_text(text(&format!("업데이트 버전(v{})이 있습니다", update.version), &format!("Update available (v{})", update.version)));
-            let _ = state.item.set_enabled(true);
-            *state.pending.lock().unwrap() = Some(update);
-            refresh_popup(&app);
+            if let Some(state) = app.try_state::<Updates>() {
+                let _ = state.item.set_text(text(&format!("업데이트 버전(v{})이 있습니다", update.version), &format!("Update available (v{})", update.version)));
+                let _ = state.item.set_enabled(true);
+                *state.pending.lock().unwrap() = Some(update);
+                refresh_popup(&app);
+            }
         }
-        app.state::<Updates>().checking.store(false, Ordering::SeqCst);
+        if let Some(state) = app.try_state::<Updates>() {
+            state.checking.store(false, Ordering::SeqCst);
+        }
     });
 }
 
@@ -265,7 +272,7 @@ fn check_updates(app: AppHandle) {
     tauri::async_runtime::spawn(async move {
         loop {
             request_update_check(&app);
-            if app.state::<Updates>().pending.lock().unwrap().is_some() {
+            if app.try_state::<Updates>().map(|s| s.pending.lock().unwrap().is_some()).unwrap_or(false) {
                 return;
             }
             tokio_sleep(Duration::from_secs(6 * 60 * 60)).await;
@@ -278,17 +285,20 @@ async fn tokio_sleep(duration: Duration) {
 }
 
 fn install_update(app: &AppHandle) {
-    let Some(update) = app.state::<Updates>().pending.lock().unwrap().clone() else { return; };
+    let Some(state) = app.try_state::<Updates>() else { return; };
+    let Some(update) = state.pending.lock().unwrap().clone() else { return; };
     if portable() {
         open_in_browser(RELEASES);
         return;
     }
     let app = app.clone();
-    let _ = app.state::<Updates>().item.set_enabled(false);
+    let _ = state.item.set_enabled(false);
     tauri::async_runtime::spawn(async move {
         // The installer stops the engine before replacing files; running services keep going.
         if update.download_and_install(|_, _| {}, || {}).await.is_ok() { app.restart(); }
-        let _ = app.state::<Updates>().item.set_enabled(true);
+        if let Some(state) = app.try_state::<Updates>() {
+            let _ = state.item.set_enabled(true);
+        }
     });
 }
 
@@ -445,7 +455,7 @@ fn main() {
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "update" => install_update(app),
                     "local" => open_in_browser(&format!("http://{ENGINE}/")),
-                    "tailnet" => if let Some(url) = app.state::<Updates>().external.lock().unwrap().clone() { open_in_browser(&format!("{url}/")); },
+                    "tailnet" => if let Some(url) = app.try_state::<Updates>().and_then(|s| s.external.lock().unwrap().clone()) { open_in_browser(&format!("{url}/")); },
                     "close" => { if let Some(window) = app.get_webview_window("main") { save(&window); } app.exit(0); },
                     "quit" | "quit-all" => {
                         let stop_services = event.id.as_ref() == "quit-all";
