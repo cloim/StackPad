@@ -3,7 +3,9 @@ import copy
 import json
 import math
 import os
+import shutil
 import ssl
+import subprocess
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -18,6 +20,9 @@ _cache = {}
 # Last successful answer per (home, provider id); a failed refresh shows it instead of an error.
 _last_good = {}
 _cache_lock = threading.Lock()
+_agy_lock = threading.Lock()
+_agy_last_attempt = {}
+AGY_RETRY_INTERVAL = 120
 CACHE_SECONDS = 60
 MIN_REFRESH_INTERVAL = 10
 STALE_SECONDS = 600
@@ -82,7 +87,7 @@ def _fetch(provider, name, directory, filename, read_token, url, headers, map_re
     return result
 
 
-def collect_claude_usage(home=None, folder=None):
+def collect_claude_usage(home=None, folder=None, **kwargs):
     def credentials(data):
         oauth = data.get('claudeAiOauth', {})
         return oauth.get('accessToken'), {}, oauth.get('expiresAt'), oauth.get('subscriptionType')
@@ -95,7 +100,7 @@ def collect_claude_usage(home=None, folder=None):
                   'https://api.anthropic.com/api/oauth/usage', {'anthropic-beta': 'oauth-2025-04-20'}, windows)
 
 
-def collect_codex_usage(home=None, folder=None):
+def collect_codex_usage(home=None, folder=None, **kwargs):
     def credentials(data):
         tokens = data.get('tokens', {})
         account_id = tokens.get('account_id')
@@ -103,8 +108,9 @@ def collect_codex_usage(home=None, folder=None):
 
     def windows(data, plan):
         result = []
+        rate_limit = data.get('rate_limit') or {}
         for source in ('primary_window', 'secondary_window'):
-            window = data['rate_limit'].get(source)
+            window = rate_limit.get(source)
             if window is None:
                 continue
             seconds = window['limit_window_seconds']
@@ -116,12 +122,98 @@ def collect_codex_usage(home=None, folder=None):
                   'https://chatgpt.com/backend-api/wham/usage', {'User-Agent': 'codex-cli'}, windows)
 
 
-def collect_antigravity_usage(home=None, folder=None):
-    providers = [_result('antigravity-gemini', 'AG Gemini'), _result('antigravity-3p', 'AG Claude/GPT')]
+def _find_agy():
+    path = shutil.which('agy') or shutil.which('agy.exe')
+    if path:
+        return path
+    local_app_data = os.environ.get('LOCALAPPDATA')
+    if local_app_data:
+        candidate = Path(local_app_data) / 'agy' / 'bin' / 'agy.exe'
+        if candidate.is_file():
+            return str(candidate)
+    return None
+
+
+def _parse_agy_buckets(data):
+    if not isinstance(data, dict):
+        return {}
+    buckets = {}
+    groups = data.get('command', {}).get('data', {}).get('groups')
+    if not groups and 'data' in data and isinstance(data['data'], dict):
+        groups = data['data'].get('groups')
+    if not groups and 'groups' in data and isinstance(data['groups'], list):
+        groups = data['groups']
+    if isinstance(groups, list):
+        for group in groups:
+            if isinstance(group, dict):
+                for bucket in group.get('buckets', []):
+                    if isinstance(bucket, dict) and 'id' in bucket:
+                        buckets[bucket['id']] = bucket
+    if not buckets and 'buckets' in data:
+        raw = data['buckets']
+        if isinstance(raw, list):
+            for bucket in raw:
+                if isinstance(bucket, dict) and 'id' in bucket:
+                    buckets[bucket['id']] = bucket
+        elif isinstance(raw, dict):
+            buckets = raw
+    return buckets
+
+
+def _refresh_antigravity_snapshot(directory, force=False):
+    now = time.monotonic()
+    key = str(directory)
+    with _agy_lock:
+        if not force and now - _agy_last_attempt.get(key, 0) < AGY_RETRY_INTERVAL:
+            return False
+        _agy_last_attempt[key] = now
+
+    agy_bin = _find_agy()
+    if not agy_bin:
+        return False
+
     try:
-        snapshot = json.loads((_dir(home, folder, '.gemini/antigravity-cli') / 'usage-snapshot.json').read_text(encoding='utf-8'))
+        res = subprocess.run(
+            [agy_bin, '--print', '/usage', '--output-format', 'json'],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            creationflags=0x08000000 if os.name == 'nt' else 0,
+        )
+        if res.returncode != 0 or not res.stdout.strip():
+            return False
+        data = json.loads(res.stdout)
+        buckets = _parse_agy_buckets(data)
+        if not buckets:
+            return False
+        target = directory / 'usage-snapshot.json'
+        target.parent.mkdir(parents=True, exist_ok=True)
+        tmp = target.with_suffix('.tmp')
+        payload = {'captured_at': datetime.now(timezone.utc).isoformat(), 'quota': buckets}
+        tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding='utf-8')
+        os.replace(tmp, target)
+        return True
+    except Exception:
+        return False
+
+
+def collect_antigravity_usage(home=None, folder=None, refresh=False, **kwargs):
+    providers = [_result('antigravity-gemini', 'AG Gemini'), _result('antigravity-3p', 'AG Claude/GPT')]
+    directory = _dir(home, folder, '.gemini/antigravity-cli')
+    snapshot_file = directory / 'usage-snapshot.json'
+
+    if not snapshot_file.is_file() or refresh:
+        _refresh_antigravity_snapshot(directory, force=refresh)
+
+    try:
+        snapshot = json.loads(snapshot_file.read_text(encoding='utf-8'))
         captured_at = _utc(snapshot['captured_at'])
         elapsed = datetime.now(timezone.utc).timestamp() - datetime.fromisoformat(captured_at).timestamp()
+
+        if elapsed > 600:
+            threading.Thread(target=_refresh_antigravity_snapshot, args=(directory,), daemon=True).start()
+
         quota = snapshot['quota']
         for provider, prefix in zip(providers, ('gemini', '3p')):
             for suffix, key, label in (('5h', 'five_hour', '5h'), ('weekly', 'weekly', 'w')):
@@ -198,7 +290,7 @@ def collect_usage(home=None, refresh=False, enabled=None, dirs=None):
         if cached and ((not refresh and requested_at - cached[0] < CACHE_SECONDS) or (refresh and requested_at - cached[0] < MIN_REFRESH_INTERVAL) or cached[0] >= requested_at):
             return copy.deepcopy(cached[1])
         with ThreadPoolExecutor(max_workers=3) as pool:
-            results = list(pool.map(lambda name: COLLECTORS[name](folder=resolved[name]), names))
+            results = list(pool.map(lambda name: COLLECTORS[name](folder=resolved[name], refresh=refresh), names))
         providers = [_keep_last_good(resolved[name], provider)
                      for name, result in zip(names, results) for provider in (result if isinstance(result, list) else [result])]
         _cache[key] = (time.perf_counter(), providers)

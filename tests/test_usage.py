@@ -21,6 +21,10 @@ class UsageTests(unittest.TestCase):
         self.home = Path(self.temp.name)
         usage._cache.clear()
         usage._last_good.clear()
+        usage._agy_last_attempt.clear()
+        agy_patcher = patch.object(usage, '_find_agy', return_value=None)
+        agy_patcher.start()
+        self.addCleanup(agy_patcher.stop)
 
     def credentials(self, expired=False):
         for name, data in [('.claude/.credentials.json', {'claudeAiOauth': {
@@ -253,6 +257,71 @@ class UsageTests(unittest.TestCase):
             for collect in (usage.collect_claude_usage, usage.collect_codex_usage):
                 self.assertEqual(collect(self.home)['message'], 'CLI 로그인 필요')
             mock.assert_not_called()
+
+
+    def test_antigravity_auto_refresh_when_missing(self):
+        fake_payload = {
+            'command': {
+                'name': 'usage',
+                'data': {
+                    'groups': [
+                        {
+                            'name': 'Gemini Models',
+                            'buckets': [
+                                {'id': 'gemini-5h', 'remaining_fraction': 0.8, 'reset_time': '2026-11-20T00:00:00Z'},
+                                {'id': 'gemini-weekly', 'remaining_fraction': 0.5, 'reset_time': '2026-11-25T00:00:00Z'},
+                            ]
+                        },
+                        {
+                            'name': 'Claude and GPT models',
+                            'buckets': [
+                                {'id': '3p-5h', 'remaining_fraction': 1.0, 'reset_time': '2026-11-20T00:00:00Z'},
+                                {'id': '3p-weekly', 'remaining_fraction': 1.0, 'reset_time': '2026-11-25T00:00:00Z'},
+                            ]
+                        }
+                    ]
+                }
+            }
+        }
+        mock_proc = unittest.mock.Mock(returncode=0, stdout=json.dumps(fake_payload))
+        with patch.object(usage, '_find_agy', return_value='/path/to/agy'), \
+             patch('subprocess.run', return_value=mock_proc) as mock_run:
+            providers = usage.collect_antigravity_usage(self.home)
+            mock_run.assert_called_once()
+            self.assertEqual(len(providers), 2)
+            gemini, third_party = providers
+            self.assertEqual(gemini['status'], 'ok')
+            self.assertAlmostEqual(gemini['windows'][0]['used_percent'], 20.0, places=2)
+            self.assertEqual(third_party['status'], 'ok')
+            snapshot_path = self.home / '.gemini/antigravity-cli/usage-snapshot.json'
+            self.assertTrue(snapshot_path.is_file())
+
+    def test_antigravity_auto_refresh_when_stale_or_forced(self):
+        self.snapshot(age=15)
+        fake_payload = {
+            'command': {
+                'name': 'usage',
+                'data': {
+                    'groups': [
+                        {
+                            'name': 'Gemini Models',
+                            'buckets': [
+                                {'id': 'gemini-5h', 'remaining_fraction': 0.9, 'reset_time': '2026-11-20T00:00:00Z'},
+                                {'id': 'gemini-weekly', 'remaining_fraction': 0.7, 'reset_time': '2026-11-25T00:00:00Z'},
+                            ]
+                        }
+                    ]
+                }
+            }
+        }
+        mock_proc = unittest.mock.Mock(returncode=0, stdout=json.dumps(fake_payload))
+        with patch.object(usage, '_find_agy', return_value='/path/to/agy'), \
+             patch('subprocess.run', return_value=mock_proc) as mock_run:
+            providers = usage.collect_antigravity_usage(self.home, refresh=True)
+            mock_run.assert_called_once()
+            gemini = providers[0]
+            self.assertEqual(gemini['status'], 'ok')
+            self.assertAlmostEqual(gemini['windows'][0]['used_percent'], 10.0, places=2)
 
 
 if __name__ == '__main__':
