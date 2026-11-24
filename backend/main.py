@@ -41,7 +41,7 @@ from i18n import request_lang, translate, translate_payload
 
 
 # Keep in step with package.json; tests/test_version.py checks it.
-VERSION = '1.1.44'
+VERSION = '1.1.45'
 TAILSCALE_CHECK_SECONDS = 60
 
 
