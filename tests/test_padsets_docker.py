@@ -134,6 +134,13 @@ class DockerTests(unittest.TestCase):
         self.engine.delete_pad(pid)
         self.assertFalse(any(cmd[0] == 'rm' for cmd in self.commands))
 
+    def test_stopped_container_ignores_last_health_result(self):
+        self.running = False
+        self.health = 'unhealthy'
+        state = self.engine.docker_state({'container': 'test-api'})
+        self.assertEqual(state['status'], 'stopped')
+        self.assertFalse(state['active'])
+
     def test_duplicate_alias_and_busy_edit_guard(self):
         pid = self.register()
         with self.assertRaises(ValueError):

@@ -78,7 +78,8 @@ class DockerServices:
                         ports.append(label)
             active = bool(state.get('Running'))
             status = 'running' if active else 'error' if state.get('ExitCode', 0) or state.get('Dead') else 'stopped'
-            if state.get('Paused') or state.get('Health', {}).get('Status') == 'unhealthy':
+            # Docker keeps the last health result after a container exits, so it only counts while running.
+            if active and (state.get('Paused') or state.get('Health', {}).get('Status') == 'unhealthy'):
                 status = 'unhealthy'
             elif state.get('Restarting') or state.get('Health', {}).get('Status') == 'starting':
                 status = 'starting'
