@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::{fs, io::{Read, Write}, net::{TcpStream, SocketAddr}, path::PathBuf, process::{Command, Stdio}, sync::{Arc, Mutex, atomic::{AtomicBool, AtomicU64, Ordering}}, thread, time::{Duration, Instant}};
+use std::{fs, io::{Read, Write}, net::{TcpStream, SocketAddr}, path::PathBuf, process::{Command, Stdio}, sync::{Arc, Mutex, atomic::{AtomicU64, Ordering}}, thread, time::{Duration, Instant}};
 use std::os::windows::process::CommandExt;
 use serde_json::{json, Value};
 use tauri::{AppHandle, Manager, Monitor, PhysicalPosition, PhysicalSize, WebviewUrl, WebviewWindow, WebviewWindowBuilder, menu::{Menu, MenuItem, PredefinedMenuItem}, tray::{TrayIconBuilder, TrayIconEvent, MouseButton}};
@@ -15,7 +15,9 @@ const MIN_HEIGHT: f64 = WINDOW_HEIGHT;
 mod tray_usage;
 mod cli;
 mod shared;
+mod updates;
 use shared::{ENGINE, config_dir, korean, text};
+use updates::{Flow, Outcome, Phase};
 
 const RELEASES: &str = "https://github.com/cloim/StackPad/releases/latest";
 
@@ -81,16 +83,15 @@ struct Updates {
     item: MenuItem<tauri::Wry>,
     tailnet: MenuItem<tauri::Wry>,
     external: Mutex<Option<String>>,
-    pending: Mutex<Option<Update>>,
+    flow: Mutex<Flow<Update>>,
     usage: Mutex<Value>,
-    last_check: Mutex<Option<Instant>>,
-    checking: AtomicBool,
 }
 
 fn refresh_popup(app: &AppHandle) {
     let Some(state) = app.try_state::<Updates>() else { return; };
     let data = state.usage.lock().unwrap().clone();
-    tray_usage::update(app, data, state.pending.lock().unwrap().is_some());
+    let available = state.flow.lock().unwrap().pending.is_some();
+    tray_usage::update(app, data, available);
 }
 
 fn desktop_get(path: &str) -> Option<Value> {
@@ -216,90 +217,113 @@ fn watch_alerts(app: AppHandle) {
     });
 }
 
-fn should_check_update(has_pending: bool, is_checking: bool, last_check: Option<Instant>, now: Instant, throttle: Duration) -> bool {
-    if has_pending || is_checking {
-        return false;
-    }
-    match last_check {
-        Some(prev) => now.duration_since(prev) >= throttle,
-        None => true,
-    }
+// Blocks until the box is closed, so call it away from the UI thread. True when the user chose Yes.
+fn message_box(message: &str, ask: bool) -> bool {
+    let message = message.replace('\'', "''");
+    let buttons = if ask { "YesNo" } else { "OK" };
+    let script = format!("Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show('{message}', 'StackPad', '{buttons}')");
+    Command::new("powershell.exe").args(["-NoProfile", "-NonInteractive", "-Command", &script]).creation_flags(0x08000000).stdin(Stdio::null()).output()
+        .map(|output| String::from_utf8_lossy(&output.stdout).trim() == "Yes").unwrap_or(false)
 }
 
-fn request_update_check(app: &AppHandle) {
+// The label is set outside the lock because menu calls wait for the UI thread.
+fn sync_update_item(app: &AppHandle) {
     let Some(state) = app.try_state::<Updates>() else { return; };
-    let has_pending = state.pending.lock().unwrap().is_some();
-    let is_checking = state.checking.load(Ordering::SeqCst);
-    let now = Instant::now();
-    let throttle = Duration::from_secs(300);
+    let phase = state.flow.lock().unwrap().phase.clone();
+    let _ = state.item.set_text(phase.label(&app.package_info().version.to_string()));
+    let _ = state.item.set_enabled(phase.clickable());
+    refresh_popup(app);
+}
 
-    let eligible = {
-        let last = state.last_check.lock().unwrap();
-        should_check_update(has_pending, is_checking, *last, now, throttle)
-    };
+fn notify_update(app: &AppHandle, version: &str) {
+    use tauri_plugin_notification::NotificationExt;
+    let body = text(&format!("새 버전: v{version}\n트레이 메뉴의 업데이트 하기를 눌러 설치해 주세요."), &format!("New version: v{version}\nChoose Update now in the tray menu to install it."));
+    let _ = app.notification().builder().title(text("StackPad 업데이트", "StackPad update")).body(body).show();
+}
 
-    if !eligible || state.checking.swap(true, Ordering::SeqCst) {
-        return;
-    }
-    *state.last_check.lock().unwrap() = Some(now);
-
-    let app = app.clone();
+fn run_update_check(app: AppHandle) {
     tauri::async_runtime::spawn(async move {
-        let updater = match app.updater() {
-            Ok(u) => u,
-            Err(_) => {
-                if let Some(state) = app.try_state::<Updates>() {
-                    state.checking.store(false, Ordering::SeqCst);
-                }
-                return;
-            }
+        let result = match app.updater_builder().timeout(updates::CHECK_TIMEOUT).build() {
+            Ok(updater) => updater.check().await.map_err(|error| error.to_string()),
+            Err(error) => Err(error.to_string()),
         };
-        if let Ok(Some(update)) = updater.check().await {
-            if let Some(state) = app.try_state::<Updates>() {
-                let _ = state.item.set_text(text(&format!("업데이트 버전(v{})이 있습니다", update.version), &format!("Update available (v{})", update.version)));
-                let _ = state.item.set_enabled(true);
-                *state.pending.lock().unwrap() = Some(update);
-                refresh_popup(&app);
+        // The check timeout must not cut off the much longer installer download.
+        let result = result.map(|found| found.map(|mut update| {
+            update.timeout = None;
+            (update.version.clone(), update)
+        }));
+        let Some(state) = app.try_state::<Updates>() else { return; };
+        let outcome = state.flow.lock().unwrap().finish(result);
+        sync_update_item(&app);
+        match outcome {
+            Outcome::Found(version) => notify_update(&app, &version),
+            Outcome::CheckFailed(error) => {
+                let message = text(&format!("업데이트를 확인하지 못했습니다. 네트워크 연결을 확인한 뒤 다시 시도해 주세요.\n\n{error}"), &format!("Could not check for updates. Check your network connection and try again.\n\n{error}"));
+                thread::spawn(move || { message_box(&message, false); });
             }
-        }
-        if let Some(state) = app.try_state::<Updates>() {
-            state.checking.store(false, Ordering::SeqCst);
+            Outcome::Quiet => {}
         }
     });
+}
+
+fn auto_check(app: &AppHandle, cooldown: Duration) {
+    let Some(state) = app.try_state::<Updates>() else { return; };
+    let start = state.flow.lock().unwrap().begin_auto(Instant::now(), cooldown);
+    if start { run_update_check(app.clone()); }
 }
 
 fn check_updates(app: AppHandle) {
-    tauri::async_runtime::spawn(async move {
+    thread::spawn(move || {
+        thread::sleep(updates::STARTUP_DELAY);
         loop {
-            request_update_check(&app);
-            if app.try_state::<Updates>().map(|s| s.pending.lock().unwrap().is_some()).unwrap_or(false) {
-                return;
-            }
-            tokio_sleep(Duration::from_secs(6 * 60 * 60)).await;
+            auto_check(&app, Duration::ZERO);
+            thread::sleep(updates::CHECK_INTERVAL);
         }
     });
 }
 
-async fn tokio_sleep(duration: Duration) {
-    let _ = tauri::async_runtime::spawn_blocking(move || thread::sleep(duration)).await;
+fn manual_check(app: &AppHandle) {
+    let Some(state) = app.try_state::<Updates>() else { return; };
+    let start = state.flow.lock().unwrap().begin_manual(Instant::now());
+    sync_update_item(app);
+    if start { run_update_check(app.clone()); }
 }
 
 fn install_update(app: &AppHandle) {
     let Some(state) = app.try_state::<Updates>() else { return; };
-    let Some(update) = state.pending.lock().unwrap().clone() else { return; };
-    if portable() {
-        open_in_browser(RELEASES);
-        return;
-    }
+    let update = state.flow.lock().unwrap().begin_install();
+    let Some(update) = update else { return; };
+    sync_update_item(app);
     let app = app.clone();
-    let _ = state.item.set_enabled(false);
     tauri::async_runtime::spawn(async move {
+        let downloaded = app.clone();
         // The installer stops the engine before replacing files; running services keep going.
-        if update.download_and_install(|_, _| {}, || {}).await.is_ok() { app.restart(); }
-        if let Some(state) = app.try_state::<Updates>() {
-            let _ = state.item.set_enabled(true);
+        let result = update.download_and_install(|_, _| {}, move || {
+            if let Some(state) = downloaded.try_state::<Updates>() { state.flow.lock().unwrap().downloaded(); }
+            sync_update_item(&downloaded);
+        }).await;
+        match result {
+            Ok(()) => app.restart(),
+            Err(error) => {
+                if let Some(state) = app.try_state::<Updates>() { state.flow.lock().unwrap().install_failed(); }
+                sync_update_item(&app);
+                let message = text(&format!("업데이트를 설치하지 못했습니다.\n\n{error}\n\nGitHub 릴리스 페이지를 열까요?"), &format!("Could not install the update.\n\n{error}\n\nOpen the GitHub releases page?"));
+                thread::spawn(move || { if message_box(&message, true) { open_in_browser(RELEASES); } });
+            }
         }
     });
+}
+
+fn click_update(app: &AppHandle) {
+    let Some(state) = app.try_state::<Updates>() else { return; };
+    let phase = state.flow.lock().unwrap().phase.clone();
+    match phase {
+        Phase::Idle | Phase::Failed => manual_check(app),
+        // A portable copy has no installer to run.
+        Phase::Available(_) if portable() => open_in_browser(RELEASES),
+        Phase::Available(_) => install_update(app),
+        _ => {}
+    }
 }
 
 // Windows adds invisible resize borders on the left, right and bottom only, inside a 1px visible border.
@@ -393,7 +417,6 @@ fn schedule_save(window: &WebviewWindow, pending: &Arc<AtomicU64>) {
 }
 
 fn show(app: &tauri::AppHandle) {
-    request_update_check(app);
     if let Some(window) = app.get_webview_window("main") {
         // Keep the user's place, and dock again only when that screen is gone.
         let on_screen = window.outer_position().ok().and_then(|position| monitor_at(&window, position, window.outer_size().ok()?.width).ok().flatten()).is_some();
@@ -413,9 +436,7 @@ fn main() {
         .setup(|app| {
             if let Err(error) = start_engine() {
                 // Without the engine there is nothing to show, so explain and exit.
-                let message = error.to_string().replace('\'', "''");
-                let script = format!("Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show('{message}', 'StackPad') | Out-Null");
-                let _ = Command::new("powershell.exe").args(["-NoProfile", "-NonInteractive", "-Command", &script]).creation_flags(0x08000000).stdin(Stdio::null()).status();
+                message_box(&error.to_string(), false);
                 return Err(error);
             }
             let hidden = std::env::args().any(|arg| arg == "--hidden");
@@ -441,7 +462,9 @@ fn main() {
                 _ => {}
             });
             let version = app.package_info().version.to_string();
-            let update = MenuItem::with_id(app, "update", text(&format!("최신 버전(v{version})입니다"), &format!("Up to date (v{version})")), false, None::<&str>)?;
+            // Debug builds carry no signed installer to update from.
+            let phase = if cfg!(debug_assertions) { Phase::Unsupported } else { Phase::Idle };
+            let update = MenuItem::with_id(app, "update", phase.label(&version), phase.clickable(), None::<&str>)?;
             let local = MenuItem::with_id(app, "local", text(&format!("http://{ENGINE}/ 열기"), &format!("Open http://{ENGINE}/")), true, None::<&str>)?;
             let tailnet = MenuItem::with_id(app, "tailnet", text("Tailscale 주소 열기 (연결 전)", "Open Tailscale address (not connected)"), false, None::<&str>)?;
             let close = MenuItem::with_id(app, "close", text("앱 닫기 (엔진/서비스 유지)", "Close app (keep engine and services)"), true, None::<&str>)?;
@@ -449,11 +472,11 @@ fn main() {
             let quit_all = MenuItem::with_id(app, "quit-all", text("완전 종료", "Quit completely"), true, None::<&str>)?;
             let (links, exits) = (PredefinedMenuItem::separator(app)?, PredefinedMenuItem::separator(app)?);
             let menu = Menu::with_items(app, &[&update, &links, &local, &tailnet, &exits, &close, &quit, &quit_all])?;
-            app.manage(Updates { item: update, tailnet, external: Mutex::new(None), pending: Mutex::new(None), usage: Mutex::new(Value::Null), last_check: Mutex::new(None), checking: AtomicBool::new(false) });
+            app.manage(Updates { item: update, tailnet, external: Mutex::new(None), flow: Mutex::new(Flow::new(phase)), usage: Mutex::new(Value::Null) });
             tray_usage::init(app.handle())?;
             TrayIconBuilder::with_id("main").icon(app.default_window_icon().unwrap().clone()).menu(&menu).show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
-                    "update" => install_update(app),
+                    "update" => click_update(app),
                     "local" => open_in_browser(&format!("http://{ENGINE}/")),
                     "tailnet" => if let Some(url) = app.try_state::<Updates>().and_then(|s| s.external.lock().unwrap().clone()) { open_in_browser(&format!("{url}/")); },
                     "close" => { if let Some(window) = app.get_webview_window("main") { save(&window); } app.exit(0); },
@@ -467,15 +490,15 @@ fn main() {
                 })
                 .on_tray_icon_event(|tray, event| match event {
                     TrayIconEvent::Enter { rect, .. } | TrayIconEvent::Move { rect, .. } => {
-                        request_update_check(tray.app_handle());
                         tray_usage::hover(tray.app_handle(), rect);
                     }
                     TrayIconEvent::DoubleClick { button: MouseButton::Left, .. } => {
                         tray_usage::dismiss(tray.app_handle());
                         show(tray.app_handle());
                     }
-                    TrayIconEvent::Click { .. } => {
-                        request_update_check(tray.app_handle());
+                    TrayIconEvent::Click { button, .. } => {
+                        // The open menu may not repaint, so a result found now shows the next time it opens.
+                        if button == MouseButton::Right { auto_check(tray.app_handle(), updates::MENU_COOLDOWN); }
                         let app = tray.app_handle().clone();
                         thread::spawn(move || refresh_tailnet(&app));
                         tray_usage::dismiss(tray.app_handle());
@@ -489,30 +512,4 @@ fn main() {
         })
         .run(tauri::generate_context!())
         .expect("StackPad failed to start");
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn update_check_throttles_frequency_and_avoids_duplicate_work() {
-        let now = Instant::now();
-        let throttle = Duration::from_secs(300);
-
-        // First check ever should always run
-        assert!(should_check_update(false, false, None, now, throttle));
-
-        // Skip when an update is already pending or a check is in progress
-        assert!(!should_check_update(true, false, None, now, throttle));
-        assert!(!should_check_update(false, true, None, now, throttle));
-
-        // Throttle within 5 minutes
-        let recent = now - Duration::from_secs(60);
-        assert!(!should_check_update(false, false, Some(recent), now, throttle));
-
-        // Allow check once 5 minutes pass
-        let elapsed = now - Duration::from_secs(301);
-        assert!(should_check_update(false, false, Some(elapsed), now, throttle));
-    }
 }
