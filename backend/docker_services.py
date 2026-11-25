@@ -99,6 +99,8 @@ class DockerServices:
             service = dict(self.service(service_id))
             if service_id in self.docker_busy:
                 raise ValueError('컨테이너 작업을 완료한 뒤 다시 시도해 주세요.')
+            if action == 'stop' and not self.member_group(service_id):
+                self.set_pad_desired(service_id, 'stopped')
             self.docker_busy.add(service_id)
         try:
             docker_cli(action, container_name(service['container']))
@@ -107,6 +109,10 @@ class DockerServices:
                 raise ValueError('컨테이너 실행 결과를 확인해 주세요.')
             with self.lock:
                 self.samples[service_id] = sample
+                if action == 'start' and service_id not in self.group_operations:
+                    self.set_pad_desired(self.pad_id_for(service_id), 'running')
         finally:
             with self.lock:
                 self.docker_busy.discard(service_id)
+            if hasattr(self, 'notify_services'):
+                self.notify_services()

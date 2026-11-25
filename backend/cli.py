@@ -214,21 +214,30 @@ def find_padset(engine, ref):
     return found[0]
 
 
-def group_status(members):
-    """Same rules as the pad screen, so a group reads the same here and there."""
+def pad_status(members, desired='stopped'):
+    """Same rules as the pad screen, so a pad reads the same here and there."""
     active = [s for s in members if s.get('active')]
     statuses = [s.get('status') for s in members]
     if 'conflict' in statuses:
         return 'conflict'
     if not active and 'external' in statuses:
         return 'external'
+    if not active and 'restarting' in statuses:
+        return 'restarting'
     if any(s in ('unhealthy', 'error', 'unreachable') for s in statuses):
-        return 'unhealthy' if active else 'error' if 'error' in statuses else 'unreachable'
+        if active:
+            return 'unhealthy'
+        if desired == 'running':
+            return 'error' if 'error' in statuses else 'unreachable'
+        return 'stopped'
     if not active:
-        return 'checking' if 'checking' in statuses else 'stopped'
+        return 'checking' if (desired == 'running' and 'checking' in statuses) else 'stopped'
     if len(active) < len(members):
         return 'partial'
     return 'starting' if 'starting' in statuses else 'running'
+
+
+group_status = pad_status
 
 
 def component_settings(service):
@@ -250,9 +259,10 @@ def all_pads(engine):
     pads += [(s, [s], False) for s in services.values() if s['id'] not in grouped]
     result = []
     for pad, members, is_group in pads:
+        desired = engine.pad_desired_state(pad['id'])
         result.append({
             'id': pad['id'], 'name': pad['name'], 'padset_id': pad['padset_id'], 'padset': names.get(pad['padset_id'], ''), 'slot': pad['slot'],
-            'type': 'group' if is_group else 'single', 'status': group_status(members) if is_group else members[0].get('status'),
+            'type': 'group' if is_group else 'single', 'status': pad_status(members, desired), 'desired': desired,
             'color': pad.get('color'), 'autostart': bool(pad.get('autostart')), 'environment': pad.get('environment', 'development'),
             'components': [{'id': s['id'], 'name': s['name'], 'kind': s.get('kind') or 'local', 'status': s.get('status'), 'pid': s.get('pid'),
                             'error': s.get('error') or s.get('message') or '', **component_settings(s)} for s in members],

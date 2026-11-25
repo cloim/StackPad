@@ -198,6 +198,7 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices, SceneManager
         self.git_futures = {}
         self.git_pool = ThreadPoolExecutor(4, thread_name_prefix='git-status')
         self.group_operations = {}
+        self.pad_desired = {}
         self.restarts = {}
         self.alerts = deque(maxlen=100)
         self._alert_counter = 0
@@ -231,9 +232,25 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices, SceneManager
             self.config['usage_providers'] = ['claude', 'codex', 'antigravity'] if self.config['services'] else []
         self.migrate_legacy_files()
         self.purge_expired_logs()
+        for service in self.config['services']:
+            if service.get('kind', 'local') == 'local' and self.owned(service):
+                self.set_pad_desired(self.pad_id_for(service['id']), 'running')
         self.start_scheduler()
         self.monitor = threading.Thread(target=self.watch, daemon=True)
         self.remote_init()
+
+    def pad_id_for(self, service_id):
+        group = self.member_group(service_id)
+        return group['id'] if group else service_id
+
+    def pad_desired_state(self, pad_id):
+        return self.pad_desired.get(pad_id, 'stopped')
+
+    def set_pad_desired(self, pad_id, state):
+        if state == 'running':
+            self.pad_desired[pad_id] = 'running'
+        else:
+            self.pad_desired.pop(pad_id, None)
 
     def service_dir(self, service_id):
         directory = self.data_dir / 'services' / service_id
@@ -371,7 +388,7 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices, SceneManager
                 item.pop('_sample_time', None)
             return {
                 'services': result,
-                'groups': self.config.get('groups', []),
+                'groups': [{**g, 'desired': self.pad_desired_state(g['id'])} for g in self.config.get('groups', [])],
                 'links': self.pad_links(),
                 'padsets': self.config.get('padsets', []),
                 'group_progress': dict(getattr(self, 'group_progress', {})),
@@ -592,6 +609,7 @@ class Engine(GroupManager, RemoteServices, Padsets, DockerServices, SceneManager
             if self.owned(service) or (service.get('kind') == 'docker' and self.docker_state(service)['active']):
                 raise ValueError('서비스를 중지한 다음 삭제해 주세요.')
             self.config['services'].remove(service)
+            self.pad_desired.pop(service_id, None)
             self.samples.pop(service_id, None)
             self._unhealthy_counts.pop(service_id, None)
             self._last_unhealthy.discard(service_id)
@@ -693,9 +711,13 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                 created = process.create_time()
             except psutil.NoSuchProcess:
                 service.update(runtime=None, error='명령이 곧바로 종료되었습니다. 로그를 확인해 주세요.')
+                if service_id not in self.group_operations:
+                    self.set_pad_desired(self.pad_id_for(service_id), 'running')
                 self.save()
                 return
             service.update(runtime={'pid': process.pid, 'created': created, 'log_source': str(log)}, error='')
+            if service_id not in self.group_operations:
+                self.set_pad_desired(self.pad_id_for(service_id), 'running')
             self.samples[service_id] = {'status': 'starting'}
             self._unhealthy_counts.pop(service_id, None)
             self._last_unhealthy.discard(service_id)
@@ -744,6 +766,8 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                     raise RuntimeError('프로세스 종료 상태를 확인해 주세요.')
             self.sync_service_log(service_id)
             service.update(runtime=None, error='')
+            if not self.member_group(service_id):
+                self.set_pad_desired(service_id, 'stopped')
             self.samples.pop(service_id, None)
             self._unhealthy_counts.pop(service_id, None)
             self._last_unhealthy.discard(service_id)
@@ -798,11 +822,12 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
         with self.lock:
             result = []
             for service in sorted(self.config['services'], key=lambda s: s['slot']):
+                desired = self.pad_desired_state(self.pad_id_for(service['id']))
                 if self.is_remote_service(service):
-                    result.append(self.remote_snapshot(service))
+                    result.append({**self.remote_snapshot(service), 'desired': desired})
                     continue
                 if service.get('kind') == 'docker':
-                    result.append({**service, **self.samples.get(service['id'], {'status': 'checking', 'active': False, 'pid': None, 'uptime': 0}), 'busy': service['id'] in self.docker_busy})
+                    result.append({**service, **self.samples.get(service['id'], {'status': 'checking', 'active': False, 'pid': None, 'uptime': 0}), 'busy': service['id'] in self.docker_busy, 'desired': desired})
                     continue
                 process = self.owned(service)
                 sample = self.samples.get(service['id'], {})
@@ -817,7 +842,7 @@ $r | Select-Object ProcessId,ReturnValue | ConvertTo-Json -Compress
                     status = 'error'
                 else:
                     status = 'stopped'
-                result.append({**{k: v for k, v in service.items() if k != 'runtime'}, **sample, 'git_state': self.git_states.get(service['cwd']) if (self.member_group(service['id']) or service).get('environment', 'development') == 'development' else None, 'status': status, 'pid': process.pid if process else None, 'external_pid': found['pid'] if found else None, 'active': bool(process), 'uptime': int(time.time() - process.create_time()) if process else 0})
+                result.append({**{k: v for k, v in service.items() if k != 'runtime'}, **sample, 'git_state': self.git_states.get(service['cwd']) if (self.member_group(service['id']) or service).get('environment', 'development') == 'development' else None, 'status': status, 'desired': desired, 'pid': process.pid if process else None, 'external_pid': found['pid'] if found else None, 'active': bool(process), 'uptime': int(time.time() - process.create_time()) if process else 0})
             return result
 
     def logs_offset(self, service_id, file=None, offset=None):

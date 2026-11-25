@@ -166,7 +166,9 @@ class GroupManager:
             except Exception:
                 self.config = previous
                 raise
+            self.pad_desired.pop(pad_id, None)
             for sid in ids:
+                self.pad_desired.pop(sid, None)
                 self.samples.pop(sid, None)
                 self.forget_remote(sid)
                 if hasattr(self, 'clean_scenes_for_pad'):
@@ -395,11 +397,13 @@ class GroupManager:
             for service, slot in zip(members, available):
                 service['slot'] = slot
             self.config['groups'].remove(group)
+            self.pad_desired.pop(group_id, None)
             self.save()
 
     def group_action(self, group_id, action, takeover=False, skip_remote=False):
         with self.lock:
             group = dict(self.group(group_id))
+            prev_desired = self.pad_desired_state(group_id)
             # Windows startup leaves remote members to their own servers.
             ids = [sid for sid in group['member_ids'] if not (skip_remote and self.is_remote_service(self.service(sid)))]
             for sid in ids:
@@ -410,6 +414,8 @@ class GroupManager:
         started = []
         try:
             if action == 'stop':
+                with self.lock:
+                    self.set_pad_desired(group_id, 'stopped')
                 errors = []
                 for idx, sid in enumerate(reversed(ids)):
                     prog = {'done': idx, 'total': len(ids), 'current_id': sid, 'phase': 'stopping'}
@@ -467,7 +473,12 @@ class GroupManager:
                             break
                         if time.monotonic() >= deadline or self.closed.wait(.2):
                             raise ValueError(f"{self.service(sid)['name']}: 준비 확인 시간이 초과되었습니다.")
+            with self.lock:
+                self.set_pad_desired(group_id, 'running')
         except Exception as error:
+            if action != 'stop':
+                with self.lock:
+                    self.set_pad_desired(group_id, prev_desired)
             cleanup_errors = []
             for sid in reversed(started):
                 try:
@@ -485,3 +496,5 @@ class GroupManager:
                     self.group_progress.pop(group_id, None)
             if hasattr(self, 'events'):
                 self.events.publish('progress', {'group_id': group_id, 'phase': 'finished', 'done': len(ids), 'total': len(ids), 'current_id': None})
+            if hasattr(self, 'notify_services'):
+                self.notify_services()

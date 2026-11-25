@@ -33,7 +33,7 @@ if (import.meta.env.PROD && window.isSecureContext && 'serviceWorker' in navigat
   });
 }
 
-const labels = { stopped: t('중지됨'), starting: t('시작 중'), running: t('실행 중'), partial: t('일부 실행'), unhealthy: t('응답 이상'), error: t('실행 오류'), external: t('외부 실행'), conflict: t('포트 충돌'), unreachable: t('연결 실패'), checking: t('확인 중') };
+const labels = { stopped: t('중지됨'), starting: t('시작 중'), restarting: t('재시작 중'), running: t('실행 중'), partial: t('일부 실행'), unhealthy: t('응답 이상'), error: t('실행 오류'), external: t('외부 실행'), conflict: t('포트 충돌'), unreachable: t('연결 실패'), checking: t('확인 중') };
 const actionLabels = { start: t('시작'), stop: t('종료') };
 
 function lastCommand(last) {
@@ -192,6 +192,7 @@ const stateBadge = {
   running: '#35D982',
   external: '#35D982',
   starting: '#D8D832',
+  restarting: '#D8D832',
   checking: '#D8D832',
   partial: '#DDB439',
   error: '#D65A5A',
@@ -232,16 +233,36 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
   const logPane = useRef(null);
   const follow = useRef(true);
   const groupedIds = new Set(groups.flatMap(g => g.member_ids));
-  const pads = [...services.filter(s => !groupedIds.has(s.id)), ...groups.map(group => {
-    const members = group.member_ids.map(id => services.find(s => s.id === id)).filter(Boolean);
+  const padStatus = (members, desired = 'stopped') => {
     const active = members.filter(s => s.active);
-    const idle = members.some(s => s.status === 'conflict') ? 'conflict' : active.length === 0 && members.some(s => s.status === 'external') ? 'external' : null;
-    const failed = members.some(s => s.status === 'error') ? 'error' : 'unreachable';
-    const status = idle ? idle : members.some(s => ['unhealthy', 'error', 'unreachable'].includes(s.status)) ? (active.length ? 'unhealthy' : failed) : active.length === 0 ? (members.some(s => s.status === 'checking') ? 'checking' : 'stopped') : active.length < members.length ? 'partial' : members.some(s => s.status === 'starting') ? 'starting' : 'running';
-    const cpu = members.reduce((sum, s) => sum + (s.cpu || 0), 0);
-    const memory = members.reduce((sum, s) => sum + (s.memory || 0), 0);
-    return { ...group, isGroup: true, members, status, active: active.length > 0, busy: members.some(s => s.busy), pid: active.find(s => s.pid)?.pid, cpu, memory };
-  })];
+    const statuses = members.map(s => s.status);
+    if (statuses.includes('conflict')) return 'conflict';
+    if (active.length === 0 && statuses.includes('external')) return 'external';
+    if (active.length === 0 && statuses.includes('restarting')) return 'restarting';
+    if (statuses.some(s => ['unhealthy', 'error', 'unreachable'].includes(s))) {
+      if (active.length) return 'unhealthy';
+      if (desired === 'running') return statuses.includes('error') ? 'error' : 'unreachable';
+      return 'stopped';
+    }
+    if (active.length === 0) return desired === 'running' && statuses.includes('checking') ? 'checking' : 'stopped';
+    if (active.length < members.length) return 'partial';
+    return statuses.includes('starting') ? 'starting' : 'running';
+  };
+  const pads = [
+    ...services.filter(s => !groupedIds.has(s.id)).map(service => {
+      const desired = service.desired || 'stopped';
+      return { ...service, desired, rawStatus: service.status, status: padStatus([service], desired) };
+    }),
+    ...groups.map(group => {
+      const members = group.member_ids.map(id => services.find(s => s.id === id)).filter(Boolean);
+      const active = members.filter(s => s.active);
+      const desired = group.desired || 'stopped';
+      const status = padStatus(members, desired);
+      const cpu = members.reduce((sum, s) => sum + (s.cpu || 0), 0);
+      const memory = members.reduce((sum, s) => sum + (s.memory || 0), 0);
+      return { ...group, isGroup: true, desired, members, status, active: active.length > 0, busy: members.some(s => s.busy), pid: active.find(s => s.pid)?.pid, cpu, memory };
+    }),
+  ];
   const remoteOnly = pad => (pad.isGroup ? pad.members : [pad]).every(s => s.kind === 'remote');
   const current = pads.find(s => s.id === selected);
   const detailServices = current ? (current.isGroup ? current.members : [current]) : [];
@@ -548,7 +569,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
           }
           progressPct = Math.round(((done + (phase === 'waiting' ? 0.5 : 0)) / total) * 100);
         }
-        const errorLine = (service.isGroup ? service.members : [service]).find(s => s.error_line)?.error_line;
+        const errorLine = service.desired === 'running' ? (service.isGroup ? service.members : [service]).find(s => s.error_line)?.error_line : null;
         const gitStates = (service.isGroup ? service.members : [service]).map(s => s.git_state);
         const gitDirty = gitStates.includes('dirty');
         const gitState = gitDirty ? 'dirty' : gitStates.includes('clean') ? 'clean' : 'unknown';
@@ -667,11 +688,11 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
       </div>
     </div>}
     <Modal isOpen={!!current} onClose={() => { setSelected(null); setTargetError(null); }} title={current?.name || t('서비스 상세')} storageKey="service-detail" size="lg" className="modal-tall [&_.modal-body]:flex [&_.modal-body]:flex-col [&_.modal-body]:gap-3 [&_.modal-body]:overflow-hidden">{current && <>
-      {detailServices.length > 1 && <Tabs label={t('등록된 서비스')} tabs={detailServices.map(service => ({ id: service.id, name: service.name, badge: groupProgress?.[current.id]?.current_id === service.id ? t('진행 중') : undefined }))} value={logId} onChange={setComponentId} prefix="service-detail" />}
+      {detailServices.length > 1 && <Tabs label={t('등록된 서비스')} tabs={detailServices.map(service => ({ id: service.id, name: service.name, badge: groupProgress?.[current.id]?.current_id === service.id ? t('진행 중') : (service.status === 'unreachable' || service.status === 'error') ? labels[service.status] : undefined }))} value={logId} onChange={setComponentId} prefix="service-detail" />}
       {logService && <DetailScroll role={detailServices.length > 1 ? 'tabpanel' : 'region'} id="service-detail-panel" ariaLabel={detailServices.length > 1 ? undefined : t('서비스 상세')} ariaLabelledBy={detailServices.length > 1 ? `service-detail-tab-${logId}` : undefined}>
         <dl className="[&_dd]:text-[#3a4535] [&_dt]:text-[#6b7564]">
           <div><dt>{t('타입')}</dt><dd>{logService.kind === 'docker' ? t('도커') : logService.kind === 'remote' ? t('원격 서버') : t('로컬 프로세스')}</dd></div>
-          <div><dt>{t('러닝타임')}</dt><dd>{logService.active ? timeLabel(logService.uptime || 0) : labels[logService.status]}</dd></div>
+          <div><dt>{t('러닝타임')}</dt><dd>{logService.active ? timeLabel(logService.uptime || 0) : labels[logService.rawStatus || logService.status]}</dd></div>
           <div><dt>{t('메모리')}</dt><dd>{logService.memory == null ? t('확인 정보 없음') : `${logService.memory} MB`}</dd></div>
           <div><dt>PID</dt><dd>{logService.pid || logService.external_pid || t('없음')}</dd></div>
           <div><dt>{t('포트')}</dt><dd>{logService.kind === 'docker' ? logService.container_ports?.join(', ') || t('없음') : logService.port || t('없음')}</dd></div>

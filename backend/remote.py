@@ -211,7 +211,11 @@ class RemoteServices:
             if action == 'start' and status == 'running':
                 raise ValueError('이미 실행 중인 서비스입니다.')
             if action == 'stop' and status == 'stopped':
+                if not self.member_group(service_id):
+                    self.set_pad_desired(service_id, 'stopped')
                 return
+            if action == 'stop' and not self.member_group(service_id):
+                self.set_pad_desired(service_id, 'stopped')
             if service_id in self.remote_busy:
                 raise ValueError('원격 명령을 처리하고 있습니다. 완료 후 다시 시도해 주세요.')
             self.remote_busy.add(service_id)
@@ -240,8 +244,12 @@ class RemoteServices:
                     state['status'] = 'unreachable'
             elif action == 'start':
                 state.update(status='starting', pending=time.time())
+                if service_id not in self.group_operations:
+                    self.set_pad_desired(self.pad_id_for(service_id), 'running')
             else:
                 state.update(status='stopped', pending=None)
+        if hasattr(self, 'notify_services'):
+            self.notify_services()
         if failed:
             label = '시작' if action == 'start' else '종료'
             raise ValueError(f"{service['name']}: 원격 {label} 명령이 실패했습니다.\n{message}")

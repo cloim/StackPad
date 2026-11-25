@@ -77,7 +77,7 @@ try {
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
 
-  // An unreachable host shows a connection failure.
+  // An unreachable host stays stopped on the pad card until started, while detail shows the connection failure.
   await page.getByRole('button', { name: '패드 2 서비스 등록' }).click();
   await page.getByLabel('패드 이름').fill('NAS');
   await page.getByRole('tab', { name: '서비스', exact: true }).click();
@@ -86,7 +86,12 @@ try {
   await page.getByLabel('systemd 서비스 이름').fill('nas-app');
   await page.getByRole('button', { name: '명령 채우기' }).click();
   await page.getByRole('button', { name: '저장' }).click();
-  await expect(page.getByRole('button', { name: 'NAS 실행' })).toContainText('연결 실패', { timeout: 15000 });
+  await expect(page.getByRole('button', { name: 'NAS 실행' })).toContainText('중지됨', { timeout: 15000 });
+  await page.getByRole('button', { name: 'NAS 메뉴' }).click();
+  await page.getByRole('menuitem', { name: '상세' }).click();
+  await expect(page.getByRole('dialog')).toContainText('연결 실패', { timeout: 15000 });
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.screenshot({ path: path.join(shots, 'remote-pads-pc.png') });
 
   // Stopping runs the stop command.

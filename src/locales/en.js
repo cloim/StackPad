@@ -161,6 +161,7 @@ export default {
   'PWA 등록을 다시 확인해 주세요.': 'Could not register the app for offline use.',
   '중지됨': 'Stopped',
   '시작 중': 'Starting',
+  '재시작 중': 'Restarting',
   '실행 중': 'Running',
   '일부 실행': 'Partly running',
   '응답 이상': 'Not responding',
