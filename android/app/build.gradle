@@ -7,8 +7,8 @@ android {
         applicationId "com.cloimism.stackpad"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 10145
-        versionName "1.1.45"
+        versionCode 10146
+        versionName "1.1.46"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
