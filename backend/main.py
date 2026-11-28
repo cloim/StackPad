@@ -42,7 +42,7 @@ from system_metrics import SystemMetrics
 
 
 # Keep in step with package.json; tests/test_version.py checks it.
-VERSION = '1.1.46'
+VERSION = '1.1.47'
 TAILSCALE_CHECK_SECONDS = 60
 
 
