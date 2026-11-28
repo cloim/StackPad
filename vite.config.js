@@ -4,6 +4,14 @@ import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import packageJson from './package.json' with { type: 'json' };
 
+// A managed development pad can use its own engine while keeping the installed engine's Google session.
+const isolatedEngine = process.env.STACKPAD_DEV_ENGINE_PORT === '48732';
+// Keep the browser Host so the engine can check the Origin on writes.
+const proxy = isolatedEngine ? {
+  '^/api/(auth|auth/google/start|logout)(?:\\?|$)': { target: 'http://127.0.0.1:48731', changeOrigin: false },
+  '/api': { target: 'http://127.0.0.1:48732', changeOrigin: false },
+} : { '/api': 'http://127.0.0.1:48731' };
+
 export default defineConfig({
   build: { rollupOptions: { input: { main: 'index.html', tray: 'tray-usage.html' } } },
   define: { APP_VERSION: JSON.stringify(packageJson.version) },
@@ -41,5 +49,8 @@ export default defineConfig({
       runtimeCaching: [],
     },
   })],
-  server: { proxy: { '/api': 'http://127.0.0.1:48731' } },
+  server: {
+    proxy,
+    watch: { ignored: ['**/.jobs/**', '**/src-tauri/target/**'] },
+  },
 });

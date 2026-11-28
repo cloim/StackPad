@@ -78,6 +78,7 @@ export default {
   '허용된 Google 계정으로 로그인하고 서비스 현황을 확인하세요.': 'Sign in with an allowed Google account to see your services.',
   '브라우저에서 로그인을 마쳐 주세요': 'Finish signing in in your browser',
   'Google로 로그인': 'Sign in with Google',
+  'Google로 로그인 (새 탭)': 'Sign in with Google (new tab)',
   'Google 로그인 설정 다시 입력': 'Re-enter Google sign-in settings',
 
   // Pad registration
@@ -99,6 +100,7 @@ export default {
   '선택': 'optional',
   '로컬 URL': 'Local URL',
   '비우면 포트로 자동 결정': 'Leave empty to use the port',
+  '비우면 Tailscale 주소로 자동 결정': 'Leave empty to use the Tailscale address',
   '패드 색상': 'Pad color',
   '원격 서버 서비스는 서버에서 관리하므로 자동 실행 대상에서 제외됩니다.': 'Remote server services are managed on the server, so they are not started automatically.',
   '관리 엔진 시작 시 패드 자동 실행': 'Start this pad when the engine starts',
@@ -145,6 +147,14 @@ export default {
 
   // AI usage
   'AI 사용량': 'AI usage',
+  '시스템 정보': 'System information',
+  '메모리 사용률': 'Memory usage',
+  'GPU 사용률': 'GPU usage',
+  '조회 불가': 'Unavailable',
+  '위젯 영역 설정': 'Widget area settings',
+  '{0} 위젯 영역 설정': '{0} widget area settings',
+  '표시할 위젯': 'Widget to show',
+  '표시 안 함': 'None',
   'CLI 로그인 필요': 'Sign in to the CLI',
   'CLI 사용 시 갱신': 'Updated when the CLI is used',
   'Antigravity 실행 후 표시': 'Run Antigravity to see usage',

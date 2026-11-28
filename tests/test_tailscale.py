@@ -77,3 +77,25 @@ class RestoreTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class PadServeTests(unittest.TestCase):
+    def test_reads_the_ports_of_a_serve_component(self):
+        command = r'"C:\Program Files\Tailscale\tailscale.exe" serve --https=42435 http://127.0.0.1:41435'
+        self.assertEqual(tailscale.serve_target(command), (42435, 41435))
+        self.assertEqual(tailscale.serve_target('tailscale serve --https 8443 localhost:9000'), (8443, 9000))
+        self.assertEqual(tailscale.serve_target('tailscale serve 3000'), (443, 3000))
+        self.assertIsNone(tailscale.serve_target('npm run dev'))
+        self.assertIsNone(tailscale.serve_target('tailscale serve --https=5173 off'))
+        self.assertIsNone(tailscale.serve_target('tailscale serve --https=5173 http://192.168.0.5:5173'))
+
+    def serve(self, fake, ports):
+        with patch('tailscale._run', fake.run), patch('tailscale.executable', return_value='tailscale'):
+            return tailscale.serve_local_ports(HOST, ports)
+
+    def test_adds_missing_ports_and_skips_taken_ones(self):
+        fake = FakeTailscale(web={f'{HOST}:8000': proxy('http://127.0.0.1:8000'), f'{HOST}:9000': proxy('http://127.0.0.1:1234')},
+                             tcp={'8000': {'HTTPS': True}, '9000': {'HTTPS': True}, '7000': {'TCPForward': '127.0.0.1:22'}})
+        fake.serve['Foreground'] = {'abc': {'Web': {f'{HOST}:5173': proxy('http://127.0.0.1:5173')}, 'TCP': {'5173': {'HTTPS': True}}}}
+        self.assertEqual(self.serve(fake, [8000, 9000, 7000, 5173, 40001]), {8000, 5173, 40001})
+        self.assertEqual(fake.added, [('serve', '--bg', '--https=40001', 'http://127.0.0.1:40001')])

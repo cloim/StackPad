@@ -5,6 +5,17 @@ import { t } from '../i18n.js';
 
 const isDesktop = () => !!window.__TAURI_INTERNALS__;
 
+function developmentLoginUrl() {
+  const port = import.meta.env.VITE_DEV_GOOGLE_AUTH_PORT;
+  const localHttp = window.location.protocol === 'http:' && window.location.hostname === '127.0.0.1';
+  if (!import.meta.env.DEV || isDesktop() || (window.location.protocol !== 'https:' && !localHttp) ||
+      !/^[1-9]\d{0,4}$/.test(port) || Number(port) > 65535) return null;
+  // A session cookie from the registered callback is also sent to this host's development port.
+  const url = new URL('/api/auth/google/start', window.location.origin);
+  url.port = port;
+  return url.origin === window.location.origin ? null : url.href;
+}
+
 function takeUrlError() {
   const params = new URLSearchParams(window.location.search);
   const message = params.get('auth_error');
@@ -75,9 +86,11 @@ export function SignIn({ auth, api, logo, onLogin }) {
     } catch (e) { setError(e.message); } finally { setWaiting(false); }
   }
   const blocked = !auth.owner && !auth.local;
+  const developmentLogin = developmentLoginUrl();
   return <AuthCard logo={logo} caption={t('당신의 서버, 손끝에서.')} title={t('컨트롤 룸에 입장하기')} error={error} description={blocked ? t('StackPad가 실행 중인 PC에서 먼저 로그인해 주세요. 처음 로그인한 계정이 소유자가 됩니다.') : !auth.owner ? t('처음 로그인한 Google 계정이 이 StackPad의 소유자로 등록됩니다.') : t('허용된 Google 계정으로 로그인하고 서비스 현황을 확인하세요.')}>
     {!blocked && <div className="mb-1.5 flex flex-col gap-2.5">
-      <button className="primary wide" disabled={waiting} onClick={signIn}>{waiting ? <LoaderCircle className="spin" size={17} /> : <ArrowUpRight size={17} />}{waiting ? t('브라우저에서 로그인을 마쳐 주세요') : t('Google로 로그인')}</button>
+      {developmentLogin ? <a href={developmentLogin} target="_blank" rel="noopener noreferrer" className="primary wide inline-flex items-center justify-center gap-2 no-underline"><ArrowUpRight size={17} aria-hidden="true" />{t('Google로 로그인 (새 탭)')}</a> :
+        <button className="primary wide" disabled={waiting} onClick={signIn}>{waiting ? <LoaderCircle className="spin" size={17} /> : <ArrowUpRight size={17} />}{waiting ? t('브라우저에서 로그인을 마쳐 주세요') : t('Google로 로그인')}</button>}
       {waiting && <button className="secondary wide" onClick={() => { cancelled.current = true; setWaiting(false); }}>{t('취소')}</button>}
       {auth.local && !auth.owner && !waiting && <button className="secondary wide" onClick={() => setEditing(true)}>{t('Google 로그인 설정 다시 입력')}</button>}
     </div>}

@@ -127,6 +127,8 @@ python scripts/build-android.py     # Android APK, needs ANDROID_HOME and JAVA_H
 
 Messages are written in Korean in the source and translated through `src/locales/en.js` (screen) and `backend/i18n.py` (engine).
 
+To run against an isolated profile while using the installed engine's browser sign-in, start `.venv\Scripts\python scripts\dev-engine.py` and set `STACKPAD_DEV_ENGINE_PORT=48732` and `VITE_DEV_GOOGLE_AUTH_PORT=48731` in the environment before launching Vite. The development engine listens on loopback and stores its pads and widget settings under `~/.config/stackpad-dev`.
+
 After changing pad schedules or flow editing, run `npm run build` followed by `node scripts/pad-automation-ui-test.mjs` from the project root before delivering the change. The test requires the installed Playwright Chromium browser and uses a mock API without starting a server or changing engine data. Exit code 0 confirms draft saving, cancellation, retries, flow management, and mobile layout; failures save `.jobs/pad-automation-fail.png`. Inspect the failure, fix it, and rerun before delivery.
 
 Pushing a tag such as `v1.2.0` builds the installer, the portable zip, the updater files and the signed APK on GitHub Actions and publishes them to Releases. Keep the version in `package.json`, `src-tauri/Cargo.toml` and `backend/main.py` in step; `tests/test_version.py` checks them.

@@ -7,6 +7,7 @@ import os
 import re
 
 EN = {
+    '위젯을 다시 선택해 주세요.': 'Choose the widget again.',
     # Docker
     '도커 컨테이너 이름 또는 ID를 입력해 주세요.': 'Enter a Docker container name or ID.',
     'Docker 데몬 연결과 컨테이너 상태를 확인해 주세요.': 'Check the Docker daemon connection and the container state.',

@@ -28,7 +28,7 @@ import recommend
 import cli
 from usage import collect_usage
 from groups import GroupInput, PadInput
-from padsets import PadsetInput
+from padsets import PadsetInput, PadsetWidgetInput
 from scenes import SceneInput
 from schedules import ScheduleInput
 from folder_picker import select_folder
@@ -38,6 +38,7 @@ from google_auth import GoogleAuth, CALLBACK_PATH, FLOW_TTL
 import tailscale
 from widget_tokens import WidgetTokens
 from i18n import request_lang, translate, translate_payload
+from system_metrics import SystemMetrics
 
 
 # Keep in step with package.json; tests/test_version.py checks it.
@@ -45,8 +46,9 @@ VERSION = '1.1.46'
 TAILSCALE_CHECK_SECONDS = 60
 
 
-def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_token=None, engine_port=None):
+def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_token=None, engine_port=None, session_lookup=None):
     engine = Engine(data_dir, desktop_exe)
+    system_metrics = SystemMetrics()
     sessions = SessionStore(data_dir)
     google = GoogleAuth(engine)
     widget_tokens = WidgetTokens(lambda: engine.data_dir)
@@ -55,6 +57,7 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
     attempts = defaultdict(deque)
     SESSION_COOKIE, STATE_COOKIE = 'stackpad_session', 'stackpad_oauth'
     auth_lock = threading.RLock()
+    lookup_session = session_lookup or sessions.get
 
     @contextlib.asynccontextmanager
     async def lifespan(app):
@@ -82,6 +85,7 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
         yield
         engine.closed.set()
         engine.wake.set()
+        system_metrics.close()
 
     def watch_tailscale():
         """Reinstalling or resetting Tailscale drops serve entries, which cuts paired phones off from the saved address."""
@@ -95,8 +99,21 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
                 if str(error) != reported:
                     logging.warning('Tailscale serve check failed: %s', error)
                     reported = str(error)
+            sync_tailnet_domains()
             if engine.closed.wait(TAILSCALE_CHECK_SECONDS):
                 return
+
+    def sync_tailnet_domains():
+        try:
+            engine.sync_tailnet_domains()
+        except Exception as error:
+            logging.warning('Tailscale pad address check failed: %s', error)
+
+    def sync_tailnet_domains_soon():
+        # `tailscale serve` can take seconds, so the saved pad is answered first and its address follows.
+        # Only the installed engine (started with its port) touches this PC's Tailscale settings.
+        if engine_port:
+            threading.Thread(target=sync_tailnet_domains, daemon=True).start()
 
     app = FastAPI(title='StackPad', lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.engine = engine
@@ -181,7 +198,7 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
         app.add_exception_handler(exception_type, handler)
 
     def current_session(request):
-        return sessions.get(request.cookies.get(SESSION_COOKIE))
+        return lookup_session(request.cookies.get(SESSION_COOKIE))
 
     def authenticated(request: Request):
         record = current_session(request)
@@ -510,7 +527,7 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
     @app.get('/api/events')
     async def events_stream(request: Request, topics: str = 'services,settings,alert,progress'):
         requested_topics = {t.strip() for t in topics.split(',') if t.strip()}
-        session_record = current_session(request)
+        session_record = await asyncio.to_thread(current_session, request) if session_lookup else current_session(request)
         control = request.headers.get('x-stackpad-control', '')
         is_desktop = bool(control_token) and is_local(request) and secrets.compare_digest(control, control_token)
         scheme, _, auth_token = request.headers.get('authorization', '').partition(' ')
@@ -581,6 +598,10 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
     def update_padset(padset_id: str, values: PadsetInput):
         return {'id': engine.save_padset(values, padset_id)}
 
+    @app.put('/api/padsets/{padset_id}/widget', dependencies=[Depends(authenticated)])
+    def update_padset_widget(padset_id: str, values: PadsetWidgetInput):
+        return {'widget': engine.save_padset_widget(padset_id, values)}
+
     @app.delete('/api/padsets/{padset_id}', dependencies=[Depends(authenticated)])
     def delete_padset(padset_id: str):
         engine.delete_padset(padset_id)
@@ -648,12 +669,16 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
     @app.post('/api/pads', dependencies=[Depends(authenticated)])
     def add_pad(values: PadInput, request: Request):
         guard_remote(request, any(c.kind == 'remote' for c in values.components))
-        return {'id': engine.save_pad(values)}
+        pad_id = engine.save_pad(values)
+        sync_tailnet_domains_soon()
+        return {'id': pad_id}
 
     @app.put('/api/pads/{pad_id}', dependencies=[Depends(authenticated)])
     def update_pad(pad_id: str, values: PadInput, request: Request):
         remote_settings = any(c.kind == 'remote' for c in values.components) or touches_remote(pad_id)
-        return {'id': engine.save_pad(values, pad_id, metadata_only=remote_settings and not is_local(request))}
+        saved = engine.save_pad(values, pad_id, metadata_only=remote_settings and not is_local(request))
+        sync_tailnet_domains_soon()
+        return {'id': saved}
 
     @app.delete('/api/pads/{pad_id}', dependencies=[Depends(authenticated)])
     def delete_pad(pad_id: str):
@@ -764,6 +789,10 @@ def create_app(data_dir, web_dir, desktop_exe=None, location_file=None, control_
             return engine.service_history(service_id)
         except KeyError as error:
             raise HTTPException(404, str(error))
+
+    @app.get('/api/system/metrics', dependencies=[Depends(authenticated)])
+    def get_system_metrics():
+        return system_metrics.snapshot()
 
     class Shutdown(BaseModel):
         stop_services: bool = False

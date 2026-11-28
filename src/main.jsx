@@ -6,7 +6,7 @@ import { PadForm } from './components/PadForm.jsx';
 import { SelectControl } from './components/SelectControl.jsx';
 import { Tabs } from './components/Tabs.jsx';
 import { PadsetSettings } from './components/PadsetSettings.jsx';
-import { UsageBar } from './components/UsageBar.jsx';
+import { padsetWidget, WidgetArea, WidgetEditor } from './components/PadsetWidgets.jsx';
 import { AccountSettings } from './components/AccountSettings.jsx';
 import { SceneSettings } from './components/SceneSettings.jsx';
 import { LogViewer } from './components/LogViewer.jsx';
@@ -212,7 +212,7 @@ function PadMoveHandle({ pad, disabled }) {
   return <Tooltip content={t('끌거나 스페이스 키를 눌러 빈 패드로 옮길 수 있어요')}><button ref={setNodeRef} {...attributes} {...listeners} data-pad-move className="absolute top-[5px] left-2.5 h-[30px] w-[calc(100%-48px)] cursor-grab touch-none select-none justify-start truncate rounded-[5px] border-0 bg-transparent px-[3px] py-0 text-left text-[16px] font-medium text-ink hover:bg-[#cdd2c344] hover:text-[#354a37] focus-visible:outline-focus focus-visible:outline-offset-0 active:cursor-grabbing max-tablet:top-[3px] max-tablet:left-[7px] max-tablet:h-7 max-tablet:w-[calc(100%-42px)] max-tablet:text-[12px]" disabled={disabled} aria-label={t('{0} 자리 이동', pad.name)}>{pad.name}</button></Tooltip>;
 }
 
-function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, loading, settings, refresh, onError, connected, local, scenes = [], sceneProgress = {}, groupProgress = {}, schedules = [], onOpenSceneManager }) {
+function Deck({ services, groups, padsets, padsetId, onPadsetChange, widget, links, loading, settings, refresh, onError, connected, local, scenes = [], sceneProgress = {}, groupProgress = {}, schedules = [], onOpenSceneManager }) {
   const [selected, setSelected] = useState(null);
   const [padEditor, setPadEditor] = useState(null);
   const [busy, setBusy] = useState(new Set());
@@ -268,8 +268,11 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
   const detailServices = current ? (current.isGroup ? current.members : [current]) : [];
   useEffect(() => { setSelected(null); setPadMenu(null); setPadEditor(null); }, [padsetId]);
   const menuPad = padMenu && pads.find(s => s.id === padMenu.id);
-  const menuLinkTarget = menuPad?.environment === 'production' && links[menuPad.id]?.domain
-    ? 'domain' : local && links[menuPad?.id]?.local ? 'local' : null;
+  // This PC opens development pads on localhost; other devices and production pads use the domain URL.
+  const menuLinks = menuPad ? links[menuPad.id] || {} : {};
+  const preferLocal = local && menuPad?.environment !== 'production';
+  const menuLinkTarget = preferLocal && menuLinks.local ? 'local'
+    : menuLinks.domain ? 'domain' : local && menuLinks.local ? 'local' : null;
   const editingPad = padEditor?.id ? pads.find(s => s.id === padEditor.id) : null;
   const logService = current?.isGroup ? current.members.find(s => s.id === componentId) || current.members[0] : current;
   const logId = logService?.id;
@@ -509,7 +512,7 @@ function Deck({ services, groups, padsets, padsetId, onPadsetChange, links, load
   const draggedPad = dragged && pads.find(pad => pad.id === dragged);
   return <>
     <section className="flex h-full w-full flex-col gap-3.5 max-tablet:gap-2" aria-label={t('서비스 컨트롤 패드')}>
-      <UsageBar api={api} expected={settings?.usage_providers?.length || 0} />
+      <WidgetArea widget={widget} api={api} settings={settings} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Tabs label={t('패드셋')} tabs={padsets.map(set => ({ ...set, badge: pads.filter(p => p.padset_id === set.id).length }))} value={padsetId} onChange={onPadsetChange} prefix="padsets" variant="keys" />
         <div className="flex flex-wrap items-center gap-2" aria-label={t('흐름 목록')}>
@@ -898,16 +901,20 @@ function App() {
   const [services, setServices] = useState([]);
   const [groups, setGroups] = useState([]);
   const [padsets, setPadsets] = useState([]);
+  const onWidgetSaved = (id, widget) => setPadsets(current => current.map(set => set.id === id ? { ...set, widget } : set));
   const [scenes, setScenes] = useState([]);
   const [sceneProgress, setSceneProgress] = useState({});
   const [groupProgress, setGroupProgress] = useState({});
   const [schedules, setSchedules] = useState([]);
   const [activePadset, setActivePadset] = useState(() => { try { return localStorage.getItem('stackpad-padset') || 'default'; } catch { return 'default'; } });
-  const padsetId = padsets.some(s => s.id === activePadset) ? activePadset : padsets[0]?.id || 'default';
+  const padset = padsets.find(set => set.id === activePadset) ?? padsets[0];
+  const padsetId = padset?.id || 'default';
+  const widget = padsetWidget(padset);
   function onPadsetChange(id) { setActivePadset(id); try { localStorage.setItem('stackpad-padset', id); } catch { /* 세션 내 선택 유지 */ } }
   const [links, setLinks] = useState({});
   const [registrationSlot, setRegistrationSlot] = useState(null);
   const [sceneManager, setSceneManager] = useState(false);
+  const [widgetEditor, setWidgetEditor] = useState(false);
   const [preset, setPreset] = useState(null);
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -1039,18 +1046,21 @@ function App() {
   async function logout() { try { await disconnectWidget(api); await api('/logout', { method: 'POST' }); setServices([]); setSettings(null); setLoading(true); checkAuth(); } catch (e) { onError(e.message); } }
   if (!auth) return <div className="flex h-dvh flex-col items-center justify-center gap-5 bg-canvas text-[13px] text-[#515d47]"><Logo /><p>{authError || t('관리 엔진과 연결하고 있어요.')}</p>{authError && <button className="secondary" onClick={checkAuth}><RefreshCw size={16} />{t('다시 연결')}</button>}</div>;
   if (!auth.authenticated) return isNative ? <PairPhone api={api} logo={<Logo />} onPaired={checkAuth} /> : <SignIn auth={auth} api={api} logo={<Logo />} onLogin={checkAuth} />;
+  const offline = !connected && !loading;
   return <div data-app-shell className="flex h-dvh flex-col overflow-hidden bg-[linear-gradient(115deg,#f2f1e9,#eae9df)] p-4 shadow-[inset_0_1px_0_#fffff5,inset_0_-1px_0_#b8b9ae] max-tablet:p-2.5 short:p-2">
-    <header className="flex h-[54px] shrink-0 items-center gap-4 px-2 max-tablet:h-[52px] max-tablet:gap-2.5 max-tablet:px-[3px]" aria-label={t('공통 도구')}>
+    <header className={`flex h-[54px] shrink-0 items-center gap-4 px-2 max-tablet:gap-2.5 max-tablet:px-[3px] max-[360px]:gap-x-1 ${offline ? 'max-tablet:h-auto max-tablet:flex-wrap max-tablet:gap-y-1' : 'max-tablet:h-[52px]'}`} aria-label={t('공통 도구')}>
       <h1 data-toolbar-brand className="m-0 flex items-center gap-[9px] font-sans text-[25px] font-bold tracking-[-1px] whitespace-nowrap text-[#555c51] max-tablet:gap-[7px] max-tablet:text-[22px] max-tablet:font-black max-tablet:[font-family:'Arial_Black','sans-serif-black',sans-serif] max-tablet:[font-synthesis:weight] max-tablet:[-webkit-text-stroke:.25px_currentColor] [.native-app_&]:font-black [.native-app_&]:[font-family:'Arial_Black','sans-serif-black',sans-serif] [.native-app_&]:[font-synthesis:weight] [.native-app_&]:[-webkit-text-stroke:.25px_currentColor]">StackPad</h1>
-      {!connected && !loading && <div data-engine-offline className="flex min-w-0 items-center gap-2 rounded border border-warn-line bg-warn-soft py-1 pr-1 pl-2.5 text-[12px] text-warn-ink" role="status"><i aria-hidden="true" className="size-[7px] shrink-0 rounded-full bg-[#c08a3e] animate-[pad-pulse_1.5s_infinite]" /><span className="min-w-0 truncate max-tablet:hidden">{t('관리 엔진 연결이 끊겼어요. 다시 연결하는 중입니다.')}</span><button type="button" className="secondary min-h-8 shrink-0 px-2.5 py-0 text-[12px]" onClick={refresh}><RefreshCw size={14} />{t('다시 연결')}</button></div>}
-      <div className="ml-auto flex items-center gap-2.5 max-tablet:gap-1.5">
+      {offline && <div data-engine-offline className="flex min-w-0 items-center gap-2 rounded border border-warn-line bg-warn-soft py-1 pr-1 pl-2.5 text-[12px] text-warn-ink max-tablet:ml-auto" role="status"><i aria-hidden="true" className="size-[7px] shrink-0 rounded-full bg-[#c08a3e] animate-[pad-pulse_1.5s_infinite]" /><span className="min-w-0 truncate max-tablet:hidden">{t('관리 엔진 연결이 끊겼어요. 다시 연결하는 중입니다.')}</span><button type="button" className="secondary min-h-8 shrink-0 px-2.5 py-0 text-[12px]" onClick={refresh}><RefreshCw size={14} />{t('다시 연결')}</button></div>}
+      <div className={`ml-auto flex shrink-0 items-center gap-2.5 max-tablet:gap-1.5 max-[360px]:gap-1 max-[360px]:[&>button]:size-8 ${offline ? 'max-tablet:basis-full max-tablet:justify-end' : ''}`}>
         <Tooltip content={t('등록 추천')}><button className="tool-button" disabled={!connected} onClick={() => setPanel('recommend')} aria-label={t('등록 추천')}><ScanSearch size={17} /></button></Tooltip>
         <Tooltip content={t('서비스 등록')}><button className="tool-button" disabled={!connected} onClick={() => { const slot = Array.from({ length: 16 }, (_, i) => i).find(i => !services.some(s => s.padset_id === padsetId && s.slot === i)); if (slot === undefined) onError(t('빈 패드를 확보해 주세요.')); else setRegistrationSlot(slot); }} aria-label={t('서비스 등록')}><Plus size={17} /></button></Tooltip>
         <Tooltip content={t('흐름 관리')}><button className="tool-button" disabled={!connected} onClick={() => setSceneManager(true)} aria-label={t('흐름 관리')}><Workflow size={17} /></button></Tooltip>
+        <Tooltip content={t('위젯 영역 설정')}><button type="button" className="tool-button" disabled={!connected || !padset} onClick={() => setWidgetEditor(true)} aria-label={t('위젯 영역 설정')} aria-haspopup="dialog"><SlidersHorizontal size={17} aria-hidden="true" /></button></Tooltip>
         <Tooltip content={t('환경 설정')}><button className="tool-button" onClick={() => { setSettingsCategory('general'); setPanel('settings'); }} aria-label={t('환경 설정')}><Gear size={17} /></button></Tooltip>
       </div>
     </header>
-    <main className="min-h-0 flex-1 overflow-hidden pt-3" aria-label={t('서비스 패드')}><Deck {...{ padsets, padsetId, onPadsetChange, services, groups, links, loading, settings, refresh, onError, connected, scenes, sceneProgress, groupProgress, schedules }} onOpenSceneManager={() => setSceneManager(true)} local={auth.local} /></main>
+    <main className="min-h-0 flex-1 overflow-hidden pt-3" aria-label={t('서비스 패드')}><Deck {...{ padsets, padsetId, onPadsetChange, widget, services, groups, links, loading, settings, refresh, onError, connected, scenes, sceneProgress, groupProgress, schedules }} onOpenSceneManager={() => setSceneManager(true)} local={auth.local} /></main>
+    {widgetEditor && padset && <WidgetEditor key={padsetId} padset={padset} widget={widget} api={api} onSaved={onWidgetSaved} onClose={() => setWidgetEditor(false)} onError={onError} />}
     <Modal isOpen={sceneManager} onClose={() => setSceneManager(false)} title={t('흐름 관리')} size="lg" storageKey="scene-manager">
       {sceneManager && <SceneSettings {...{ scenes, services, groups, colors, colorNames, api, refresh, onError }} />}
     </Modal>

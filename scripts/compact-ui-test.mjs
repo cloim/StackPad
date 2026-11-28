@@ -25,7 +25,7 @@ await page.route('http://stackpad.test/**', async route => {
     else if (url.pathname === '/api/devices') body = { devices: [], current: null };
     else throw new Error(`Unexpected API: ${url.pathname}`);
     if (url.pathname === '/api/services') {
-      body.padsets = [{ id: 'default', name: '기본' }];
+      body.padsets = [{ id: 'default', name: '기본' }, { id: 'widgets', name: '위젯 테스트' }];
       body.services.forEach(service => { service.active = !!service.pid; });
       [...body.services, ...(body.groups || [])].forEach(pad => { pad.padset_id = 'default'; });
     }
@@ -70,7 +70,15 @@ try {
   await expect(page.getByRole('switch', { name: 'Windows 로그인 시 자동 실행' })).toBeChecked();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: '시스템 모니터', exact: true })).toHaveCount(0);
-  expect(await page.locator('header .tool-button').evaluateAll(buttons => buttons.map(b => b.getAttribute('aria-label')))).toEqual(['등록 추천', '서비스 등록', '환경 설정']);
+  expect(await page.locator('header .tool-button').evaluateAll(buttons => buttons.map(b => b.getAttribute('aria-label')))).toEqual(['등록 추천', '서비스 등록', '흐름 관리', '위젯 영역 설정', '환경 설정']);
+  await page.getByRole('tab', { name: '위젯 테스트' }).click();
+  const widgetTool = page.locator('header').getByRole('button', { name: '위젯 영역 설정', exact: true });
+  await widgetTool.press('Enter');
+  await expect(page.getByRole('dialog', { name: '위젯 테스트 위젯 영역 설정', exact: true })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: '표시할 위젯' }).locator('option')).toHaveText(['표시 안 함', 'AI 사용량', '시스템 정보']);
+  await page.keyboard.press('Escape');
+  await expect(widgetTool).toBeFocused();
+  await page.getByRole('tab', { name: '기본' }).click();
   await expect(page.locator('header').getByRole('button', { name: '로그아웃', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: '환경 설정', exact: true }).click();
   await page.getByRole('tab', { name: '계정', exact: true }).click();

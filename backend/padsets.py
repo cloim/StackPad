@@ -1,5 +1,7 @@
 """Each padset owns sixteen independent slots."""
+import re
 import uuid
+
 from i18n import system_text
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -14,6 +16,22 @@ class PadsetInput(BaseModel):
         value = value.strip()
         if not value or any(c in value for c in ('\x00', '\n', '\r')):
             raise ValueError('패드셋 이름을 한 줄로 입력해 주세요.')
+        return value
+
+
+WIDGET_ID = re.compile(r'[a-z0-9][a-z0-9-]{0,39}')
+
+
+class PadsetWidgetInput(BaseModel):
+    """The one widget shown above a padset's pads, named after its file in src/widgets; None shows none."""
+    model_config = ConfigDict(extra='forbid')
+    widget: str | None = None
+
+    @field_validator('widget')
+    @classmethod
+    def widget_id(cls, value):
+        if value is not None and not WIDGET_ID.fullmatch(value):
+            raise ValueError('위젯을 다시 선택해 주세요.')
         return value
 
 
@@ -34,6 +52,12 @@ class Padsets:
     def init_padsets(self):
         changed = 'padsets' not in self.config and self.path.exists()
         self.config.setdefault('padsets', [{'id': 'default', 'name': system_text('기본')}])
+        for padset in self.config['padsets']:
+            # Earlier builds kept a list of widgets; only the first one stays.
+            if 'widgets' in padset:
+                widgets = padset.pop('widgets') or []
+                padset['widget'] = widgets[0].get('kind') if widgets else None
+                changed = True
         for pad in [*self.config['services'], *self.config.get('groups', [])]:
             if 'padset_id' not in pad:
                 pad['padset_id'] = 'default'
@@ -63,6 +87,21 @@ class Padsets:
                 self.config['padsets'] = previous
                 raise
             return padset_id
+
+    def save_padset_widget(self, padset_id, values):
+        with self.lock:
+            padset = self.padset(padset_id)
+            previous = self.config['padsets']
+            self.config['padsets'] = [
+                {**padset, 'widget': values.widget} if current['id'] == padset_id else current
+                for current in previous
+            ]
+            try:
+                self.save()
+            except Exception:
+                self.config['padsets'] = previous
+                raise
+            return values.widget
 
     def delete_padset(self, padset_id):
         with self.lock:

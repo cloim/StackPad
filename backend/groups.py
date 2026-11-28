@@ -3,6 +3,7 @@ import threading
 import time
 import uuid
 import copy
+import logging
 import os
 from typing import Literal
 from urllib.parse import urlsplit
@@ -10,6 +11,7 @@ from urllib.parse import urlsplit
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from remote import RemoteSpec
+import tailscale
 
 PAD_COLORS = ('#ef4444', '#da9281', '#f97316', '#be9537', '#e6d3a8', '#facc15', '#daf797', '#22c55e', '#97f7da', '#25bfd0', '#3b82f6', '#a8bbe6', '#a855f7', '#ef3994', '#eea0c7', '#f5f5f4')
 
@@ -145,6 +147,32 @@ def automatic_local_url(members):
             return f'{health.scheme}://{health.netloc}{health.path}'
         return f"http://localhost:{service['port']}/"
     return ''
+
+
+def _location(parts):
+    query = f'?{parts.query}' if parts.query else ''
+    fragment = f'#{parts.fragment}' if parts.fragment else ''
+    return (parts.path or '/') + query + fragment
+
+
+def tailnet_url(host, members, local_url):
+    """A pad's address on this PC's tailnet, and the local port StackPad must serve itself (None when a component does).
+
+    A component running `tailscale serve` decides the HTTPS port; otherwise the local address keeps its port.
+    """
+    local = urlsplit(local_url) if local_url else None
+    try:
+        local_port = local.port if local and local.hostname in LOOPBACK else None
+    except ValueError:
+        local_port = None
+    for service in members:
+        target = tailscale.serve_target(service.get('command')) if service.get('kind', 'local') == 'local' else None
+        if target:
+            https_port, port = target
+            return tailscale.external_url(host, https_port) + (_location(local) if local_port == port else '/'), None
+    if local_port:
+        return tailscale.external_url(host, local_port) + _location(local), local_port
+    return '', None
 
 
 class GroupManager:
@@ -319,6 +347,55 @@ class GroupManager:
             pads = [(g, [self.service(sid) for sid in g['member_ids']]) for g in self.config.get('groups', [])]
             pads += [(s, [s]) for s in self.config['services'] if s['id'] not in grouped]
             return {pad['id']: {'domain': pad.get('domain_url', ''), 'local': pad.get('local_url') or automatic_local_url(members)} for pad, members in pads}
+
+    def tailnet_pads(self, host):
+        """(pad id, Tailscale address, port to serve, domain is empty) for development pads that use this PC's tailnet name."""
+        with self.lock:
+            grouped = {sid for g in self.config.get('groups', []) for sid in g['member_ids']}
+            pads = [(g, [self.service(sid) for sid in g['member_ids']]) for g in self.config.get('groups', [])]
+            pads += [(s, [s]) for s in self.config['services'] if s['id'] not in grouped]
+            found = []
+            for pad, members in pads:
+                if pad.get('environment', 'development') != 'development':
+                    continue
+                url, port = tailnet_url(host, members, pad.get('local_url') or automatic_local_url(members))
+                current = pad.get('domain_url', '')
+                # An address typed by the user is kept; the default one is served again after Tailscale drops it.
+                if url and (not current or (port and current == url)):
+                    found.append((pad['id'], url, port, not current))
+            return found
+
+    def fill_domain_url(self, pad_id, url):
+        """Put the default address in an empty domain URL; an address saved in the meantime wins."""
+        with self.lock:
+            pad = next((g for g in self.config.get('groups', []) if g['id'] == pad_id), None)
+            if pad is None:
+                pad = next((s for s in self.config['services'] if s['id'] == pad_id), None)
+            if pad is None or pad.get('domain_url'):
+                return False
+            previous = copy.deepcopy(self.config)
+            try:
+                pad['domain_url'] = url
+                self.save()
+            except Exception:
+                self.config = previous
+                raise
+            return True
+
+    def sync_tailnet_domains(self):
+        """Development pads without a domain URL open through `tailscale serve`, so other devices can reach them too."""
+        host = tailscale.host()
+        if not host:
+            return []
+        pads = self.tailnet_pads(host)
+        ready = tailscale.serve_local_ports(host, [port for _, _, port, _ in pads if port])
+        filled = []
+        for pad_id, url, port, empty in pads:
+            if port and port not in ready:
+                logging.warning('Tailscale HTTPS port %s is taken, so pad %s keeps no domain URL', port, pad_id)
+            elif empty and self.fill_domain_url(pad_id, url):
+                filled.append(pad_id)
+        return filled
 
     def open_link(self, pad_id, target):
         url = self.pad_links().get(pad_id, {}).get(target)

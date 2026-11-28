@@ -9,7 +9,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'backend'))
 from engine import Engine, ServiceInput
 from groups import GroupInput, PadInput
-from padsets import PadsetInput
+from padsets import PadsetInput, PadsetWidgetInput
 from docker_services import DockerServiceInput, docker_cli
 
 
@@ -45,6 +45,38 @@ class PadsetTests(unittest.TestCase):
         self.assertEqual(restored.group(gid)['padset_id'], 'default')
         self.assertTrue(all(s['padset_id'] == 'default' for s in restored.config['services']))
         self.assertTrue(all(s['command'] == 'echo test' for s in restored.config['services']))
+
+    def test_one_widget_per_padset_and_can_be_none(self):
+        second = self.engine.save_padset(PadsetInput(name='개발'))
+        self.engine.save_padset_widget(second, PadsetWidgetInput(widget='system'))
+        self.assertNotIn('widget', self.engine.padset('default'))
+        self.engine.save_padset_widget('default', PadsetWidgetInput(widget=None))
+        self.engine.save_padset(PadsetInput(name='운영'), second)
+
+        restored = Engine(self.directory.name)
+        self.assertIsNone(restored.padset('default')['widget'])
+        self.assertEqual(restored.padset(second)['widget'], 'system')
+        with patch.object(restored, 'save', side_effect=OSError):
+            with self.assertRaises(OSError):
+                restored.save_padset_widget(second, PadsetWidgetInput(widget=None))
+        self.assertEqual(restored.padset(second)['widget'], 'system')
+        for invalid in ('', 'System', '../x', 'a' * 41):
+            with self.assertRaises(ValueError):
+                PadsetWidgetInput(widget=invalid)
+        with self.assertRaises(ValueError):
+            PadsetWidgetInput(widget='system', width='half')
+
+    def test_earlier_widget_lists_keep_their_first_widget(self):
+        self.engine.save()
+        path = self.engine.path
+        config = json.loads(path.read_text('utf-8'))
+        config['padsets'][0]['widgets'] = [{'kind': 'system', 'width': 'half'}, {'kind': 'ai-usage', 'width': 'full'}]
+        config['padsets'].append({'id': 'empty', 'name': '빈 셋', 'widgets': []})
+        path.write_text(json.dumps(config), 'utf-8')
+        restored = Engine(self.directory.name)
+        self.assertEqual(restored.padset('default'), {'id': 'default', 'name': config['padsets'][0]['name'], 'widget': 'system'})
+        self.assertIsNone(restored.padset('empty')['widget'])
+        self.assertNotIn('widgets', json.loads(path.read_text('utf-8'))['padsets'][1])
 
     def test_move_group_and_slot_collisions_are_scoped(self):
         second = self.engine.save_padset(PadsetInput(name='개발'))

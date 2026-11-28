@@ -103,3 +103,55 @@ class PadLinkTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TailnetDomainTests(unittest.TestCase):
+    HOST = 'pc.tail1234.ts.net'
+
+    def setUp(self):
+        self.folder = tempfile.TemporaryDirectory()
+        self.addCleanup(self.folder.cleanup)
+        self.engine = Engine(Path(self.folder.name) / 'data')
+
+    def component(self, name='App', port=None, command='echo', health_url=''):
+        return {'name': name, 'command': command, 'cwd': self.folder.name, 'port': port, 'health_url': health_url}
+
+    def save(self, components, **values):
+        return self.engine.save_pad(PadInput(name='Pad', slot=values.pop('slot', 0), color='#3b82f6', components=components, **values))
+
+    def sync(self, taken=()):
+        served = []
+        def serve(host, ports):
+            served.append(sorted(ports))
+            return set(ports) - set(taken)
+        with patch('tailscale.host', return_value=self.HOST), patch('tailscale.serve_local_ports', serve):
+            return self.engine.sync_tailnet_domains(), served
+
+    def test_tailnet_url_prefers_a_serve_component(self):
+        serve = self.component('Tailscale', command='tailscale serve --https=49087 http://127.0.0.1:48087')
+        self.assertEqual(groups.tailnet_url(self.HOST, [{'port': 48087}, serve], 'http://127.0.0.1:48087/hanlim/'), (f'https://{self.HOST}:49087/hanlim/', None))
+        self.assertEqual(groups.tailnet_url(self.HOST, [{'port': 5173}], 'http://localhost:5173/?preview=1#/rules'), (f'https://{self.HOST}:5173/?preview=1#/rules', 5173))
+        self.assertEqual(groups.tailnet_url(self.HOST, [{'port': None}], ''), ('', None))
+
+    def test_fills_empty_development_domains_only(self):
+        plain = self.save([self.component(port=8000, health_url='http://localhost:8000/health')])
+        served = self.save([self.component('Web', 48087), self.component('Tailscale', command='tailscale serve --https=49087 http://127.0.0.1:48087')], slot=1)
+        typed = self.save([self.component(port=5174)], slot=2, domain_url='https://prism.example.com/')
+        production = self.save([self.component(port=3010)], slot=3, environment='production')
+        filled, calls = self.sync()
+        links = self.engine.pad_links()
+        self.assertEqual(sorted(filled), sorted([plain, served]))
+        self.assertEqual(calls, [[8000]])
+        self.assertEqual(links[plain]['domain'], f'https://{self.HOST}:8000/')
+        self.assertEqual(links[served]['domain'], f'https://{self.HOST}:49087/')
+        self.assertEqual(links[typed]['domain'], 'https://prism.example.com/')
+        self.assertEqual(links[production]['domain'], '')
+        # The default address keeps its serve entry checked, while nothing changes in the saved pads.
+        self.assertEqual(self.sync(), ([], [[8000]]))
+
+    def test_taken_port_or_missing_tailscale_leaves_the_domain_empty(self):
+        pad_id = self.save([self.component(port=8000)])
+        self.assertEqual(self.sync(taken=[8000])[0], [])
+        with patch('tailscale.host', return_value=None):
+            self.assertEqual(self.engine.sync_tailnet_domains(), [])
+        self.assertEqual(self.engine.pad_links()[pad_id]['domain'], '')

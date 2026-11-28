@@ -1,6 +1,7 @@
 """Expose the engine to the user's tailnet with `tailscale serve`, leaving other serve entries untouched."""
 import json
 import os
+import re
 import shutil
 import subprocess
 import threading
@@ -122,6 +123,87 @@ def _connect(engine_port):
         raise RuntimeError('비어 있는 Tailscale HTTPS 포트를 찾지 못했습니다.')
     _run('serve', '--bg', f'--https={port}', f'http://127.0.0.1:{engine_port}', timeout=60)
     return _external_url(current['host'], port)
+
+
+SERVE_COMMAND = re.compile(r'tailscale(?:\.exe)?"?\s+serve\s+(?P<arguments>.*)$', re.IGNORECASE)
+LOOPBACK = ('127.0.0.1', 'localhost')
+
+
+def serve_target(command):
+    """(HTTPS port, local port) when a pad component runs `tailscale serve --https=P http://127.0.0.1:L`, else None."""
+    match = SERVE_COMMAND.search(command or '')
+    if not match:
+        return None
+    arguments = match['arguments'].replace('"', ' ').split()
+    if 'off' in arguments or 'reset' in arguments or 'status' in arguments:
+        return None
+    https, local = 443, None
+    for index, argument in enumerate(arguments):
+        if argument.startswith('--https='):
+            value = argument.partition('=')[2]
+        elif argument == '--https' and index + 1 < len(arguments):
+            value = arguments[index + 1]
+        else:
+            value = None
+            if argument.isdigit():
+                local = int(argument)
+            elif not argument.startswith('-'):
+                parts = urlsplit(argument if '://' in argument else f'http://{argument}')
+                try:
+                    if parts.hostname in LOOPBACK and parts.port:
+                        local = parts.port
+                except ValueError:
+                    pass
+        if value is not None:
+            if not value.isdigit():
+                return None
+            https = int(value)
+    return (https, local) if local else None
+
+
+def host():
+    """This PC's tailnet name while Tailscale is connected, else None."""
+    if not executable():
+        return None
+    state = json.loads(_run('status', '--json'))
+    name = (state.get('Self') or {}).get('DNSName', '').rstrip('.')
+    return name if state.get('BackendState') == 'Running' and name else None
+
+
+def external_url(name, port):
+    return _external_url(name, port)
+
+
+def _all_web(serve):
+    """Background and foreground `serve` entries; a pad's own `tailscale serve` component shows up as foreground."""
+    web = dict(serve.get('Web') or {})
+    tcp = set(serve.get('TCP') or {})
+    for session in (serve.get('Foreground') or {}).values():
+        web.update(session.get('Web') or {})
+        tcp.update(session.get('TCP') or {})
+    return web, tcp
+
+
+def serve_local_ports(name, ports):
+    """Proxy https://<name>:<port> to the same local port for each port, adding the missing background entries.
+
+    Returns the ports that now reach their local server; a port another service holds is left out.
+    """
+    with _serve_lock:
+        web, tcp = _all_web(json.loads(_run('serve', 'status', '--json') or '{}'))
+        ready = set()
+        for port in sorted(set(ports)):
+            entry = web.get(f'{name}:{port}')
+            if entry is not None:
+                target = ((entry.get('Handlers') or {}).get('/') or {}).get('Proxy', '').rstrip('/')
+                if target in _engine_targets(port):
+                    ready.add(port)
+                continue
+            if str(port) in tcp:
+                continue
+            _run('serve', '--bg', f'--https={port}', f'http://127.0.0.1:{port}', timeout=60)
+            ready.add(port)
+        return ready
 
 
 def same_origin(url, scheme, host):
